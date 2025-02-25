@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課程追蹤器</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --complete-color: #d6eaf8;
+            --incomplete-color: #ecf0f1;
+            --delete-color: #e74c3c;
+            --success-color: #27ae60;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .date-display {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .edit-button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .lists-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .list {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .list-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .course-item {
+            background-color: var(--incomplete-color);
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .complete {
+            background-color: var(--complete-color);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .course-edit-item {
+            display: flex;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            align-items: center;
+        }
+        
+        .course-input {
+            flex: 2;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        
+        .day-select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        
+        .delete-btn {
+            background-color: var(--delete-color);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .modal-buttons {
+            margin-top: 15px;
+        }
+        
+        .add-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .cancel-btn {
+            flex: 1;
+            background-color: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .save-btn {
+            flex: 1;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* 添加到主屏幕提示 */
+        .install-prompt {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+        }
+        
+        @media (max-width: 480px) {
+            .lists-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>課程追蹤器</h1>
+            <div class="date-display" id="dateDisplay"></div>
+        </header>
+        
+        <div class="install-prompt" id="installPrompt">
+            <p>將此應用添加到主屏幕，以獲得更好的體驗！</p>
+            <p>iOS: 點擊分享按鈕，然後選擇"添加到主屏幕"</p>
+            <p>Android: 點擊選單按鈕，然後選擇"添加到主屏幕"</p>
+        </div>
+        
+        <button class="edit-button" id="editButton">編輯課程</button>
+        
+        <div class="lists-container">
+            <div class="list">
+                <div class="list-title">未完成</div>
+                <div id="incompleteList"></div>
+            </div>
+            
+            <div class="list">
+                <div class="list-title">已完成</div>
+                <div id="completeList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 編輯課程彈窗 -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-title">編輯課程</div>
+            
+            <div id="courseEditList"></div>
+            
+            <div class="modal-buttons">
+                <button class="add-btn" id="addCourseBtn">添加課程</button>
+                
+                <div class="action-buttons">
+                    <button class="cancel-btn" id="cancelBtn">取消</button>
+                    <button class="save-btn" id="saveBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化變量
+        const maxCourses = 10;
+        let courses = [];
+        let currentWeekday = 0;
+        
+        // DOM 元素
+        const dateDisplay = document.getElementById('dateDisplay');
+        const editButton = document.getElementById('editButton');
+        const incompleteList = document.getElementById('incompleteList');
+        const completeList = document.getElementById('completeList');
+        const editModal = document.getElementById('editModal');
+        const courseEditList = document.getElementById('courseEditList');
+        const addCourseBtn = document.getElementById('addCourseBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const installPrompt = document.getElementById('installPrompt');
+        
+        // 初始化
+        function init() {
+            loadCourses();
+            updateDate();
+            setupEventListeners();
+            checkDayChange();
+            checkInstallPrompt();
+            
+            // 每小時檢查一次日期變化
+            setInterval(() => {
+                updateDate();
+                checkDayChange();
+            }, 3600000); // 3600000 毫秒 = 1 小時
+        }
+        
+        // 檢查是否顯示安裝提示
+        function checkInstallPrompt() {
+            // 只在iOS Safari或Android Chrome中顯示
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            
+            if ((isIOS || isAndroid) && !isStandalone) {
+                installPrompt.style.display = 'block';
+                
+                // 3天內只顯示一次
+                const lastPrompt = localStorage.getItem('installPromptShown');
+                if (lastPrompt) {
+                    const lastPromptDate = new Date(parseInt(lastPrompt));
+                    const now = new Date();
+                    const diffDays = Math.floor((now - lastPromptDate) / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 3) {
+                        installPrompt.style.display = 'none';
+                    } else {
+                        localStorage.setItem('installPromptShown', Date.now().toString());
+                    }
+                } else {
+                    localStorage.setItem('installPromptShown', Date.now().toString());
+                }
+            }
+        }
+        
+        // 設置事件監聽器
+        function setupEventListeners() {
+            editButton.addEventListener('click', openEditModal);
+            addCourseBtn.addEventListener('click', addCourse);
+            cancelBtn.addEventListener('click', closeEditModal);
+            saveBtn.addEventListener('click', saveEditedCourses);
+        }
+        
+        // 加載課程
+        function loadCourses() {
+            const savedCourses = localStorage.getItem('courses');
+            courses = savedCourses ? JSON.parse(savedCourses) : [];
+            renderCourses();
+        }
+        
+        // 保存課程
+        function saveCourses() {
+            localStorage.setItem('courses', JSON.stringify(courses));
+            renderCourses();
+        }
+        
+        // 更新日期顯示
+        function updateDate() {
+            const now = new Date();
+            const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
+            const weekday = now.getDay(); // 0-6, 對應週日到週六
+            
+            // 轉換為1-7格式 (週一到週日)
+            currentWeekday = weekday === 0 ? 7 : weekday;
+            
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            
+            dateDisplay.textContent = `${year}年${month}月${day}日 星期${weekdayNames[weekday]}`;
+        }
+        
+        // 檢查日期變化
+        function checkDayChange() {
+            let updated = false;
+            
+            courses.forEach(course => {
+                if (course.completed && parseInt(course.day) === currentWeekday) {
+                    course.completed = false;
+                    updated = true;
+                }
+            });
+            
+            if (updated) {
+                saveCourses();
+            }
+        }
+        
+        // 切換課程完成狀態
+        function toggleCourse(index) {
+            courses[index].completed = !courses[index].completed;
+            saveCourses();
+        }
+        
+        // 渲染課程列表
+        function renderCourses() {
+            incompleteList.innerHTML = '';
+            completeList.innerHTML = '';
+            
+            courses.forEach((course, index) => {
+                const courseElement = document.createElement('div');
+                courseElement.className = `course-item ${course.completed ? 'complete' : ''}`;
+                courseElement.textContent = `${course.name} (星期${course.day})`;
+                courseElement.addEventListener('click', () => toggleCourse(index));
+                
+                if (course.completed) {
+                    completeList.appendChild(courseElement);
+                } else {
+                    incompleteList.appendChild(courseElement);
+                }
+            });
+        }
+        
+        // 打開編輯彈窗
+        function openEditModal() {
+            renderEditCourses();
+            editModal.style.display = 'block';
+        }
+        
+        // 關閉編輯彈窗
+        function closeEditModal() {
+            editModal.style.display = 'none';
+        }
+        
+        // 渲染編輯課程列表
+        function renderEditCourses() {
+            courseEditList.innerHTML = '';
+            
+            courses.forEach((course, index) => {
+                const courseEditItem = document.createElement('div');
+                courseEditItem.className = 'course-edit-item';
+                
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'course-input';
+                nameInput.value = course.name;
+                nameInput.dataset.index = index;
+                nameInput.placeholder = '課程名稱';
+                
+                const daySelect = document.createElement('select');
+                daySelect.className = 'day-select';
+                daySelect.dataset.index = index;
+                
+                for (let i = 1; i <= 7; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `星期${i}`;
+                    if (parseInt(course.day) === i) {
+                        option.selected = true;
+                    }
+                    daySelect.appendChild(option);
+                }
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = '刪除';
+                deleteBtn.dataset.index = index;
+                deleteBtn.addEventListener('click', (e) => {
+                    const idx = e.target.dataset.index;
+                    courseEditItem.remove();
+                    
+                    // 更新剩餘元素的索引
+                    const inputs = courseEditList.querySelectorAll('.course-input');
+                    const selects = courseEditList.querySelectorAll('.day-select');
+                    const buttons = courseEditList.querySelectorAll('.delete-btn');
+                    
+                    for (let i = 0; i < inputs.length; i++) {
+                        if (parseInt(inputs[i].dataset.index) > idx) {
+                            inputs[i].dataset.index = parseInt(inputs[i].dataset.index) - 1;
+                            selects[i].dataset.index = parseInt(selects[i].dataset.index) - 1;
+                            buttons[i].dataset.index = parseInt(buttons[i].dataset.index) - 1;
+                        }
+                    }
+                });
+                
+                courseEditItem.appendChild(nameInput);
+                courseEditItem.appendChild(daySelect);
+                courseEditItem.appendChild(deleteBtn);
+                
+                courseEditList.appendChild(courseEditItem);
+            });
+        }
+        
+        // 添加新課程
+        function addCourse() {
+            const courseCount = courseEditList.children.length;
+            
+            if (courseCount >= maxCourses) {
+                alert(`最多只能添加 ${maxCourses} 個課程`);
+                return;
+            }
+            
+            const courseEditItem = document.createElement('div');
+            courseEditItem.className = 'course-edit-item';
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'course-input';
+            nameInput.value = '新課程';
+            nameInput.dataset.index = courseCount;
+            nameInput.placeholder = '課程名稱';
+            
+            const daySelect = document.createElement('select');
+            daySelect.className = 'day-select';
+            daySelect.dataset.index = courseCount;
+            
+            for (let i = 1; i <= 7; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `星期${i}`;
+                if (i === 1) {
+                    option.selected = true;
+                }
+                daySelect.appendChild(option);
+            }
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '刪除';
+            deleteBtn.dataset.index = courseCount;
+            deleteBtn.addEventListener('click', (e) => {
+                const idx = e.target.dataset.index;
+                courseEditItem.remove();
+                
+                // 更新剩餘元素的索引
+                const inputs = courseEditList.querySelectorAll('.course-input');
+                const selects = courseEditList.querySelectorAll('.day-select');
+                const buttons = courseEditList.querySelectorAll('.delete-btn');
+                
+                for (let i = 0; i < inputs.length; i++) {
+                    if (parseInt(inputs[i].dataset.index) > idx) {
+                        inputs[i].dataset.index = parseInt(inputs[i].dataset.index) - 1;
+                        selects[i].dataset.index = parseInt(selects[i].dataset.index) - 1;
+                        buttons[i].dataset.index = parseInt(buttons[i].dataset.index) - 1;
+                    }
+                }
+            });
+            
+            courseEditItem.appendChild(nameInput);
+            courseEditItem.appendChild(daySelect);
+            courseEditItem.appendChild(deleteBtn);
+            
+            courseEditList.appendChild(courseEditItem);
+        }
+        
+        // 保存編輯的課程
+        function saveEditedCourses() {
+            const nameInputs = courseEditList.querySelectorAll('.course-input');
+            const daySelects = courseEditList.querySelectorAll('.day-select');
+            const newCourses = [];
+            
+            for (let i = 0; i < nameInputs.length; i++) {
+                const name = nameInputs[i].value.trim();
+                const day = daySelects[i].value;
+                const index = parseInt(nameInputs[i].dataset.index);
+                
+                if (!name) {
+                    alert('課程名稱不能為空');
+                    return;
+                }
+                
+                if (index < courses.length) {
+                    // 更新現有課程
+                    newCourses.push({
+                        name,
+                        day,
+                        completed: courses[index].completed
+                    });
+                } else {
+                    // 添加新課程
+                    newCourses.push({
+                        name,
+                        day,
+                        completed: false
+                    });
+                }
+            }
+            
+            courses = newCourses;
+            saveCourses();
+            closeEditModal();
+        }
+        
+        // 初始化應用
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</head>
+</body>
+</html>
