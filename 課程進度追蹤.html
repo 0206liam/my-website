@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>課程進度追蹤</title>
+    <title>通知範例</title>
     <style>
         :root {
             --primary-color: #3498db;
@@ -219,36 +220,6 @@
 
     <!-- 加入按鈕，供用戶觸發通知 -->
     <button id="notifyButton">顯示通知</button>
-
-    <script>
-        // 添加按鈕的點擊事件，呼叫 showNotification 函式
-        document.getElementById("notifyButton").addEventListener("click", function () {
-            showNotification("這是一則測試通知！");
-        });
-
-        // 定義通知函式
-        function showNotification(message) {
-            if (!("Notification" in window)) {
-                alert(message); // 如果瀏覽器不支援通知，則使用 alert
-                return;
-            }
-            if (Notification.permission === "granted") {
-                new Notification(message);
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then((permission) => {
-                    if (permission === "granted") {
-                        new Notification(message);
-                    }
-                });
-            }
-        }
-    </script>
-
-
-
-    
-    <!-- 加入按鈕，供用戶觸發通知 -->
-    <button id="notifyButton">通知</button>
     <div class="container">
         <header>
             <h1>課程進度追蹤</h1>
@@ -284,11 +255,11 @@
             <div id="courseEditList"></div>
             
             <div class="modal-buttons">
-                <button class="add-btn" id="addCourseBtn">新增課程</button>
+                <button class="add-btn" id="addCourseBtn">添加課程</button>
                 
                 <div class="action-buttons">
                     <button class="cancel-btn" id="cancelBtn">取消</button>
-                    <button class="save-btn" id="saveBtn">儲存</button>
+                    <button class="save-btn" id="saveBtn">保存</button>
                 </div>
             </div>
         </div>
@@ -319,7 +290,7 @@
 
 
         // 初始化變量
-        const maxCourses = 20;
+        const maxCourses = 10;
         let courses = [];
         let currentWeekday = 0;
         const weekdayMap = {
@@ -427,7 +398,7 @@
             courses.forEach((course) => {
                 if (!course.completed && parseInt(course.day) === currentWeekday) {
                     if (hours === 10) {
-                        showNotification(`提醒${course.name}課程進度未完成`);
+                        showNotification(`提醒：今天需要完成课程 - ${course.name}`);
                     }
                 }
             });
@@ -571,7 +542,7 @@
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.className = 'course-input';
-            nameInput.value = '';
+            nameInput.value = '新課程';
             nameInput.dataset.index = courseCount;
             nameInput.placeholder = '課程名稱';
             
@@ -655,9 +626,43 @@
             saveCourses();
             closeEditModal();
         }
-        
+
+
+        // 這裡放測試通知按鈕的程式碼
+        const testNotificationButton = document.createElement('button');
+        testNotificationButton.textContent = '測試通知';
+        testNotificationButton.style.margin = '10px';
+        document.body.appendChild(testNotificationButton);
+
+        testNotificationButton.addEventListener('click', () => {
+            if (!("Notification" in window)) {
+                alert("您的瀏覽器不支援通知功能");
+                return;
+            }
+            if (Notification.permission === "granted") {
+                setTimeout(() => {
+                    new Notification("這是 10 秒後的測試通知！");
+                }, 10000);
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        setTimeout(() => {
+                            new Notification("這是 10 秒後的測試通知！");
+                        }, 10000);
+                    } else {
+                        alert("通知功能未獲授權");
+                    }
+                });
+            } else {
+                alert("通知功能已被拒絕，請在瀏覽器設定中允許通知");
+            }
+        });
+
+                
         // 初始化應用
         document.addEventListener('DOMContentLoaded', init);
+
+
     </script>
 </head>
 </body>
