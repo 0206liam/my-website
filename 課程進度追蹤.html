@@ -483,12 +483,17 @@
                 for (let i = 1; i <= 7; i++) {
                     const option = document.createElement('option');
                     option.value = i;
-                    option.textContent = `星期${i}`;
+
+                    // 使用陣列將數字轉換為中文
+                    const daysInChinese = ['一', '二', '三', '四', '五', '六', '日'];
+                    option.textContent = `星期${daysInChinese[i - 1]}`;
+
                     if (parseInt(course.day) === i) {
                         option.selected = true;
                     }
                     daySelect.appendChild(option);
                 }
+
                 
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-btn';
