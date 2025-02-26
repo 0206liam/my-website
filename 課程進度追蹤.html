@@ -396,7 +396,7 @@
             courses.forEach((course) => {
                 if (!course.completed && parseInt(course.day) === currentWeekday) {
                     if (hours === 10) {
-                        showNotification(`提醒：今天需要完成课程 - ${course.name}`);
+                        showNotification(`提醒${course.name}課程進度未完成`);
                     }
                 }
             });
@@ -540,7 +540,7 @@
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.className = 'course-input';
-            nameInput.value = '新課程';
+            nameInput.value = '';
             nameInput.dataset.index = courseCount;
             nameInput.placeholder = '課程名稱';
             
