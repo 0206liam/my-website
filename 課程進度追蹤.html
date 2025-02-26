@@ -216,6 +216,37 @@
     </style>
 </head>
 <body>
+
+    <!-- 加入按鈕，供用戶觸發通知 -->
+    <button id="notifyButton">顯示通知</button>
+
+    <script>
+        // 添加按鈕的點擊事件，呼叫 showNotification 函式
+        document.getElementById("notifyButton").addEventListener("click", function () {
+            showNotification("這是一則測試通知！");
+        });
+
+        // 定義通知函式
+        function showNotification(message) {
+            if (!("Notification" in window)) {
+                alert(message); // 如果瀏覽器不支援通知，則使用 alert
+                return;
+            }
+            if (Notification.permission === "granted") {
+                new Notification(message);
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        new Notification(message);
+                    }
+                });
+            }
+        }
+    </script>
+
+
+
+    
     <!-- 加入按鈕，供用戶觸發通知 -->
     <button id="notifyButton">通知</button>
     <div class="container">
