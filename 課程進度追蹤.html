@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>課程追蹤器</title>
+    <title>課程進度追蹤</title>
     <style>
         :root {
             --primary-color: #3498db;
@@ -218,14 +218,14 @@
 <body>
     <div class="container">
         <header>
-            <h1>課程追蹤器</h1>
+            <h1>課程進度追蹤</h1>
             <div class="date-display" id="dateDisplay"></div>
         </header>
         
         <div class="install-prompt" id="installPrompt">
-            <p>將此應用添加到主屏幕，以獲得更好的體驗！</p>
-            <p>iOS: 點擊分享按鈕，然後選擇"添加到主屏幕"</p>
-            <p>Android: 點擊選單按鈕，然後選擇"添加到主屏幕"</p>
+            <p>將此應用添加到主畫面，以獲得更好的體驗！</p>
+            <p>iOS: 點擊分享按鈕，然後選擇"添加到主畫面"</p>
+            <p>Android: 點擊選單按鈕，然後選擇"添加到主畫面"</p>
         </div>
         
         <button class="edit-button" id="editButton">編輯課程</button>
@@ -266,18 +266,26 @@
         const maxCourses = 10;
         let courses = [];
         let currentWeekday = 0;
+        const weekdayMap = {
+            1: "星期一",
+            2: "星期二",
+            3: "星期三",
+            4: "星期四",
+            5: "星期五",
+            6: "星期六",
+            7: "星期日",
+        };
         
         // DOM 元素
-        const dateDisplay = document.getElementById('dateDisplay');
-        const editButton = document.getElementById('editButton');
-        const incompleteList = document.getElementById('incompleteList');
-        const completeList = document.getElementById('completeList');
-        const editModal = document.getElementById('editModal');
-        const courseEditList = document.getElementById('courseEditList');
-        const addCourseBtn = document.getElementById('addCourseBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const saveBtn = document.getElementById('saveBtn');
-        const installPrompt = document.getElementById('installPrompt');
+        const dateDisplay = document.getElementById("dateDisplay");
+        const editButton = document.getElementById("editButton");
+        const incompleteList = document.getElementById("incompleteList");
+        const completeList = document.getElementById("completeList");
+        const editModal = document.getElementById("editModal");
+        const courseEditList = document.getElementById("courseEditList");
+        const addCourseBtn = document.getElementById("addCourseBtn");
+        const cancelBtn = document.getElementById("cancelBtn");
+        const saveBtn = document.getElementById("saveBtn");
         
         // 初始化
         function init() {
@@ -285,13 +293,11 @@
             updateDate();
             setupEventListeners();
             checkDayChange();
-            checkInstallPrompt();
-            
-            // 每小時檢查一次日期變化
+            // 每小时检查一次日期和课程状态
             setInterval(() => {
                 updateDate();
                 checkDayChange();
-            }, 3600000); // 3600000 毫秒 = 1 小時
+            }, 3600000);
         }
         
         // 檢查是否顯示安裝提示
@@ -343,38 +349,57 @@
             renderCourses();
         }
         
-        // 更新日期顯示
+        // 更新日期显示
         function updateDate() {
             const now = new Date();
-            const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
-            const weekday = now.getDay(); // 0-6, 對應週日到週六
-            
-            // 轉換為1-7格式 (週一到週日)
-            currentWeekday = weekday === 0 ? 7 : weekday;
-            
+            const weekday = now.getDay();
+            currentWeekday = weekday === 0 ? 7 : weekday; // 转换为 1-7 格式
+
             const year = now.getFullYear();
             const month = now.getMonth() + 1;
             const day = now.getDate();
-            
-            dateDisplay.textContent = `${year}年${month}月${day}日 星期${weekdayNames[weekday]}`;
+
+            dateDisplay.textContent = `${year}年${month}月${day}日 ${weekdayMap[currentWeekday]}`;
         }
         
-        // 檢查日期變化
+
+        // 检查日期变化
         function checkDayChange() {
-            let updated = false;
-            
-            courses.forEach(course => {
-                if (course.completed && parseInt(course.day) === currentWeekday) {
-                    course.completed = false;
-                    updated = true;
+            const now = new Date();
+            const hours = now.getHours();
+
+            courses.forEach((course) => {
+                if (!course.completed && parseInt(course.day) === currentWeekday) {
+                    if (hours === 10) {
+                        showNotification(`提醒：今天需要完成课程 - ${course.name}`);
+                    }
                 }
             });
-            
-            if (updated) {
-                saveCourses();
-            }
+
+            saveCourses();
         }
         
+        
+        function showNotification(message) {
+            if (!("Notification" in window)) {
+                alert(message); // 如果瀏覽器不支援通知，則使用 alert
+                return;
+            }
+            if (Notification.permission === "granted") {
+                new Notification(message);
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        new Notification(message);
+                    }
+                });
+            }
+        }
+
+
+
+
+
         // 切換課程完成狀態
         function toggleCourse(index) {
             courses[index].completed = !courses[index].completed;
@@ -389,7 +414,7 @@
             courses.forEach((course, index) => {
                 const courseElement = document.createElement('div');
                 courseElement.className = `course-item ${course.completed ? 'complete' : ''}`;
-                courseElement.textContent = `${course.name} (星期${course.day})`;
+                courseElement.textContent = `${course.name} (${weekdayMap[course.day]})`;
                 courseElement.addEventListener('click', () => toggleCourse(index));
                 
                 if (course.completed) {
