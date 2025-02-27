@@ -318,6 +318,14 @@
                 updateDate();
                 checkDayChange();
             }, 3600000);
+        
+            // 每天晚上十點重置已完成課程
+            setInterval(() => {
+                const now = new Date();
+                if (now.getHours() === 22) {
+                    resetCompletedCourses();
+                }
+            }, 3600000);
         }
         
         // 設定事件監聽器
@@ -358,16 +366,38 @@
         function checkDayChange() {
             const now = new Date();
             const hours = now.getHours();
-
+            
+            // 計算前一天的星期值
+            let previousDay = currentWeekday - 1;
+            // 如果是週日(0)的前一天，則應該是週六(6)
+            if (previousDay < 0) {
+                previousDay = 6;
+            }
+            
             courses.forEach((course) => {
-                if (!course.completed && parseInt(course.day) === currentWeekday) {
+                if (!course.completed && parseInt(course.day) === previousDay) {
                     if (hours === 10) {
-                        showNotification(`提醒：今天需要完成課程 - ${course.name}`);
+                        showNotification(`提醒：明天前需完成課程 - ${course.name}`);
                     }
                 }
             });
         }
         
+
+        // 重置已完成課程
+        function resetCompletedCourses() {
+            const now = new Date();
+            const currentDay = now.getDay();
+            courses.forEach((course) => {
+                if (course.completed && parseInt(course.day) === currentDay) {
+                    course.completed = false;
+                }
+            });
+            saveCourses();
+        }
+    
+
+
         // =========================================
         // 通知功能
         // =========================================
