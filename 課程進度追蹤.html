@@ -428,10 +428,14 @@
             }
             
             if (Notification.permission === "granted") {
-                setTimeout(() => {
-                    new Notification("這是10秒後的測試通知！");
-                }, 10000);
                 alert("通知將在10秒後顯示");
+                setTimeout(() => {
+                    try {
+                        new Notification("這是10秒後的測試通知！");
+                    } catch (error) {
+                        alert("通知發送失敗：" + error.message);
+                    }
+                }, 10000);
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
