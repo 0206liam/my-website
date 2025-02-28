@@ -397,7 +397,7 @@
         }
     
 
-
+        
         // =========================================
         // 通知功能
         // =========================================
@@ -415,27 +415,15 @@
         } else {
             alert("您的瀏覽器不支援 Service Worker，通知功能可能無法正常運作");
         }
-
-
+        
         // 顯示瀏覽器通知
         function showNotification(message) {
             if (!("Notification" in window)) {
-                alert(message); // 如果瀏覽器不支援通知，則使用 alert
+                alert("您的瀏覽器不支援通知功能");
                 return;
             }
-            
-            if (Notification.permission === "granted") {
-                new Notification(message);
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then((permission) => {
-                    if (permission === "granted") {
-                        new Notification(message);
-                    }
-                });
-            }
-
-
-            if (Notification.permission === "granted") {
+        
+            const show = () => {
                 if (window.serviceWorkerRegistration) {
                     window.serviceWorkerRegistration.showNotification("通知標題", {
                         body: message,
@@ -445,14 +433,14 @@
                 } else {
                     alert("Service Worker 尚未註冊，無法發送通知");
                 }
+            };
+        
+            if (Notification.permission === "granted") {
+                show();
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
-                    if (permission === "granted" && window.serviceWorkerRegistration) {
-                        window.serviceWorkerRegistration.showNotification("通知標題", {
-                            body: message,
-                            icon: '/icon.png',
-                            badge: '/badge.png',
-                        });
+                    if (permission === "granted") {
+                        show();
                     } else {
                         alert("通知功能未獲授權");
                     }
@@ -460,7 +448,6 @@
             } else {
                 alert("通知功能已被拒絕，請在瀏覽器設定中允許通知");
             }
-
         }
         
         // 測試通知功能
@@ -469,22 +456,22 @@
                 alert("您的瀏覽器不支援通知功能");
                 return;
             }
-            
+        
+            const sendTestNotification = () => {
+                try {
+                    new Notification("這是10秒後的測試通知！");
+                } catch (error) {
+                    alert("通知發送失敗：" + error.message);
+                }
+            };
+        
             if (Notification.permission === "granted") {
                 alert("通知將在10秒後顯示");
-                setTimeout(() => {
-                    try {
-                        new Notification("這是10秒後的測試通知！");
-                    } catch (error) {
-                        alert("通知發送失敗：" + error.message);
-                    }
-                }, 10000);
+                setTimeout(sendTestNotification, 10000);
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
-                        setTimeout(() => {
-                            new Notification("這是10秒後的測試通知！");
-                        }, 10000);
+                        setTimeout(sendTestNotification, 10000);
                         alert("通知將在10秒後顯示");
                     } else {
                         alert("通知功能未獲授權");
@@ -494,7 +481,7 @@
                 alert("通知功能已被拒絕，請在瀏覽器設定中允許通知");
             }
         }
-        
+
         // =========================================
         // 課程資料管理
         // =========================================
