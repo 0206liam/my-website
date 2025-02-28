@@ -462,20 +462,20 @@
         
             const sendTestNotification = () => {
                 try {
-                    new Notification("這是10秒後的測試通知！");
+                    new Notification("這是5秒後的測試通知！");
                 } catch (error) {
                     alert("通知發送失敗：" + error.message);
                 }
             };
         
             if (Notification.permission === "granted") {
-                alert("通知將在10秒後顯示");
+                alert("通知將在5秒後顯示");
                 setTimeout(sendTestNotification, 5000);
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
                         setTimeout(sendTestNotification, 5000);
-                        alert("通知將在10秒後顯示");
+                        alert("通知將在5秒後顯示");
                     } else {
                         alert("通知功能未獲授權");
                     }
