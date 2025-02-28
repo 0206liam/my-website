@@ -470,11 +470,11 @@
         
             if (Notification.permission === "granted") {
                 alert("通知將在10秒後顯示");
-                setTimeout(sendTestNotification, 10000);
+                setTimeout(sendTestNotification, 5000);
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
-                        setTimeout(sendTestNotification, 10000);
+                        setTimeout(sendTestNotification, 5000);
                         alert("通知將在10秒後顯示");
                     } else {
                         alert("通知功能未獲授權");
