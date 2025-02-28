@@ -402,6 +402,21 @@
         // 通知功能
         // =========================================
         
+        // 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                    console.log('Service Worker 註冊成功：', registration);
+                    window.serviceWorkerRegistration = registration;
+                })
+                .catch((error) => {
+                    console.error('Service Worker 註冊失敗：', error);
+                });
+        } else {
+            alert("您的瀏覽器不支援 Service Worker，通知功能可能無法正常運作");
+        }
+
+
         // 顯示瀏覽器通知
         function showNotification(message) {
             if (!("Notification" in window)) {
@@ -418,6 +433,34 @@
                     }
                 });
             }
+
+
+            if (Notification.permission === "granted") {
+                if (window.serviceWorkerRegistration) {
+                    window.serviceWorkerRegistration.showNotification("通知標題", {
+                        body: message,
+                        icon: '/icon.png',
+                        badge: '/badge.png',
+                    });
+                } else {
+                    alert("Service Worker 尚未註冊，無法發送通知");
+                }
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted" && window.serviceWorkerRegistration) {
+                        window.serviceWorkerRegistration.showNotification("通知標題", {
+                            body: message,
+                            icon: '/icon.png',
+                            badge: '/badge.png',
+                        });
+                    } else {
+                        alert("通知功能未獲授權");
+                    }
+                });
+            } else {
+                alert("通知功能已被拒絕，請在瀏覽器設定中允許通知");
+            }
+
         }
         
         // 測試通知功能
