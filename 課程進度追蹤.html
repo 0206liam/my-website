@@ -490,10 +490,14 @@
             }
         
             const sendTestNotification = () => {
-                try {
-                    new Notification("這是5秒後的測試通知！");
-                } catch (error) {
-                    alert("通知發送失敗：" + error.message);
+                if (window.serviceWorkerRegistration) {
+                    window.serviceWorkerRegistration.showNotification("這是5秒後的測試通知！", {
+                        body: "測試通知內容",
+                        icon: '/icon.png',
+                        badge: '/badge.png',
+                    });
+                } else {
+                    alert("Service Worker 尚未註冊，無法發送通知");
                 }
             };
         
@@ -503,8 +507,8 @@
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
-                        setTimeout(sendTestNotification, 5000);
                         alert("通知將在5秒後顯示");
+                        setTimeout(sendTestNotification, 5000);
                     } else {
                         alert("通知功能未獲授權");
                     }
