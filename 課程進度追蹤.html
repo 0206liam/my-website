@@ -431,7 +431,7 @@
         
         // 註冊 Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('/my-website/sw.js')
                 .then((registration) => {
                     console.log('Service Worker 註冊成功：', registration);
                     window.serviceWorkerRegistration = registration;
