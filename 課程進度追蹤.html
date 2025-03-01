@@ -453,7 +453,7 @@
                 return;
             }
         
-            const show = () => {
+            if (Notification.permission === "granted") {
                 if (window.serviceWorkerRegistration) {
                     window.serviceWorkerRegistration.showNotification("通知標題", {
                         body: message,
@@ -463,14 +463,16 @@
                 } else {
                     alert("Service Worker 尚未註冊，無法發送通知");
                 }
-            };
-        
-            if (Notification.permission === "granted") {
-                show();
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
-                        show();
+                        if (window.serviceWorkerRegistration) {
+                            window.serviceWorkerRegistration.showNotification("通知標題", {
+                                body: message,
+                                icon: '/icon.png',
+                                badge: '/badge.png',
+                            });
+                        }
                     } else {
                         alert("通知功能未獲授權");
                     }
