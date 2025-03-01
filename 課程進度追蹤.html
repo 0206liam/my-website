@@ -439,7 +439,7 @@
                 })
                 .catch((error) => {
                     console.error('Service Worker 註冊失敗：', error);
-                    alert("Service Worker 註冊失敗，請檢查瀏覽器設定");
+                    alert("Service Worker 註冊失敗，請檢查瀏覽器設定" + error.message);
                 });
         } else {
             alert("您的瀏覽器不支援 Service Worker，通知功能可能無法正常運作");
