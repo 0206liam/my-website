@@ -435,7 +435,6 @@
                 .then((registration) => {
                     console.log('Service Worker 註冊成功：', registration);
                     window.serviceWorkerRegistration = registration;
-                    alert("Service Worker 註冊成功！");
                 })
                 .catch((error) => {
                     console.error('Service Worker 註冊失敗：', error);
