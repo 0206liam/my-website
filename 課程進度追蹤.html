@@ -488,34 +488,53 @@
             }
         }
 
-        
         // 測試通知功能
         function testNotification() {
+            // 定義發送測試通知的函式
+            const sendTestNotification = () => {
+                try {
+                    if (window.serviceWorkerRegistration) {
+                        // 使用 Service Worker 發送通知
+                        window.serviceWorkerRegistration.showNotification("這是5秒後的測試通知！", {
+                            body: "測試通知內容",
+                            icon: '/icon.png',  // 替換為實際的 icon 路徑
+                            badge: '/badge.png',  // 替換為實際的 badge 路徑
+                        });
+                    } else {
+                        // 如果 Service Worker 尚未註冊，直接使用 Notification API
+                        new Notification("這是5秒後的測試通知！", {
+                            body: "測試通知內容",
+                            icon: '/icon.png',
+                        });
+                    }
+                } catch (error) {
+                    // 捕捉錯誤並提示用戶
+                    console.error("通知發送失敗", error);
+        
+                    if (error.name === "TypeError") {
+                        alert("通知失敗：您的瀏覽器可能不支援通知功能");
+                    } else if (error.name === "SecurityError") {
+                        alert("通知失敗：請檢查通知權限或 HTTPS 設定");
+                    } else {
+                        alert(`通知發送失敗：${error.message}`);
+                    }
+                }
+            };
+        
+            // 檢查 Notification 支援與權限
             if (!("Notification" in window)) {
                 alert("您的瀏覽器不支援通知功能");
                 return;
             }
         
-            const sendTestNotification = () => {
-                if (window.serviceWorkerRegistration) {
-                    window.serviceWorkerRegistration.showNotification("這是5秒後的測試通知！", {
-                        body: "測試通知內容",
-                        icon: '/icon.png',
-                        badge: '/badge.png',
-                    });
-                } else {
-                    alert("Service Worker 尚未註冊，無法發送通知");
-                }
-            };
-        
             if (Notification.permission === "granted") {
                 alert("通知將在5秒後顯示");
-                setTimeout(sendTestNotification, 5000);
+                setTimeout(sendTestNotification, 5000); // 延遲 5 秒後發送通知
             } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
                         alert("通知將在5秒後顯示");
-                        setTimeout(sendTestNotification, 5000);
+                        setTimeout(sendTestNotification, 5000); // 延遲 5 秒後發送通知
                     } else {
                         alert("通知功能未獲授權");
                     }
@@ -524,6 +543,7 @@
                 alert("通知功能已被拒絕，請在瀏覽器設定中允許通知");
             }
         }
+
 
         // =========================================
         // 課程資料管理
