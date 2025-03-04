@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>課程進度追蹤</title>
     <style>
+
+        .update-status {
+            margin: 10px 0;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+         .update-status-updated {
+            background-color: #27ae60;
+            color: white;
+        }
+        
+        .update-status-not-updated {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
         :root {
             --primary-color: #3498db;
             --secondary-color: #2980b9;
@@ -312,18 +330,22 @@
             setupEventListeners();
             checkDayChange();
             checkInstallPrompt();
+            checkCourseUpdateStatus();
             
             // 每小時檢查一次日期和課程狀態
             setInterval(() => {
                 updateDate();
                 checkDayChange();
+                checkCourseUpdateStatus(); // 定期检查更新状态
             }, 3600000);
         
-            // 每天晚上十點重置已完成課程
+
+            // 每天晚上十点重置已完成课程
             setInterval(() => {
                 const now = new Date();
                 if (now.getHours() === 22) {
                     resetCompletedCourses();
+                    checkCourseUpdateStatus(); // 重置后立即检查更新状态
                 }
             }, 3600000);
         }
@@ -412,6 +434,7 @@
 
 
         // 重置已完成課程
+        // 修改 resetCompletedCourses 函数，确保更新时间戳
         function resetCompletedCourses() {
             const now = new Date();
             const currentDay = now.getDay();
@@ -421,6 +444,9 @@
                 }
             });
             saveCourses();
+            
+            // 确保更新时间戳
+            localStorage.setItem('lastResetTimestamp', now.getTime().toString());
         }
     
 
@@ -742,6 +768,32 @@
                 }
             }
         }
+
+        // 检查课程更新状态
+        function checkCourseUpdateStatus() {
+            const now = new Date();
+            const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
+            const updateStatusElement = document.getElementById('updateStatus');
+            
+            if (!lastResetTimestamp) {
+                updateStatusElement.textContent = '尚未進行首次更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+                return;
+            }
+            
+            const lastResetDate = new Date(parseInt(lastResetTimestamp));
+            const hoursSinceReset = (now - lastResetDate) / (1000 * 60 * 60);
+            
+            // 如果上次更新是在10点后，且在24小时内
+            if (lastResetDate.getHours() === 22 && hoursSinceReset >= 0 && hoursSinceReset < 24) {
+                updateStatusElement.textContent = '已更新';
+                updateStatusElement.className = 'update-status update-status-updated';
+            } else {
+                updateStatusElement.textContent = '未更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+            }
+        }
+
         
         // 初始化應用
         document.addEventListener('DOMContentLoaded', init);
