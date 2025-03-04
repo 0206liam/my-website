@@ -318,6 +318,33 @@
         const saveBtn = document.getElementById("saveBtn");
         const installPrompt = document.getElementById("installPrompt");
         const testNotificationBtn = document.getElementById("testNotificationBtn");
+
+
+        // 检查课程更新状态
+        function checkCourseUpdateStatus() {
+            const now = new Date();
+            const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
+            const updateStatusElement = document.getElementById('updateStatus');
+            
+            if (!lastResetTimestamp) {
+                updateStatusElement.textContent = '尚未進行首次更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+                return;
+            }
+            
+            const lastResetDate = new Date(parseInt(lastResetTimestamp));
+            const hoursSinceReset = (now - lastResetDate) / (1000 * 60 * 60);
+            
+            // 如果上次更新是在10点后，且在24小时内
+            if (lastResetDate.getHours() === 22 && hoursSinceReset >= 0 && hoursSinceReset < 24) {
+                updateStatusElement.textContent = '已更新';
+                updateStatusElement.className = 'update-status update-status-updated';
+            } else {
+                updateStatusElement.textContent = '未更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+            }
+        }
+        
         
         // =========================================
         // 初始化及主要功能
@@ -769,30 +796,7 @@
             }
         }
 
-        // 检查课程更新状态
-        function checkCourseUpdateStatus() {
-            const now = new Date();
-            const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
-            const updateStatusElement = document.getElementById('updateStatus');
-            
-            if (!lastResetTimestamp) {
-                updateStatusElement.textContent = '尚未進行首次更新';
-                updateStatusElement.className = 'update-status update-status-not-updated';
-                return;
-            }
-            
-            const lastResetDate = new Date(parseInt(lastResetTimestamp));
-            const hoursSinceReset = (now - lastResetDate) / (1000 * 60 * 60);
-            
-            // 如果上次更新是在10点后，且在24小时内
-            if (lastResetDate.getHours() === 22 && hoursSinceReset >= 0 && hoursSinceReset < 24) {
-                updateStatusElement.textContent = '已更新';
-                updateStatusElement.className = 'update-status update-status-updated';
-            } else {
-                updateStatusElement.textContent = '未更新';
-                updateStatusElement.className = 'update-status update-status-not-updated';
-            }
-        }
+
 
         
         // 初始化應用
