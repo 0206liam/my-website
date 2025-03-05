@@ -7,7 +7,7 @@
     <style>
 
         .update-status {
-            margin: 10px 0;
+            margin: 5px 0;
             padding: 10px;
             text-align: center;
             border-radius: 5px;
@@ -23,6 +23,7 @@
             color: white;
         }
         
+        /* CSS變數：定義全域顏色 */
         :root {
             --primary-color: #3498db;
             --secondary-color: #2980b9;
@@ -32,6 +33,7 @@
             --success-color: #27ae60;
         }
         
+        /* 基礎重置和全局樣式 */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -45,12 +47,14 @@
             line-height: 1.6;
         }
         
+        /* 主容器：限制寬度和居中 */
         .container {
             max-width: 600px;
             margin: 0 auto;
             padding: 10px;
         }
         
+        /* 頁面標題樣式 */
         header {
             background-color: var(--primary-color);
             color: white;
@@ -64,6 +68,7 @@
             margin-top: 5px;
         }
         
+        /* 編輯按鈕樣式 */
         .edit-button {
             background-color: var(--secondary-color);
             color: white;
@@ -77,10 +82,11 @@
             cursor: pointer;
         }
         
+        /* 課程列表容器 */
         .lists-container {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .list {
@@ -234,6 +240,7 @@
             border-radius: 4px;
             margin: 10px;
             cursor: pointer;
+            margin-left: auto;   /* 靠左 */
         }
         
         @media (max-width: 480px) {
@@ -258,7 +265,7 @@
         
         <button class="edit-button" id="editButton">編輯課程</button>
         
-        <div class="update-status" id="updateStatus"></div>
+        
 
         <div class="lists-container">
             <div class="list">
@@ -271,8 +278,9 @@
                 <div id="completeList"></div>
             </div>
         </div>
-        
+        <div class="update-status" id="updateStatus"></div>
         <button class="notification-test" id="testNotificationBtn">通知測試</button>
+        
     </div>
     
     <!-- 編輯課程彈窗 -->
@@ -462,19 +470,26 @@
         document.addEventListener('DOMContentLoaded', checkAndResetCourses);
 
 
-        // 重置已完成課程
-        // 修改 resetCompletedCourses 函数，确保更新时间戳
         function resetCompletedCourses() {
             const now = new Date();
-            const currentDay = now.getDay();
-            courses.forEach((course) => {
+            const currentDay = now.getDay() || 7; // 转换周日为7
+
+            // 创建新数组，避免直接修改原数组
+            const updatedCourses = courses.map(course => {
+                // 只重置当前星期且已完成的课程
                 if (course.completed && parseInt(course.day) === currentDay) {
-                    course.completed = false;
+                    return { ...course, completed: false };
                 }
+                return course;
             });
+
+            // 更新全局课程数组
+            courses = updatedCourses;
+
+            // 保存课程
             saveCourses();
             
-            // 确保更新时间戳
+            // 更新重置时间戳
             localStorage.setItem('lastResetTimestamp', now.getTime().toString());
         }
     
