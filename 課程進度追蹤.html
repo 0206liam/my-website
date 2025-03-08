@@ -487,6 +487,10 @@
             
             // 更新重置时间戳
             localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+            //
+            updateStatusElement.textContent = '重置成功';
+            updateStatusElement.className = 'update-status update-status-updated';
+            //
         }
     
 
