@@ -330,34 +330,9 @@
         const testNotificationBtn = document.getElementById("testNotificationBtn");
 
 
-        // 检查课程更新状态
-        function checkCourseUpdateStatus() {
-            const now = new Date();
-            const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
-            const updateStatusElement = document.getElementById('updateStatus');
-            
-            if (!lastResetTimestamp) {
-                updateStatusElement.textContent = '尚未進行首次更新';
-                updateStatusElement.className = 'update-status update-status-not-updated';
-                return;
-            }
-            
-            const lastResetDate = new Date(parseInt(lastResetTimestamp));
-            const hoursSinceReset = (now - lastResetDate) / (1000 * 60 * 60);
-            
-            // 如果上次更新是在10点后，且在24小时内
-            if (lastResetDate.getHours() === 22 && hoursSinceReset >= 0 && hoursSinceReset < 24) {
-                updateStatusElement.textContent = '已更新';
-                updateStatusElement.className = 'update-status update-status-updated';
-            } else {
-                updateStatusElement.textContent = '未更新';
-                updateStatusElement.className = 'update-status update-status-not-updated';
-            }
-        }
-        
         
         // =========================================
-        // 初始化及主要功能
+        // 初始化及核心功能
         // =========================================
         
         // 初始化應用
@@ -367,13 +342,15 @@
             setupEventListeners();
             checkDayChange();
             checkInstallPrompt();
-            checkCourseUpdateStatus();
+            // checkCourseUpdateStatus();
+            //
+            checkAndResetCourses();
             
             // 每小時檢查一次日期和課程狀態
             setInterval(() => {
                 updateDate();
                 checkDayChange();
-                checkCourseUpdateStatus(); // 定期检查更新状态
+                // checkCourseUpdateStatus(); // 定期检查更新状态
             }, 3600000);
         
 
@@ -382,9 +359,13 @@
                 const now = new Date();
                 if (now.getHours() === 22) {
                     resetCompletedCourses();
-                    checkCourseUpdateStatus(); // 重置后立即检查更新状态
+                    // checkCourseUpdateStatus(); // 重置后立即检查更新状态
                 }
             }, 3600000);
+
+            
+            // 頁面加載時執行檢查
+            document.addEventListener('DOMContentLoaded', checkAndResetCourses);
         }
         
         // 設定事件監聽器
@@ -444,19 +425,36 @@
         
         // 網頁加載時檢查並執行重置邏輯
         function checkAndResetCourses() {
-        const now = new Date();
-        const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
-        const lastResetDate = lastResetTimestamp ? new Date(parseInt(lastResetTimestamp)) : null;
-        
-        // 如果沒有上次重置記錄或上次重置是在昨天或更早
-        if (!lastResetDate || isNewDay(lastResetDate, now)) {
-            // 檢查是否已過晚上10點
-            if (now.getHours() >= 22) {
-            resetCompletedCourses();
-            // 更新上次重置時間戳
-            localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+            const now = new Date();
+            const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
+            const lastResetDate = lastResetTimestamp ? new Date(parseInt(lastResetTimestamp)) : null;
+            //
+            const updateStatusElement = document.getElementById('updateStatus');
+            //
+
+
+            // 如果沒有上次重置記錄或上次重置是在昨天或更早
+            if (!lastResetDate || isNewDay(lastResetDate, now)) {
+                // 檢查是否已過晚上10點
+                if (now.getHours() >= 22) {
+                    resetCompletedCourses();
+                    //
+                    updateStatusElement.textContent = '已更新';
+                    updateStatusElement.className = 'update-status update-status-updated';
+                    //
+                    // 更新上次重置時間戳
+                    localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+                } else {
+                    updateStatusElement.textContent = '未更新';
+                    updateStatusElement.className = 'update-status update-status-not-updated';
+                }
+            }else {
+                updateStatusElement.textContent = '未更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
             }
-        }
+
+            // 確保狀態元素可見
+            //updateStatusElement.style.display = 'block';
         }
 
         // 判斷兩個日期是否是不同的日子
@@ -466,8 +464,6 @@
                 lastDate.getFullYear() !== currentDate.getFullYear();
         }
 
-        // 頁面加載時執行檢查
-        document.addEventListener('DOMContentLoaded', checkAndResetCourses);
 
 
         function resetCompletedCourses() {
@@ -494,7 +490,217 @@
         }
     
 
+
+
+        // =========================================
+        // 課程資料管理
+        // =========================================
         
+        // 加載課程
+        function loadCourses() {
+            const savedCourses = localStorage.getItem('courses');
+            courses = savedCourses ? JSON.parse(savedCourses) : [];
+            renderCourses();
+        }
+        
+        // 保存課程
+        function saveCourses() {
+            localStorage.setItem('courses', JSON.stringify(courses));
+            renderCourses();
+        }
+        
+        // 切換課程完成狀態
+        function toggleCourse(index) {
+            courses[index].completed = !courses[index].completed;
+            saveCourses();
+        }
+        
+/*
+        // 检查课程更新状态
+        function checkCourseUpdateStatus() {
+            const now = new Date();
+            const lastResetTimestamp = localStorage.getItem('lastResetTimestamp');
+            const updateStatusElement = document.getElementById('updateStatus');
+            
+            if (!lastResetTimestamp) {
+                updateStatusElement.textContent = '尚未進行首次更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+                return;
+            }
+            
+            const lastResetDate = new Date(parseInt(lastResetTimestamp));
+            const hoursSinceReset = (now - lastResetDate) / (1000 * 60 * 60);
+            
+            // 如果上次更新是在10点后，且在24小时内
+            if (lastResetDate.getHours() === 22 && hoursSinceReset >= 0 && hoursSinceReset < 24) {
+                updateStatusElement.textContent = '已更新';
+                updateStatusElement.className = 'update-status update-status-updated';
+            } else {
+                updateStatusElement.textContent = '未更新';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+            }
+        }
+       */
+
+
+        // =========================================
+        // 課程 UI 渲染
+        // =========================================
+        
+        // 渲染課程列表
+        function renderCourses() {
+            incompleteList.innerHTML = '';
+            completeList.innerHTML = '';
+            
+            courses.forEach((course, index) => {
+                const courseElement = document.createElement('div');
+                courseElement.className = `course-item ${course.completed ? 'complete' : ''}`;
+                courseElement.textContent = `${course.name} (${weekdayMap[course.day]})`;
+                courseElement.dataset.index = index;
+                
+                if (course.completed) {
+                    completeList.appendChild(courseElement);
+                } else {
+                    incompleteList.appendChild(courseElement);
+                }
+            });
+        }
+        
+        
+        // 渲染編輯課程列表
+        function renderEditCourses() {
+            courseEditList.innerHTML = '';
+            
+            courses.forEach((course, index) => {
+                addEditCourseItem(course.name, course.day, index);
+            });
+        }
+        
+
+        // =========================================
+        // 課程編輯功能
+        // =========================================
+        
+        // 打開編輯彈窗
+        function openEditModal() {
+            renderEditCourses();
+            editModal.style.display = 'block';
+        }
+        
+        // 關閉編輯彈窗
+        function closeEditModal() {
+            editModal.style.display = 'none';
+        }
+
+        // 添加編輯課程項目
+        function addEditCourseItem(name, day, index) {
+            const courseEditItem = document.createElement('div');
+            courseEditItem.className = 'course-edit-item';
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'course-input';
+            nameInput.value = name;
+            nameInput.dataset.index = index;
+            nameInput.placeholder = '課程名稱';
+            
+            const daySelect = document.createElement('select');
+            daySelect.className = 'day-select';
+            daySelect.dataset.index = index;
+            
+            for (let i = 1; i <= 7; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                
+                // 使用陣列將數字轉換為中文
+                const daysInChinese = ['一', '二', '三', '四', '五', '六', '日'];
+                option.textContent = `星期${daysInChinese[i - 1]}`;
+                
+                if (parseInt(day) === i) {
+                    option.selected = true;
+                }
+                daySelect.appendChild(option);
+            }
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '刪除';
+            deleteBtn.dataset.index = index;
+            deleteBtn.addEventListener('click', handleDeleteCourse);
+            
+            courseEditItem.appendChild(nameInput);
+            courseEditItem.appendChild(daySelect);
+            courseEditItem.appendChild(deleteBtn);
+            
+            courseEditList.appendChild(courseEditItem);
+        }
+        
+        // 處理刪除課程
+        function handleDeleteCourse(e) {
+            const idx = e.target.dataset.index;
+            e.target.closest('.course-edit-item').remove();
+            
+            // 更新剩餘元素的索引
+            updateRemainingIndexes();
+        }
+        
+        // 更新剩餘元素的索引
+        function updateRemainingIndexes() {
+            const inputs = courseEditList.querySelectorAll('.course-input');
+            const selects = courseEditList.querySelectorAll('.day-select');
+            const buttons = courseEditList.querySelectorAll('.delete-btn');
+            
+            for (let i = 0; i < inputs.length; i++) {
+                inputs[i].dataset.index = i;
+                selects[i].dataset.index = i;
+                buttons[i].dataset.index = i;
+            }
+        }
+        
+        // 添加新課程
+        function addCourse() {
+            const courseCount = courseEditList.children.length;
+            
+            if (courseCount >= maxCourses) {
+                alert(`最多只能添加 ${maxCourses} 個課程`);
+                return;
+            }
+            
+            addEditCourseItem('', 1, courseCount);
+        }
+        
+        // 保存編輯的課程
+        function saveEditedCourses() {
+            const nameInputs = courseEditList.querySelectorAll('.course-input');
+            const daySelects = courseEditList.querySelectorAll('.day-select');
+            const newCourses = [];
+            
+            for (let i = 0; i < nameInputs.length; i++) {
+                const name = nameInputs[i].value.trim();
+                const day = daySelects[i].value;
+                const index = parseInt(nameInputs[i].dataset.index);
+                
+                if (!name) {
+                    alert('課程名稱不能為空');
+                    return;
+                }
+                
+                // 保留原有的完成狀態
+                const completed = (index < courses.length) ? courses[index].completed : false;
+                
+                newCourses.push({
+                    name,
+                    day,
+                    completed
+                });
+            }
+            
+            courses = newCourses;
+            saveCourses();
+            closeEditModal();
+        }
+
+
         // =========================================
         // 通知功能
         // =========================================
@@ -604,184 +810,6 @@
         }
 
 
-
-        // =========================================
-        // 課程資料管理
-        // =========================================
-        
-        // 加載課程
-        function loadCourses() {
-            const savedCourses = localStorage.getItem('courses');
-            courses = savedCourses ? JSON.parse(savedCourses) : [];
-            renderCourses();
-        }
-        
-        // 保存課程
-        function saveCourses() {
-            localStorage.setItem('courses', JSON.stringify(courses));
-            renderCourses();
-        }
-        
-        // 切換課程完成狀態
-        function toggleCourse(index) {
-            courses[index].completed = !courses[index].completed;
-            saveCourses();
-        }
-        
-        // =========================================
-        // 課程 UI 渲染
-        // =========================================
-        
-        // 渲染課程列表
-        function renderCourses() {
-            incompleteList.innerHTML = '';
-            completeList.innerHTML = '';
-            
-            courses.forEach((course, index) => {
-                const courseElement = document.createElement('div');
-                courseElement.className = `course-item ${course.completed ? 'complete' : ''}`;
-                courseElement.textContent = `${course.name} (${weekdayMap[course.day]})`;
-                courseElement.dataset.index = index;
-                
-                if (course.completed) {
-                    completeList.appendChild(courseElement);
-                } else {
-                    incompleteList.appendChild(courseElement);
-                }
-            });
-        }
-        
-        // =========================================
-        // 課程編輯功能
-        // =========================================
-        
-        // 打開編輯彈窗
-        function openEditModal() {
-            renderEditCourses();
-            editModal.style.display = 'block';
-        }
-        
-        // 關閉編輯彈窗
-        function closeEditModal() {
-            editModal.style.display = 'none';
-        }
-        
-        // 渲染編輯課程列表
-        function renderEditCourses() {
-            courseEditList.innerHTML = '';
-            
-            courses.forEach((course, index) => {
-                addEditCourseItem(course.name, course.day, index);
-            });
-        }
-        
-        // 添加編輯課程項目
-        function addEditCourseItem(name, day, index) {
-            const courseEditItem = document.createElement('div');
-            courseEditItem.className = 'course-edit-item';
-            
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.className = 'course-input';
-            nameInput.value = name;
-            nameInput.dataset.index = index;
-            nameInput.placeholder = '課程名稱';
-            
-            const daySelect = document.createElement('select');
-            daySelect.className = 'day-select';
-            daySelect.dataset.index = index;
-            
-            for (let i = 1; i <= 7; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                
-                // 使用陣列將數字轉換為中文
-                const daysInChinese = ['一', '二', '三', '四', '五', '六', '日'];
-                option.textContent = `星期${daysInChinese[i - 1]}`;
-                
-                if (parseInt(day) === i) {
-                    option.selected = true;
-                }
-                daySelect.appendChild(option);
-            }
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = '刪除';
-            deleteBtn.dataset.index = index;
-            deleteBtn.addEventListener('click', handleDeleteCourse);
-            
-            courseEditItem.appendChild(nameInput);
-            courseEditItem.appendChild(daySelect);
-            courseEditItem.appendChild(deleteBtn);
-            
-            courseEditList.appendChild(courseEditItem);
-        }
-        
-        // 處理刪除課程
-        function handleDeleteCourse(e) {
-            const idx = e.target.dataset.index;
-            e.target.closest('.course-edit-item').remove();
-            
-            // 更新剩餘元素的索引
-            updateRemainingIndexes();
-        }
-        
-        // 更新剩餘元素的索引
-        function updateRemainingIndexes() {
-            const inputs = courseEditList.querySelectorAll('.course-input');
-            const selects = courseEditList.querySelectorAll('.day-select');
-            const buttons = courseEditList.querySelectorAll('.delete-btn');
-            
-            for (let i = 0; i < inputs.length; i++) {
-                inputs[i].dataset.index = i;
-                selects[i].dataset.index = i;
-                buttons[i].dataset.index = i;
-            }
-        }
-        
-        // 添加新課程
-        function addCourse() {
-            const courseCount = courseEditList.children.length;
-            
-            if (courseCount >= maxCourses) {
-                alert(`最多只能添加 ${maxCourses} 個課程`);
-                return;
-            }
-            
-            addEditCourseItem('', 1, courseCount);
-        }
-        
-        // 保存編輯的課程
-        function saveEditedCourses() {
-            const nameInputs = courseEditList.querySelectorAll('.course-input');
-            const daySelects = courseEditList.querySelectorAll('.day-select');
-            const newCourses = [];
-            
-            for (let i = 0; i < nameInputs.length; i++) {
-                const name = nameInputs[i].value.trim();
-                const day = daySelects[i].value;
-                const index = parseInt(nameInputs[i].dataset.index);
-                
-                if (!name) {
-                    alert('課程名稱不能為空');
-                    return;
-                }
-                
-                // 保留原有的完成狀態
-                const completed = (index < courses.length) ? courses[index].completed : false;
-                
-                newCourses.push({
-                    name,
-                    day,
-                    completed
-                });
-            }
-            
-            courses = newCourses;
-            saveCourses();
-            closeEditModal();
-        }
         
         // =========================================
         // 安裝提示功能
