@@ -433,23 +433,26 @@
             //
 
 
-            // 如果沒有上次重置記錄或上次重置是在昨天或更早
-            if (!lastResetDate || isNewDay(lastResetDate, now)) {
-                // 檢查是否已過晚上10點
-                if (now.getHours() >= 22) {
-                    resetCompletedCourses();
-                    //
-                    updateStatusElement.textContent = '已更新';
-                    updateStatusElement.className = 'update-status update-status-updated';
-                    //
-                    // 更新上次重置時間戳
-                    localStorage.setItem('lastResetTimestamp', now.getTime().toString());
-                } else {
-                    updateStatusElement.textContent = '未更新';
-                    updateStatusElement.className = 'update-status update-status-not-updated';
-                }
-            }else {
-                updateStatusElement.textContent = '剛重置';
+            // 如果沒有上次重置記錄，則立即進行首次重置
+            if (!lastResetDate) {
+                resetCompletedCourses();
+                localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+                updateStatusElement.textContent = '首次重置成功';
+                updateStatusElement.className = 'update-status update-status-updated';
+                return;
+            }
+            // 檢查是否已經過了一天（超過24小時）
+            const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+            const timeSinceLastReset = now.getTime() - lastResetDate.getTime();
+            const daysSinceLastReset = Math.floor(timeSinceLastReset / oneDayInMilliseconds);
+
+            // 如果已經過了一天，或者是同一天但已經過了22點
+            if (daysSinceLastReset >= 1 || (isNewDay(lastResetDate, now) && now.getHours() >= 22)) {
+                resetCompletedCourses();
+                updateStatusElement.textContent = '重置成功';
+                updateStatusElement.className = 'update-status update-status-updated';
+            } else {
+                updateStatusElement.textContent = '已更新';
                 updateStatusElement.className = 'update-status update-status-updated';
             }
 
