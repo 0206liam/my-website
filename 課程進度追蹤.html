@@ -446,8 +446,8 @@
                 // 只檢查那些尚未完成且屬於 "明天" 的課程
                 if (!lastNotificationTime &&
                     !course.completed && 
-                    parseInt(course.day) === nextDay &&
-                    //hours === 10)
+                    parseInt(course.day) === nextDay )
+                    //hours === 10
                     {
                         showNotification(`提醒：明天前需完成課程 - ${course.name}`);
                         // 記錄此次通知時間
