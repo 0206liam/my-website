@@ -444,21 +444,20 @@
             
             courses.forEach((course) => {
                 // 只檢查那些尚未完成且屬於 "明天" 的課程
-                if (
-                    !lastNotificationTime &&
+                if (!lastNotificationTime &&
                     !course.completed && 
                     parseInt(course.day) === nextDay &&
-                    //hours === 10
-                ){
+                    //hours === 10)
+                    {
                         showNotification(`提醒：明天前需完成課程 - ${course.name}`);
                         // 記錄此次通知時間
                         localStorage.setItem('lastNotificationTime', currentTime.toString());
                         // 找到一個課程需要通知後就記錄時間，不需要對每個課程都記錄
                         return;
                     }
-                }
-            });
-        }        
+                
+            }
+        }
 
 
         // 網頁加載時檢查並執行重置邏輯
