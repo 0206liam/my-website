@@ -386,7 +386,7 @@
         }
         
         // =========================================
-        // 日期和時間功能
+        // 日期和時間與通知功能
         // =========================================
         
         // 更新日期顯示
@@ -402,7 +402,7 @@
             dateDisplay.textContent = `${year}年${month}月${day}日 ${weekdayMap[currentWeekday]}`;
         }
         
-        // 檢查日期變化及通知**
+        // 檢查日期變化及通知
         function checkDayChange() {
             const now = new Date();
             const hours = now.getHours();
@@ -456,8 +456,7 @@
                 }
             });
         }
-
-
+        
         // 網頁加載時檢查並執行重置邏輯
         function checkAndResetCourses() {
             const now = new Date();
@@ -468,23 +467,26 @@
             //
 
 
-            // 如果沒有上次重置記錄或上次重置是在昨天或更早
-            if (!lastResetDate || isNewDay(lastResetDate, now)) {
-                // 檢查是否已過晚上10點
-                if (now.getHours() >= 22) {
-                    resetCompletedCourses();
-                    //
-                    updateStatusElement.textContent = '已更新';
-                    updateStatusElement.className = 'update-status update-status-updated';
-                    //
-                    // 更新上次重置時間戳
-                    localStorage.setItem('lastResetTimestamp', now.getTime().toString());
-                } else {
-                    updateStatusElement.textContent = '未更新';
-                    updateStatusElement.className = 'update-status update-status-not-updated';
-                }
-            }else {
-                updateStatusElement.textContent = '剛重置';
+            // 如果沒有上次重置記錄，則立即進行首次重置
+            if (!lastResetDate) {
+                resetCompletedCourses();
+                localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+                updateStatusElement.textContent = '首次重置成功';
+                updateStatusElement.className = 'update-status update-status-updated';
+                return;
+            }
+            // 檢查是否已經過了一天（超過24小時）
+            const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+            const timeSinceLastReset = now.getTime() - lastResetDate.getTime();
+            const daysSinceLastReset = Math.floor(timeSinceLastReset / oneDayInMilliseconds);
+
+            // 如果已經過了一天，或者是同一天但已經過了22點
+            if (daysSinceLastReset >= 1 || (isNewDay(lastResetDate, now) && now.getHours() >= 22)) {
+                resetCompletedCourses();
+                updateStatusElement.textContent = '重置成功';
+                updateStatusElement.className = 'update-status update-status-updated';
+            } else {
+                updateStatusElement.textContent = '已更新';
                 updateStatusElement.className = 'update-status update-status-updated';
             }
 
@@ -765,14 +767,14 @@
             try {
                 // 嘗試發送通知，無論瀏覽器是否支援或權限狀態如何
                 if (window.serviceWorkerRegistration) {
-                    window.serviceWorkerRegistration.showNotification("通知標題", {
+                    window.serviceWorkerRegistration.showNotification({
                         body: message,
                         icon: '/icon.png',  // 替換為實際的 icon 路徑
                         badge: '/badge.png',  // 替換為實際的 badge 路徑
                     });
                 } else {
                     // 如果沒有註冊 Service Worker，使用 Notification API 直接通知
-                    new Notification("通知標題", {
+                    new Notification({
                         body: message,
                         icon: '/icon.png',
                     });
@@ -780,7 +782,7 @@
             } catch (error) {
                 // 捕獲錯誤並提示用戶
                 console.error("通知發送失敗", error);
-        
+
                 /*
                 // 根據不同的錯誤處理
                 if (error.name === "TypeError") {
@@ -791,6 +793,7 @@
                     alert(`通知發送失敗：${error.message}`);
                 }
                 */
+                
                 // 直接使用 alert 顯示原來的通知內容
                 alert(`${message}`);
                 // 記錄錯誤但不再向用戶顯示錯誤資訊
