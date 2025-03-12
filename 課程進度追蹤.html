@@ -386,7 +386,7 @@
         }
         
         // =========================================
-        // 日期和時間功能
+        // 日期和時間與通知功能
         // =========================================
         
         // 更新日期顯示
@@ -407,17 +407,54 @@
             const now = new Date();
             const hours = now.getHours();
             
-            // 計算前一天的星期值
-            let previousDay = currentWeekday - 1;
-            // 如果是週日(0)的前一天，則應該是週六(6)
-            if (previousDay < 0) {
-                previousDay = 6;
+            // 計算明天的星期值
+            let nextDay = currentWeekday + 1;
+            // 如果今天是週日(7)，明天是週一(1)
+            if (nextDay > 7) {
+                nextDay = 1;
+            }
+            /*
+           // 如果今天是週六(6)，明天是週日(0)
+            if (nextDay > 6) {
+                nextDay = 0;
+            }*/
+
+            // 取得上次通知的時間戳
+            const lastNotificationTime = localStorage.getItem('lastNotificationTime');
+            const currentTime = now.getTime();
+
+            // 如果存在上次通知時間，檢查是否需要清除記錄
+            if (lastNotificationTime) {
+                const lastNotificationDate = new Date(parseInt(lastNotificationTime, 10));
+
+                // 計算昨天的10點和今天的10點
+                const yesterdayTenAM = new Date();
+                yesterdayTenAM.setDate(now.getDate() - 1);
+                yesterdayTenAM.setHours(10, 0, 0, 0);
+
+                const todayTenAM = new Date();
+                todayTenAM.setHours(10, 0, 0, 0);
+
+                // 如果上次通知時間是昨天的10點前，且現在已經是10點後，清除通知記錄
+                if ((lastNotificationDate < yesterdayTenAM && hours >= 10) || 
+                    (lastNotificationDate < todayTenAM && hours >= 10)) {
+                    localStorage.removeItem('lastNotificationTime');
+                }
             }
             
             courses.forEach((course) => {
-                if (!course.completed && parseInt(course.day) === previousDay) {
-                    if (hours === 10) {
+                // 只檢查那些尚未完成且屬於 "明天" 的課程
+                if (
+                    !lastNotificationTime &&
+                    !course.completed && 
+                    parseInt(course.day) === nextDay &&
+                    //hours === 10
+                ){
                         showNotification(`提醒：明天前需完成課程 - ${course.name}`);
+                        // 記錄此次通知時間
+                        localStorage.setItem('lastNotificationTime', currentTime.toString());
+                        // 找到一個課程需要通知後就記錄時間，不需要對每個課程都記錄
+                        return;
                     }
                 }
             });
@@ -733,14 +770,14 @@
             try {
                 // 嘗試發送通知，無論瀏覽器是否支援或權限狀態如何
                 if (window.serviceWorkerRegistration) {
-                    window.serviceWorkerRegistration.showNotification("通知標題", {
+                    window.serviceWorkerRegistration.showNotification({
                         body: message,
                         icon: '/icon.png',  // 替換為實際的 icon 路徑
                         badge: '/badge.png',  // 替換為實際的 badge 路徑
                     });
                 } else {
                     // 如果沒有註冊 Service Worker，使用 Notification API 直接通知
-                    new Notification("通知標題", {
+                    new Notification({
                         body: message,
                         icon: '/icon.png',
                     });
@@ -748,6 +785,7 @@
             } catch (error) {
                 // 捕獲錯誤並提示用戶
                 console.error("通知發送失敗", error);
+
                 /*
                 // 根據不同的錯誤處理
                 if (error.name === "TypeError") {
@@ -760,7 +798,7 @@
                 */
                 
                 // 直接使用 alert 顯示原來的通知內容
-                alert(`通知標題\n${message}`);
+                alert(`${message}`);
                 // 記錄錯誤但不再向用戶顯示錯誤資訊
                 console.log("原始錯誤:", error.name, error.message);
         
