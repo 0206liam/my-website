@@ -748,7 +748,7 @@
             } catch (error) {
                 // 捕獲錯誤並提示用戶
                 console.error("通知發送失敗", error);
-        
+                /*
                 // 根據不同的錯誤處理
                 if (error.name === "TypeError") {
                     alert("通知失敗：您的瀏覽器可能不支援通知功能");
@@ -757,6 +757,12 @@
                 } else {
                     alert(`通知發送失敗：${error.message}`);
                 }
+                */
+                
+                // 直接使用 alert 顯示原來的通知內容
+                alert(`通知標題\n${message}`);
+                // 記錄錯誤但不再向用戶顯示錯誤資訊
+                console.log("原始錯誤:", error.name, error.message);
         
                 // 如果權限未授權或已拒絕，嘗試重新請求權限
                 if (Notification.permission !== "granted" && Notification.permission !== "denied") {
