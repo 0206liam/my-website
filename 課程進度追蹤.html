@@ -942,6 +942,7 @@
                 const day = daySelects[i].value;
                 const index = parseInt(nameInputs[i].dataset.index);
                 
+
                 if (!name) {
                     alert('課程名稱不能為空');
                     return;
@@ -993,14 +994,16 @@
                         icon: '/icon.png',  // 替換為實際的 icon 路徑
                         badge: '/badge.png',  // 替換為實際的 badge 路徑
                     });
+                    alert("window.serviceWorkerRegistration");
 
 
                 } else {
                     // 如果沒有註冊 Service Worker，使用 Notification API 直接通知
-                    new Notification({
+                    new Notification("提醒：明天前需完成課程", {
                         body: message,
                         icon: '/icon.png',
                     });
+                    alert("Notification API");
                 }
             } catch (error) {
                 // 捕獲錯誤並提示用戶
@@ -1019,6 +1022,9 @@
                 
                 // 直接使用 alert 顯示原來的通知內容
                 alert(`${message}`);
+
+                alert("alert");
+
                 // 記錄錯誤但不再向用戶顯示錯誤資訊
                 console.log("原始錯誤:", error.name, error.message);
         
