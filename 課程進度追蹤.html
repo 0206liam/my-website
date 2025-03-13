@@ -669,7 +669,7 @@
                     !course.completed && 
                     parseInt(course.day) === nextDay //hours === 10
                 ) {
-                        showNotification(`提醒：明天前需完成課程 - ${course.name}`);
+                        showNotification(`${course.name}`);
                         // 記錄此次通知時間
                         localStorage.setItem('lastNotificationTime', currentTime.toString());
                         // 找到一個課程需要通知後就記錄時間，不需要對每個課程都記錄
@@ -988,11 +988,13 @@
             try {
                 // 嘗試發送通知，無論瀏覽器是否支援或權限狀態如何
                 if (window.serviceWorkerRegistration) {
-                    window.serviceWorkerRegistration.showNotification({
+                    window.serviceWorkerRegistration.showNotification("提醒：明天前需完成課程", {
                         body: message,
                         icon: '/icon.png',  // 替換為實際的 icon 路徑
                         badge: '/badge.png',  // 替換為實際的 badge 路徑
                     });
+
+
                 } else {
                     // 如果沒有註冊 Service Worker，使用 Notification API 直接通知
                     new Notification({
