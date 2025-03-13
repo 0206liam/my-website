@@ -430,6 +430,23 @@
             loadCourses();
             updateDate();
             setupEventListeners();
+
+
+            // 註冊 Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/my-website/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker 註冊成功：', registration);
+                        window.serviceWorkerRegistration = registration;
+                    })
+                    .catch((error) => {
+                        console.error('Service Worker 註冊失敗：', error);
+                        alert("Service Worker 註冊失敗，請檢查瀏覽器設定" + error.message);
+                    });
+            } else {
+                alert("您的瀏覽器不支援 Service Worker，通知功能可能無法正常運作");
+            }
+
             checkDayChange();
             checkInstallPrompt();
             // checkCourseUpdateStatus();
@@ -979,21 +996,7 @@
         // =========================================
         // 通知功能
         // =========================================
-        
-        // 註冊 Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/my-website/sw.js')
-                .then((registration) => {
-                    console.log('Service Worker 註冊成功：', registration);
-                    window.serviceWorkerRegistration = registration;
-                })
-                .catch((error) => {
-                    console.error('Service Worker 註冊失敗：', error);
-                    alert("Service Worker 註冊失敗，請檢查瀏覽器設定" + error.message);
-                });
-        } else {
-            alert("您的瀏覽器不支援 Service Worker，通知功能可能無法正常運作");
-        }
+    
 
         
         // 顯示瀏覽器通知
