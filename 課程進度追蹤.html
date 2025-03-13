@@ -8,7 +8,7 @@
 
         .update-status {
             margin: 5px 0;
-            padding: 10px;
+            padding: 10px 15px;
             text-align: center;
             border-radius: 5px;
             font-weight: bold;
@@ -244,15 +244,16 @@
         }
 
 
-        /* 新增筆記區塊的樣式 */
+        /*新增筆記區塊的樣式(已改為local storage)*/
+        /*
         .notes-container {
             background-color: white;
             border-radius: 8px;
             padding: 15px;
             margin: 15px 0;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
+        }*/
+        /*
         .notes-display {
             min-height: 80px;
             padding: 10px;
@@ -260,7 +261,7 @@
             background-color: #f9f9f9;
             border-radius: 5px;
             border: 1px solid #eee;
-        }
+        }*/
         
         .notes-edit {
             width: 100%;
@@ -271,6 +272,7 @@
             border-radius: 5px;
             resize: vertical;
         }
+        
         
         .notes-buttons {
             display: flex;
@@ -287,8 +289,12 @@
         }
         
         .edit-notes-btn {
+            margin: 5px 0;
+            padding: 10px 15px;
             background-color: var(--primary-color);
             color: white;
+            font-size: 16px;
+            font-weight: bold;
         }
         
         .save-notes-btn {
@@ -341,7 +347,7 @@
         
         <div class="update-status" id="updateStatus"></div>
 
-        <!-- 新增筆記區塊 -->
+        <!-- 新增筆記區塊(已改為local storage) -->
         <div class="notes-container">
             <!-- 顯示筆記的區域 -->
             <div class="notes-display" id="notesDisplay">
@@ -353,7 +359,7 @@
             
             <!-- 筆記區塊的按鈕 -->
             <div class="notes-buttons">
-                <button class="edit-notes-btn" id="editNotesBtn">編輯</button>
+                <button class="edit-notes-btn" id="editNotesBtn">LocalStorage 編輯</button>
                 <button class="save-notes-btn" id="saveNotesBtn" style="display: none;">保存</button>
                 <button class="cancel-notes-btn" id="cancelNotesBtn" style="display: none;">取消</button>
             </div>
@@ -512,7 +518,7 @@
                 content += `${key}:\n${value}\n\n`;
             }
             
-            notesDisplay.textContent = content || '無數據';
+            //notesDisplay.textContent = content || '無數據';
         }
 
         // 開始編輯 localStorage
@@ -568,7 +574,7 @@
                 loadCourses();
                 
                 // 顯示成功消息
-                alert('LocalStorage 數據已更新');
+                alert('LocalStorage 已更新');
                 
                 // 恢復顯示模式
                 cancelLocalStorageEditing();
