@@ -242,6 +242,65 @@
             cursor: pointer;
             margin-left: auto;   /* 靠左 */
         }
+
+
+        /* 新增筆記區塊的樣式 */
+        .notes-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .notes-display {
+            min-height: 80px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #eee;
+        }
+        
+        .notes-edit {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        
+        .notes-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .edit-notes-btn, .save-notes-btn, .cancel-notes-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .edit-notes-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .save-notes-btn {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .cancel-notes-btn {
+            background-color: #7f8c8d;
+            color: white;
+        }
+        
         
         @media (max-width: 480px) {
             .lists-container {
@@ -278,9 +337,34 @@
                 <div id="completeList"></div>
             </div>
         </div>
+
+        
         <div class="update-status" id="updateStatus"></div>
+
+        <!-- 新增筆記區塊 -->
+        <div class="notes-container">
+            <!-- 顯示筆記的區域 -->
+            <div class="notes-display" id="notesDisplay">
+                <!-- 筆記內容將在這裡顯示 -->
+            </div>
+            
+            <!-- 編輯筆記的區域 (初始隱藏) -->
+            <textarea class="notes-edit" id="notesEdit" style="display: none;"></textarea>
+            
+            <!-- 筆記區塊的按鈕 -->
+            <div class="notes-buttons">
+                <button class="edit-notes-btn" id="editNotesBtn">編輯</button>
+                <button class="save-notes-btn" id="saveNotesBtn" style="display: none;">保存</button>
+                <button class="cancel-notes-btn" id="cancelNotesBtn" style="display: none;">取消</button>
+            </div>
+        </div>
+
+
+
         <button class="notification-test" id="testNotificationBtn">通知測試</button>
         
+
+
     </div>
     
     <!-- 編輯課程彈窗 -->
@@ -345,6 +429,9 @@
             // checkCourseUpdateStatus();
             //
             checkAndResetCourses();
+
+            // 初始化 localStorage 編輯功能
+            initLocalStorageEditor();
             
             // 每小時檢查一次日期和課程狀態
             setInterval(() => {
@@ -376,6 +463,11 @@
             saveBtn.addEventListener('click', saveEditedCourses);
             testNotificationBtn.addEventListener('click', testNotification);
             
+            // localStorage 編輯按鈕
+            document.getElementById('editNotesBtn').addEventListener('click', startEditingLocalStorage);
+            document.getElementById('saveNotesBtn').addEventListener('click', saveLocalStorageChanges);
+            document.getElementById('cancelNotesBtn').addEventListener('click', cancelLocalStorageEditing);
+    
             // 當課程項目被點擊時切換完成狀態
             document.addEventListener('click', (e) => {
                 if (e.target.classList.contains('course-item')) {
@@ -384,6 +476,129 @@
                 }
             });
         }
+
+
+        // 初始化 localStorage 編輯區域
+        function initLocalStorageEditor() {
+            // 獲取現有的筆記顯示區域
+            const notesDisplay = document.getElementById('notesDisplay');
+            const notesEdit = document.getElementById('notesEdit');
+            
+            // 更新標題
+            document.querySelector('.notes-container').getElementsByTagName('h3')[0].textContent = 'LocalStorage 編輯';
+            
+            // 顯示 localStorage 內容
+            updateLocalStorageDisplay();
+        }
+
+        // 更新 localStorage 顯示
+        function updateLocalStorageDisplay() {
+            const notesDisplay = document.getElementById('notesDisplay');
+            let content = '';
+            
+            // 獲取並格式化 localStorage 中的所有項目
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                
+                // 嘗試格式化 JSON 數據
+                try {
+                    const parsed = JSON.parse(value);
+                    value = JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // 如果不是有效的 JSON，保持原樣
+                }
+                
+                content += `${key}:\n${value}\n\n`;
+            }
+            
+            notesDisplay.textContent = content || '無數據';
+        }
+
+        // 開始編輯 localStorage
+        function startEditingLocalStorage() {
+            const notesDisplay = document.getElementById('notesDisplay');
+            const notesEdit = document.getElementById('notesEdit');
+            const editNotesBtn = document.getElementById('editNotesBtn');
+            const saveNotesBtn = document.getElementById('saveNotesBtn');
+            const cancelNotesBtn = document.getElementById('cancelNotesBtn');
+            
+            // 獲取並格式化 localStorage 數據為 JSON 格式
+            const lsData = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                try {
+                    lsData[key] = JSON.parse(localStorage.getItem(key));
+                } catch (e) {
+                    lsData[key] = localStorage.getItem(key);
+                }
+            }
+            
+            // 顯示編輯區域
+            notesEdit.value = JSON.stringify(lsData, null, 2);
+            notesDisplay.style.display = 'none';
+            notesEdit.style.display = 'block';
+            
+            // 切換按鈕
+            editNotesBtn.style.display = 'none';
+            saveNotesBtn.style.display = 'block';
+            cancelNotesBtn.style.display = 'block';
+        }
+
+        // 保存 localStorage 更改
+        function saveLocalStorageChanges() {
+            const notesEdit = document.getElementById('notesEdit');
+            
+            try {
+                // 解析編輯區域的 JSON 數據
+                const newData = JSON.parse(notesEdit.value);
+                
+                // 清除當前的 localStorage
+                localStorage.clear();
+                
+                // 保存新數據
+                for (const key in newData) {
+                    const value = typeof newData[key] === 'object' 
+                        ? JSON.stringify(newData[key]) 
+                        : newData[key];
+                    localStorage.setItem(key, value);
+                }
+                
+                // 更新課程數據
+                loadCourses();
+                
+                // 顯示成功消息
+                alert('LocalStorage 數據已更新');
+                
+                // 恢復顯示模式
+                cancelLocalStorageEditing();
+            } catch (e) {
+                alert('錯誤：無效的 JSON 格式。請檢查您的輸入。');
+                console.error('JSON 解析錯誤:', e);
+            }
+        }
+
+        // 取消 localStorage 編輯
+        function cancelLocalStorageEditing() {
+            const notesDisplay = document.getElementById('notesDisplay');
+            const notesEdit = document.getElementById('notesEdit');
+            const editNotesBtn = document.getElementById('editNotesBtn');
+            const saveNotesBtn = document.getElementById('saveNotesBtn');
+            const cancelNotesBtn = document.getElementById('cancelNotesBtn');
+            
+            // 更新顯示
+            updateLocalStorageDisplay();
+            
+            // 恢復顯示模式
+            notesDisplay.style.display = 'block';
+            notesEdit.style.display = 'none';
+            
+            // 切換按鈕
+            editNotesBtn.style.display = 'block';
+            saveNotesBtn.style.display = 'none';
+            cancelNotesBtn.style.display = 'none';
+        }
+
         
         // =========================================
         // 日期和時間與通知功能
