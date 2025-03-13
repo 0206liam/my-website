@@ -1036,7 +1036,7 @@
             }
         }        
 
-        
+
         // 測試通知功能
         function testNotification() {
             // 定義發送測試通知的函式
@@ -1053,12 +1053,15 @@
                             icon: '/icon.png', // 替換為實際的 icon 路徑
                             badge: '/badge.png', // 替換為實際的 badge 路徑
                         });
+                        alert("window.serviceWorkerRegistration");
                     } else {
                         // 如果 Service Worker 尚未註冊，直接使用 Notification API
                         new Notification("這是5秒後的測試通知！", {
                             body: "測試通知內容",
                             icon: '/icon.png',
                         });
+                        alert("Notification API");
+                        
                     }
                 } catch (error) {
                     // 捕捉錯誤並提示用戶
@@ -1073,6 +1076,7 @@
                     } else {
                         alert(`通知發送失敗：${error.message}`);
                     }
+                    alert("alert");
                 }
             };
         
