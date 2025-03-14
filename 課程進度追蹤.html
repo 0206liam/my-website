@@ -1011,11 +1011,8 @@
                     })
                     .catch((error) => {
                         console.error('Service Worker 註冊失敗：', error);
-                        alert("Service Worker 註冊失敗，請檢查瀏覽器設定" + error.message);
                     });
-            } else {
-                alert("您的瀏覽器不支援 Service Worker，通知功能可能無法正常運作");
-            }
+            } 
 
             if (!(window.serviceWorkerRegistration)) {
                 if ('serviceWorker' in navigator) {
@@ -1023,16 +1020,13 @@
                         .then((registration) => {
                             console.log('Service Worker 註冊成功：', registration);
                             window.serviceWorkerRegistration = registration;
-                            alert("Service Worker 可能註冊成功");
                             if (window.serviceWorkerRegistration){
-                                alert("Service Worker 註冊成功");
                                 // 使用 Service Worker 發送通知
                                 window.serviceWorkerRegistration.showNotification("提醒：明天前需完成課程", {
                                     body: message,
                                     icon: '/icon.png',  // 替換為實際的 icon 路徑
                                     badge: '/badge.png',  // 替換為實際的 badge 路徑
                                 });
-                                alert("window.serviceWorkerRegistration");
                             }else{
                                 try {
                                     // 如果 Service Worker 尚未註冊，直接使用 Notification API
@@ -1040,26 +1034,21 @@
                                         body: message,
                                         icon: '/icon.png',
                                     });
-                                    alert("Notification API");
                                 } catch (error) {
                                     alert(`提醒：明天前需完成課程 - ${message}`);
-                                    alert("alert");
                                 }
                             }
                         })
                         .catch((error) => {
                             console.error('Service Worker 註冊失敗：', error);
-                            alert("Service Worker 註冊失敗，請檢查瀏覽器設定" + error.message);
                             try {
                                 // 如果 Service Worker 尚未註冊，直接使用 Notification API
                                 new Notification("提醒：明天前需完成課程", {
                                     body: message,
                                     icon: '/icon.png',
                                 });
-                                alert("Notification API");
                             } catch (error) {
                                 alert(`提醒：明天前需完成課程 - ${message}`);
-                                alert("alert");
                             }
                         });
                 } else {
@@ -1068,14 +1057,12 @@
             }
             else {
                 if (window.serviceWorkerRegistration){
-                    alert("Service Worker 註冊成功");
                     // 使用 Service Worker 發送通知
                     window.serviceWorkerRegistration.showNotification("提醒：明天前需完成課程", {
                         body: message,
                         icon: '/icon.png',  // 替換為實際的 icon 路徑
                         badge: '/badge.png',  // 替換為實際的 badge 路徑
                     });
-                    alert("window.serviceWorkerRegistration");
                 }
                 else{
                     try {
@@ -1084,10 +1071,8 @@
                             body: message,
                             icon: '/icon.png',
                         });
-                        alert("Notification API");
                     } catch (error) {
                         alert(`提醒：明天前需完成課程 - ${message}`);
-                        alert("alert");
                     }
                 }
             }
