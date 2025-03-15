@@ -4,36 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>課程進度追蹤首頁</title>
-    <style>
-        .message-box {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-        .message-text {
-            width: 100%;
-            min-height: 100px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            resize: vertical;
-        }
-    </style>
 </head>
 <body>
     <h1>歡迎來到課程進度追蹤網站！</h1>
-    
-    <!-- 新增的訊息文字框 -->
-    <div class="message-box">
-        <h3>通知訊息</h3>
-        <textarea class="message-text" id="messageArea" readonly>這個網頁主要用於追蹤課程進度，你可以點擊課程來切換其完成狀態。系統設有自動化重置機制，每天晚上22:00會自動將當天星期對應的已完成課程重置為未完成狀態。另有通知功能，在當天10:00後提醒你明天有未完成的課程，並包含測試通知功能讓你確認通知運作正常。所有課程數據都使用localStorage存儲在瀏覽器中，你可以通過localStorage編輯功能直接修改原始數據。網頁還會每3天顯示一次安裝提示，讓你可以將網頁添加到主畫面。</textarea>
-    </div>
-    
-    <p>點擊下方按鈕進入課程進度追蹤頁面：</p>
-    <a href="課程進度追蹤.html" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">進入課程進度追蹤</a>
-    
+    <p>這個網頁主要用於追蹤課程進度，你可以點擊課程來切換其完成狀態。系統設有自動化重置機制，每天晚上22:00會自動將當天星期對應的已完成課程重置為未完成狀態。另有通知功能，在當天10:00後提醒你明天有未完成的課程，並包含測試通知功能讓你確認通知運作正常。所有課程數據都使用localStorage存儲在瀏覽器中，你可以通過localStorage編輯功能直接修改原始數據。網頁還會每3天顯示一次安裝提示，讓你可以將網頁添加到主畫面。</p>
+    <a href="課程進度追蹤.html" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">進入課程進度追蹤網站</a>
+
+
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').then((registration) => {
@@ -44,10 +21,8 @@
         } else {
             console.log('瀏覽器不支援 Service Worker。');
         }
-        
-        // 您可以動態設置訊息內容
-        // document.getElementById('messageArea').value = "新的訊息內容";
     </script>
     
+
 </body>
 </html>
