@@ -464,7 +464,7 @@
         
 
             // 每天晚上十点重置已完成课程
-            setInterval(() => {
+            /*setInterval(() => {
                 const now = new Date();
                 if (now.getHours() === 22) {
                     resetCompletedCourses();
@@ -475,7 +475,7 @@
             
             // 頁面加載時執行檢查
             document.addEventListener('DOMContentLoaded', checkAndResetCourses);
-        }
+        }*/
         
         // 設定事件監聽器
         function setupEventListeners() {
@@ -703,7 +703,7 @@
             const updateStatusElement = document.getElementById('updateStatus');
             //
 
-            updateStatusElement.textContent = '等待更新';
+            updateStatusElement.textContent = '待更新';
             updateStatusElement.className = 'update-status update-status-not-updated';
             
 
@@ -711,7 +711,7 @@
             if (!lastResetDate) {
                 resetCompletedCourses();
                 localStorage.setItem('lastResetTimestamp', now.getTime().toString());
-                updateStatusElement.textContent = '首次重置成功';
+                updateStatusElement.textContent = '重置成功';
                 updateStatusElement.className = 'update-status update-status-updated';
                 return;
             }
@@ -722,6 +722,8 @@
 
             // 如果已經過了一天，或者是同一天但已經過了22點
             if (daysSinceLastReset >= 1 || (isNewDay(lastResetDate, now) && now.getHours() >= 22)) {
+                updateStatusElement.textContent = '重置中';
+                updateStatusElement.className = 'update-status update-status-not-updated';
                 resetCompletedCourses();
                 updateStatusElement.textContent = '重置成功';
                 updateStatusElement.className = 'update-status update-status-updated';
