@@ -715,6 +715,25 @@
             const daysSinceLastReset = Math.floor(timeSinceLastReset / oneDayInMilliseconds);
 
 
+            // 如果沒有上次重置記錄
+            if (!lastResetDate&&now.getHours() >= 22 ) {
+                resetCompletedCourses();
+                updateStatusElement.textContent = '重置中';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+                localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+                updateStatusElement.textContent = '重置成功';
+                updateStatusElement.className = 'update-status update-status-updated';
+                return;
+            }
+            // 如果沒有上次重置記錄
+            if (!lastResetDate&&now.getHours() < 22 ) {
+                updateStatusElement.textContent = '重置中';
+                updateStatusElement.className = 'update-status update-status-not-updated';
+                resetCompletedCourses2();
+                updateStatusElement.textContent = '重置成功';
+                updateStatusElement.className = 'update-status update-status-updated';
+                return;
+            }
 
             if (
                 (lastResetDate < new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22) && now.getHours() >= 22 )
