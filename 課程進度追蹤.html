@@ -709,19 +709,8 @@
 
 
             // 如果沒有上次重置記錄，則立即進行首次重置
-            if (!lastResetDate&&now.getHours() >= 22 ) {
-                updateStatusElement.textContent = '重置中';
-                updateStatusElement.className = 'update-status update-status-not-updated';
+            if (!lastResetDate) {
                 resetCompletedCourses();
-                localStorage.setItem('lastResetTimestamp', now.getTime().toString());
-                updateStatusElement.textContent = '首次重置成功';
-                updateStatusElement.className = 'update-status update-status-updated';
-                return;
-            }
-            if (!lastResetDate&&now.getHours() < 22 ) {
-                updateStatusElement.textContent = '重置中2';
-                updateStatusElement.className = 'update-status update-status-not-updated';
-                resetCompletedCourses2();
                 localStorage.setItem('lastResetTimestamp', now.getTime().toString());
                 updateStatusElement.textContent = '首次重置成功';
                 updateStatusElement.className = 'update-status update-status-updated';
@@ -733,20 +722,10 @@
             const daysSinceLastReset = Math.floor(timeSinceLastReset / oneDayInMilliseconds);
 
             // 如果已經過了一天，或者是同一天但已經過了22點
-            if (lastResetDate < new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22)  &&  now.getHours() >= 22) {
+            if (daysSinceLastReset >= 1 || (isNewDay(lastResetDate, now) && now.getHours() >= 22)) {
                 updateStatusElement.textContent = '重置中';
                 updateStatusElement.className = 'update-status update-status-not-updated';
                 resetCompletedCourses();
-                updateStatusElement.textContent = '重置成功';
-                updateStatusElement.className = 'update-status update-status-updated';
-            } else {
-                updateStatusElement.textContent = '已更新';
-                updateStatusElement.className = 'update-status update-status-updated';
-            }
-            if (lastResetDate < new Date(now.getFullYear(), now.getMonth(), now.getDate()-1, 22)  &&  now.getHours() < 22) {
-                updateStatusElement.textContent = '重置中2';
-                updateStatusElement.className = 'update-status update-status-not-updated';
-                resetCompletedCourses2();
                 updateStatusElement.textContent = '重置成功';
                 updateStatusElement.className = 'update-status update-status-updated';
             } else {
@@ -764,6 +743,36 @@
                 lastDate.getMonth() !== currentDate.getMonth() || 
                 lastDate.getFullYear() !== currentDate.getFullYear();
         }
+
+
+
+        function resetCompletedCourses() {
+            const now = new Date();
+            const currentDay = now.getDay() || 7; // 转换周日为7
+
+            // 创建新数组，避免直接修改原数组
+            const updatedCourses = courses.map(course => {
+                // 只重置当前星期且已完成的课程
+                if (course.completed && parseInt(course.day) === currentDay) {
+                    return { ...course, completed: false };
+                }
+                return course;
+            });
+
+            // 更新全局课程数组
+            courses = updatedCourses;
+
+            // 保存课程
+            saveCourses();
+            
+            // 更新重置时间戳
+            localStorage.setItem('lastResetTimestamp', now.getTime().toString());
+            //
+            updateStatusElement.textContent = '重置成功';
+            updateStatusElement.className = 'update-status update-status-updated';
+            //
+        }
+    
 
 
 
