@@ -719,7 +719,7 @@
                 return;
             }
             if (!lastResetDate&&now.getHours() < 22 ) {
-                updateStatusElement.textContent = '重置中';
+                updateStatusElement.textContent = '重置中2';
                 updateStatusElement.className = 'update-status update-status-not-updated';
                 resetCompletedCourses2();
                 localStorage.setItem('lastResetTimestamp', now.getTime().toString());
