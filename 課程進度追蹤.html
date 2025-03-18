@@ -729,7 +729,7 @@
                 updateStatusElement.className = 'update-status update-status-updated';
             }
             // 如果沒有上次重置記錄
-            if (!lastResetDate||now.getHours() >= 22 ) {
+            if (!lastResetDate&&now.getHours() >= 22 ) {
                 resetCompletedCourses();
                 updateStatusElement.textContent = '重置中';
                 updateStatusElement.className = 'update-status update-status-not-updated';
@@ -739,7 +739,7 @@
                 return;
             }
             // 如果沒有上次重置記錄
-            if (!lastResetDate||now.getHours() < 22 ) {
+            if (!lastResetDate&&now.getHours() < 22 ) {
                 updateStatusElement.textContent = '重置中';
                 updateStatusElement.className = 'update-status update-status-not-updated';
                 resetCompletedCourses2();
