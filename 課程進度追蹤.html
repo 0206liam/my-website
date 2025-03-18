@@ -744,7 +744,7 @@
                 updateStatusElement.className = 'update-status update-status-updated';
             }
             if (lastResetDate < new Date(now.getFullYear(), now.getMonth(), now.getDate()-1, 22)  &&  now.getHours() < 22) {
-                updateStatusElement.textContent = '重置中';
+                updateStatusElement.textContent = '重置中2';
                 updateStatusElement.className = 'update-status update-status-not-updated';
                 resetCompletedCourses2();
                 updateStatusElement.textContent = '重置成功';
