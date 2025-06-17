@@ -9,35 +9,35 @@
     <style>
         body {
             font-family: "Inter", sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Align to top for better document flow */
-            min-height: 100vh;
-            padding: 2rem;
+            background-color: #ffffff; /* 將背景色改為全白 */
+            /* 移除flex相關樣式和最小高度，更適合列印 */
+            padding: 0; /* 移除整體頁面邊距 */
+            margin: 0; /* 移除預設外邊距 */
             box-sizing: border-box;
         }
         .resume-container {
-            background-color: #ffffff;
+            background-color: #ffffff; /* 容器背景色保持白色 */
             padding: 2.5rem;
-            border-radius: 1.5rem; /* More rounded corners */
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Softer shadow */
+            /* 移除圓角和陰影，更適合列印 */
+            border-radius: 0;
+            box-shadow: none;
             max-width: 800px;
             width: 100%;
+            margin: 0 auto; /* 讓容器居中 */
         }
         h1 {
-            border-bottom: 3px solid #6b7280; /* Darker gray line */
+            border-bottom: 3px solid #6b7280; /* 深灰色線 */
             padding-bottom: 1rem;
             margin-bottom: 2rem;
         }
         h2 {
-            border-bottom: 2px solid #d1d5db; /* Lighter gray line */
+            border-bottom: 2px solid #d1d5db; /* 淺灰色線 */
             padding-bottom: 0.75rem;
             margin-bottom: 1.5rem;
-            color: #1f2937; /* Darker heading color */
+            color: #1f2937; /* 深色標題文字 */
         }
         ul {
-            list-style: none; /* Remove default bullet points */
+            list-style: none; /* 移除預設項目符號 */
             padding-left: 0;
         }
         li {
@@ -48,6 +48,23 @@
         }
         .section-content:last-child {
             margin-bottom: 0;
+        }
+
+        /* 針對列印的樣式調整 */
+        @media print {
+            body {
+                background-color: #ffffff !important; /* 確保列印時背景為白色 */
+                margin: 0;
+                padding: 0;
+            }
+            .resume-container {
+                box-shadow: none !important; /* 確保列印時無陰影 */
+                border-radius: 0 !important; /* 確保列印時無圓角 */
+                margin: 0; /* 移除自動外邊距，讓內容頂到頁面邊緣 */
+                width: 100% !important; /* 讓容器在列印時佔滿寬度 */
+                max-width: none !important; /* 移除最大寬度限制 */
+                padding: 1cm; /* 為列印增加一些頁面邊距 */
+            }
         }
     </style>
 </head>
