@@ -10,7 +10,6 @@
         body {
             font-family: "Inter", sans-serif;
             background-color: #ffffff; /* 將背景色改為全白 */
-            /* 移除flex相關樣式和最小高度，更適合列印 */
             padding: 0; /* 移除整體頁面邊距 */
             margin: 0; /* 移除預設外邊距 */
             box-sizing: border-box;
@@ -29,6 +28,8 @@
             border-bottom: 3px solid #6b7280; /* 深灰色線 */
             padding-bottom: 1rem;
             margin-bottom: 2rem;
+            /* 移除 h1 的圓角和內邊距，確保底線是純直線 */
+            /* rounded-lg 和 p-2 已移除 */
         }
         h2 {
             border-bottom: 2px solid #d1d5db; /* 淺灰色線 */
@@ -71,7 +72,7 @@
 <body class="text-gray-800">
     <div class="resume-container">
         <!-- Resume Title -->
-        <h1 class="text-4xl font-extrabold text-center mb-8 text-gray-900 rounded-lg p-2">履歷表</h1>
+        <h1 class="text-4xl font-extrabold text-center mb-8 text-gray-900">履歷表</h1>
 
         <!-- Basic Information Section -->
         <div class="section-content">
