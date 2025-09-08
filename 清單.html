@@ -405,7 +405,7 @@
                     div.addEventListener('dragstart', (e) => {
                         draggedElement = div;
                         draggedIndex = index;
-                        /*div.classList.add('dragging');*/
+                        div.classList.add('dragging');
                         e.dataTransfer.effectAllowed = 'move';
                     });
 
