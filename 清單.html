@@ -631,7 +631,7 @@
             const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
             
             // 移動項目
-            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+            if (targetItem && !targetItem.classList.contains('input-area')) {
                 const targetIndex = parseInt(targetItem.dataset.index);
                 if (targetIndex !== draggedIndex && !isNaN(targetIndex)) {
                     moveItem(draggedIndex, targetIndex);
@@ -641,18 +641,6 @@
             // 清理
             isDragging = false;
             draggedElement.classList.remove('dragging');
-            draggedElement.style.position = '';
-            draggedElement.style.zIndex = '';
-            draggedElement.style.pointerEvents = '';
-            draggedElement.style.left = '';
-            draggedElement.style.top = '';
-            draggedElement.style.width = '';
-            
-            // 移除佔位符
-            const placeholder = document.querySelector('.placeholder');
-            if (placeholder) {
-                placeholder.remove();
-            }
             
             clearDragStyles();
             draggedElement = null;
