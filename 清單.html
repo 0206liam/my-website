@@ -16,6 +16,10 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
             padding: 20px;
+            /* 防止觸控拖曳時的預設行為 */
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .container {
@@ -46,6 +50,9 @@
             min-height: 40px;
             display: flex;
             align-items: center;
+            /* 防止文字選取 */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .list-item:hover {
@@ -56,15 +63,25 @@
         }
 
         .list-item.dragging {
-            opacity: 0.6;
+            opacity: 0.8;
             z-index: 1000;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
             cursor: grabbing;
+            transform: scale(1.05) rotate(2deg);
+            background: rgba(74, 158, 255, 0.2);
+            border-color: #4a9eff;
         }
 
         .list-item.drag-over {
             border-color: #ff6b9d;
             background: rgba(255, 107, 157, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .list-item.placeholder {
+            opacity: 0.5;
+            background: rgba(255, 107, 157, 0.1);
+            border: 2px dashed #ff6b9d;
         }
 
         .list-text {
@@ -108,6 +125,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10;
         }
 
         .list-item:hover .delete-btn {
@@ -129,6 +147,7 @@
             opacity: 0;
             transition: opacity 0.3s ease;
             cursor: grab;
+            z-index: 5;
         }
 
         .list-item:hover .drag-handle {
@@ -277,29 +296,47 @@
 
         /* 響應式設計 */
         @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
             .container {
                 margin: 0;
                 padding: 20px;
-                border-radius: 0;
+                border-radius: 15px;
             }
             
             .list-item {
-                padding: 3px 6px;
-                min-height: 35px;
+                padding: 6px 8px;
+                min-height: 45px;
+                margin-bottom: 6px;
             }
 
             .list-text {
                 font-size: 18px;
-                padding: 3px 25px 3px 20px;
+                padding: 6px 30px 6px 25px;
             }
 
             .list-item.input-area .list-text {
-                padding: 3px 6px;
+                padding: 6px 8px;
             }
 
             .input-dialog {
                 padding: 20px;
                 width: 95%;
+            }
+
+            /* 手機上讓拖拽手把更明顯 */
+            .drag-handle {
+                opacity: 0.6;
+                font-size: 12px;
+                color: #999;
+            }
+
+            .list-item:hover .drag-handle,
+            .list-item.dragging .drag-handle {
+                opacity: 1;
+                color: #4a9eff;
             }
         }
 
@@ -317,6 +354,11 @@
 
         .list-item {
             animation: slideIn 0.3s ease;
+        }
+
+        /* 觸控回饋 */
+        .list-item:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
@@ -345,6 +387,19 @@
         let draggedElement = null;
         let draggedIndex = null;
         let currentEditIndex = -1;
+        
+        // 觸控拖曳相關變數
+        let isDragging = false;
+        let dragStartY = 0;
+        let dragOffset = { x: 0, y: 0 };
+        let dragThreshold = 10; // 拖曳觸發閾值
+        let longPressTimer = null;
+        let longPressTriggered = false;
+
+        // 檢測是否為觸控設備
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        }
 
         // 載入本地儲存的資料
         function loadFromStorage() {
@@ -366,6 +421,7 @@
             listItems.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
+                div.dataset.index = index;
                 
                 const textDiv = document.createElement('div');
                 textDiv.className = item.trim() === '' ? 'list-text placeholder' : 'list-text';
@@ -380,7 +436,9 @@
                     div.appendChild(textDiv);
                 } else {
                     // 正常項目：有拖拽和刪除功能
-                    div.draggable = true;
+                    if (!isTouchDevice()) {
+                        div.draggable = true;
+                    }
                     
                     // 創建拖拽手把
                     const dragHandle = document.createElement('div');
@@ -401,48 +459,205 @@
                     div.appendChild(textDiv);
                     div.appendChild(deleteBtn);
                     
-                    // 拖拽事件
-                    div.addEventListener('dragstart', (e) => {
-                        draggedElement = div;
-                        draggedIndex = index;
-                        div.classList.add('dragging');
-                        e.dataTransfer.effectAllowed = 'move';
-                    });
-
-                    div.addEventListener('dragend', () => {
-                        div.classList.remove('dragging');
-                        clearDragStyles();
-                    });
-
-                    div.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        if (draggedIndex !== index && draggedIndex !== null) {
-                            div.classList.add('drag-over');
-                        }
-                    });
-
-                    div.addEventListener('dragleave', () => {
-                        div.classList.remove('drag-over');
-                    });
-
-                    div.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        if (draggedIndex !== null && draggedIndex !== index) {
-                            moveItem(draggedIndex, index);
-                        }
-                        clearDragStyles();
-                    });
+                    // 桌面版拖拽事件
+                    if (!isTouchDevice()) {
+                        setupDesktopDrag(div, index);
+                    } else {
+                        // 觸控版拖拽事件
+                        setupTouchDrag(div, index);
+                    }
                 }
 
                 // 點擊編輯（所有項目都可以點擊編輯）
                 div.addEventListener('click', (e) => {
                     if (e.target.classList.contains('delete-btn')) return;
                     if (e.target.classList.contains('drag-handle')) return;
+                    if (isDragging || longPressTriggered) return;
                     openInputModal(index);
                 });
 
                 container.appendChild(div);
             });
+        }
+
+        // 設置桌面版拖拽
+        function setupDesktopDrag(element, index) {
+            element.addEventListener('dragstart', (e) => {
+                draggedElement = element;
+                draggedIndex = index;
+                element.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            element.addEventListener('dragend', () => {
+                element.classList.remove('dragging');
+                clearDragStyles();
+            });
+
+            element.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (draggedIndex !== index && draggedIndex !== null) {
+                    element.classList.add('drag-over');
+                }
+            });
+
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('drag-over');
+            });
+
+            element.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedIndex !== null && draggedIndex !== index) {
+                    moveItem(draggedIndex, index);
+                }
+                clearDragStyles();
+            });
+        }
+
+        // 設置觸控版拖拽
+        function setupTouchDrag(element, index) {
+            let startY = 0;
+            let startTime = 0;
+
+            element.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                startY = touch.clientY;
+                startTime = Date.now();
+                longPressTriggered = false;
+                
+                // 長按檢測
+                longPressTimer = setTimeout(() => {
+                    if (!isDragging) {
+                        longPressTriggered = true;
+                        startTouchDrag(e, element, index);
+                    }
+                }, 500); // 500ms 長按
+            }, { passive: false });
+
+            element.addEventListener('touchmove', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+
+                if (!isDragging) {
+                    const touch = e.touches[0];
+                    const deltaY = Math.abs(touch.clientY - startY);
+                    
+                    // 如果移動距離超過閾值且時間超過200ms，開始拖拽
+                    if (deltaY > dragThreshold && Date.now() - startTime > 200) {
+                        startTouchDrag(e, element, index);
+                    }
+                } else {
+                    handleTouchDrag(e);
+                }
+            }, { passive: false });
+
+            element.addEventListener('touchend', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                if (isDragging) {
+                    endTouchDrag(e);
+                }
+                
+                // 重置長按標記（延遲重置以避免觸發點擊）
+                setTimeout(() => {
+                    longPressTriggered = false;
+                }, 100);
+            }, { passive: false });
+        }
+
+        // 開始觸控拖拽
+        function startTouchDrag(e, element, index) {
+            e.preventDefault();
+            isDragging = true;
+            draggedElement = element;
+            draggedIndex = index;
+            
+            const touch = e.touches[0];
+            const rect = element.getBoundingClientRect();
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
+            
+            element.classList.add('dragging');
+            element.style.position = 'fixed';
+            element.style.zIndex = '1000';
+            element.style.pointerEvents = 'none';
+            element.style.left = (touch.clientX - dragOffset.x) + 'px';
+            element.style.top = (touch.clientY - dragOffset.y) + 'px';
+            element.style.width = rect.width + 'px';
+            
+            // 創建佔位符
+            const placeholder = element.cloneNode(true);
+            placeholder.classList.add('placeholder');
+            placeholder.classList.remove('dragging');
+            placeholder.style.position = '';
+            placeholder.style.zIndex = '';
+            placeholder.style.pointerEvents = '';
+            element.parentNode.insertBefore(placeholder, element.nextSibling);
+        }
+
+        // 處理觸控拖拽
+        function handleTouchDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            draggedElement.style.left = (touch.clientX - dragOffset.x) + 'px';
+            draggedElement.style.top = (touch.clientY - dragOffset.y) + 'px';
+            
+            // 檢測拖拽到哪個元素上
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+            
+            // 清除所有拖拽樣式
+            document.querySelectorAll('.list-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            
+            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                targetItem.classList.add('drag-over');
+            }
+        }
+
+        // 結束觸控拖拽
+        function endTouchDrag(e) {
+            if (!isDragging) return;
+            
+            const touch = e.changedTouches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+            
+            // 移動項目
+            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                const targetIndex = parseInt(targetItem.dataset.index);
+                if (targetIndex !== draggedIndex && !isNaN(targetIndex)) {
+                    moveItem(draggedIndex, targetIndex);
+                }
+            }
+            
+            // 清理
+            isDragging = false;
+            draggedElement.classList.remove('dragging');
+            draggedElement.style.position = '';
+            draggedElement.style.zIndex = '';
+            draggedElement.style.pointerEvents = '';
+            draggedElement.style.left = '';
+            draggedElement.style.top = '';
+            draggedElement.style.width = '';
+            
+            // 移除佔位符
+            const placeholder = document.querySelector('.placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            clearDragStyles();
+            draggedElement = null;
+            draggedIndex = null;
         }
 
         // 打開輸入彈窗
@@ -553,6 +768,13 @@
                 cancelInput();
             }
         });
+
+        // 防止頁面滾動干擾拖拽
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
