@@ -514,15 +514,9 @@
             });
         }
 
-        // 設置觸控版拖拽
+// 設置觸控版拖拽
         function setupTouchDrag(element, index) {
-            let startY = 0;
-            let startTime = 0;
-
             element.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
-                startY = touch.clientY;
-                startTime = Date.now();
                 longPressTriggered = false;
                 
                 // 長按檢測
@@ -531,34 +525,30 @@
                         longPressTriggered = true;
                         startTouchDrag(e, element, index);
                     }
-                }, 500); // 500ms 長按
+                }, 1000); // 1000ms 長按
             }, { passive: false });
 
             element.addEventListener('touchmove', (e) => {
+                // 如果還在長按計時中，任何移動都取消長按
                 if (longPressTimer) {
                     clearTimeout(longPressTimer);
                     longPressTimer = null;
                 }
 
-                if (!isDragging) {
-                    const touch = e.touches[0];
-                    const deltaY = Math.abs(touch.clientY - startY);
-                    
-                    // 如果移動距離超過閾值且時間超過200ms，開始拖拽
-                    if (deltaY > dragThreshold && Date.now() - startTime > 200) {
-                        startTouchDrag(e, element, index);
-                    }
-                } else {
+                // 只有在已經開始拖拽後才處理移動
+                if (isDragging) {
                     handleTouchDrag(e);
                 }
             }, { passive: false });
 
             element.addEventListener('touchend', (e) => {
+                // 清理長按計時器
                 if (longPressTimer) {
                     clearTimeout(longPressTimer);
                     longPressTimer = null;
                 }
                 
+                // 如果正在拖拽，結束拖拽
                 if (isDragging) {
                     endTouchDrag(e);
                 }
@@ -592,7 +582,7 @@
             
             // 創建佔位符
             const placeholder = element.cloneNode(true);
-            //placeholder.classList.add('placeholder');
+            placeholder.classList.add('placeholder');
             placeholder.classList.remove('dragging');
             placeholder.style.position = '';
             placeholder.style.zIndex = '';
