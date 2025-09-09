@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文字清單管理器</title>
-    <style>
+<style>
         * {
             box-sizing: border-box;
             margin: 0;
@@ -370,7 +370,6 @@
         </div>
     </div>
 
-    <!-- 輸入彈窗 -->
     <div id="inputModal" class="input-modal">
         <div class="input-dialog">
             <h3>編輯文字</h3>
@@ -387,33 +386,29 @@
         let draggedElement = null;
         let draggedIndex = null;
         let currentEditIndex = -1;
-        
+
         // 觸控拖曳相關變數
         let isDragging = false;
-        let dragStartY = 0;
         let dragOffset = { x: 0, y: 0 };
-        let dragThreshold = 10; // 拖曳觸發閾值
         let longPressTimer = null;
         let longPressTriggered = false;
+        // 新增：記錄拖曳開始時的畫面垂直捲動距離
+        let dragStartScrollY = 0;
 
-        // 檢測是否為觸控設備
         function isTouchDevice() {
             return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         }
 
-        // 載入本地儲存的資料
         function loadFromStorage() {
             const stored = JSON.parse(localStorage.getItem('textListItems')) || [];
             listItems = stored.length > 0 ? stored : [''];
             renderList();
         }
 
-        // 儲存到本地
         function saveToStorage() {
             localStorage.setItem('textListItems', JSON.stringify(listItems));
         }
 
-        // 渲染清單
         function renderList() {
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
@@ -422,30 +417,25 @@
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.dataset.index = index;
-                
+
                 const textDiv = document.createElement('div');
                 textDiv.className = item.trim() === '' ? 'list-text placeholder' : 'list-text';
                 textDiv.textContent = item.trim() === '' ? '請輸入文字...' : item;
-                
-                // 判斷是否為最後一個空項目（待輸入區）
+
                 const isInputArea = (index === listItems.length - 1 && item.trim() === '');
-                
+
                 if (isInputArea) {
-                    // 待輸入區：純粹顯示，沒有任何控制項
                     div.classList.add('input-area');
                     div.appendChild(textDiv);
                 } else {
-                    // 正常項目：有拖拽和刪除功能
                     if (!isTouchDevice()) {
                         div.draggable = true;
                     }
-                    
-                    // 創建拖拽手把
+
                     const dragHandle = document.createElement('div');
                     dragHandle.className = 'drag-handle';
                     dragHandle.textContent = '⋮⋮';
-                    
-                    // 創建刪除按鈕
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-btn';
                     deleteBtn.textContent = '×';
@@ -454,21 +444,18 @@
                         e.stopPropagation();
                         deleteItem(index);
                     });
-                    
+
                     div.appendChild(dragHandle);
                     div.appendChild(textDiv);
                     div.appendChild(deleteBtn);
-                    
-                    // 桌面版拖拽事件
+
                     if (!isTouchDevice()) {
                         setupDesktopDrag(div, index);
                     } else {
-                        // 觸控版拖拽事件
                         setupTouchDrag(div, index);
                     }
                 }
 
-                // 點擊編輯（所有項目都可以點擊編輯）
                 div.addEventListener('click', (e) => {
                     if (e.target.classList.contains('delete-btn')) return;
                     if (e.target.classList.contains('drag-handle')) return;
@@ -480,7 +467,6 @@
             });
         }
 
-        // 設置桌面版拖拽
         function setupDesktopDrag(element, index) {
             element.addEventListener('dragstart', (e) => {
                 draggedElement = element;
@@ -514,187 +500,175 @@
             });
         }
 
-// 設置觸控版拖拽
-function setupTouchDrag(element, index) {
-    element.addEventListener('touchstart', (e) => {
-        longPressTriggered = false;
-        
-        // 長按檢測
-        longPressTimer = setTimeout(() => {
-            if (!isDragging) {
-                longPressTriggered = true;
-                startTouchDrag(e, element, index);
-            }
-        }, 500); // 500ms 長按
-    }, { passive: false });
+        // 設置觸控版拖拽
+        function setupTouchDrag(element, index) {
+            element.addEventListener('touchstart', (e) => {
+                longPressTriggered = false;
+                
+                longPressTimer = setTimeout(() => {
+                    if (!isDragging) {
+                        longPressTriggered = true;
+                        startTouchDrag(e, element, index);
+                    }
+                }, 500);
+            }, { passive: false });
 
-    element.addEventListener('touchmove', (e) => {
-        // 如果還在長按計時中，任何移動都取消長按
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
+            element.addEventListener('touchmove', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+
+                if (isDragging) {
+                    handleTouchDrag(e);
+                }
+            }, { passive: false });
+
+            element.addEventListener('touchend', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                if (isDragging) {
+                    endTouchDrag(e);
+                }
+                
+                setTimeout(() => {
+                    longPressTriggered = false;
+                }, 100);
+            }, { passive: false });
         }
 
-        // 只有在已經開始拖拽後才處理移動
-        if (isDragging) {
-            handleTouchDrag(e);
+        // 開始觸控拖拽（已加入 Y 下移 = 畫面捲動距離）
+        function startTouchDrag(e, element, index) {
+            e.preventDefault();
+
+            isDragging = true;
+            draggedElement = element;
+            draggedIndex = index;
+
+            const touch = e.touches[0];
+            const rect = element.getBoundingClientRect();
+
+            // 使用 client 座標計算 offset
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
+
+            // 記錄拖曳開始時的畫面捲動距離（Y）
+            dragStartScrollY = window.scrollY || window.pageYOffset || 0;
+
+            // 建立乾淨的 placeholder（不要用 cloneNode）
+            const placeholder = document.createElement('div');
+            placeholder.className = 'list-item placeholder';
+            placeholder.style.height = rect.height + 'px';
+            placeholder.style.opacity = '0.4';
+            element.parentNode.insertBefore(placeholder, element);
+
+            // 將原 element 設為 fixed
+            element.classList.add('dragging');
+            element.style.transition = 'none';
+            element.style.position = 'fixed';
+            element.style.left = rect.left + 'px';
+            element.style.top  = rect.top + 'px';
+            element.style.width = rect.width + 'px';
+            element.style.zIndex = '9999';
+            element.style.pointerEvents = 'none';
+
+            // 立刻設定位置：注意這裡把 Y 加上 dragStartScrollY（你要求的下移量）
+            element.style.left = (touch.clientX - dragOffset.x) + 'px';
+            element.style.top  = (touch.clientY - dragOffset.y + dragStartScrollY) + 'px';
+
+            // 防止頁面在拖曳過程中滾動
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.touchAction = 'none';
         }
-    }, { passive: false });
 
-    element.addEventListener('touchend', (e) => {
-        // 清理長按計時器
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-        }
-        
-        // 如果正在拖拽，結束拖拽
-        if (isDragging) {
-            endTouchDrag(e);
-        }
-        
-        // 重置長按標記（延遲重置以避免觸發點擊）
-        setTimeout(() => {
-            longPressTriggered = false;
-        }, 100);
-    }, { passive: false });
-}
+        // 處理觸控拖拽（每次移動也把 Y 加上 dragStartScrollY）
+        function handleTouchDrag(e) {
+            if (!isDragging || !draggedElement) return;
+            e.preventDefault();
 
-// 開始觸控拖拽
-function startTouchDrag(e, element, index) {
-    e.preventDefault();
+            const touch = e.touches[0];
+            const x = touch.clientX - dragOffset.x;
+            const y = touch.clientY - dragOffset.y + dragStartScrollY;
 
-    isDragging = true;
-    draggedElement = element;
-    draggedIndex = index;
+            requestAnimationFrame(() => {
+                if (draggedElement) {
+                    draggedElement.style.left = x + 'px';
+                    draggedElement.style.top  = y + 'px';
+                }
+            });
 
-    const touch = e.touches[0];
-    const rect = element.getBoundingClientRect();
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
 
-    // 一致使用 clientX/clientY（viewport 座標）
-    dragOffset.x = touch.clientX - rect.left;
-    dragOffset.y = touch.clientY - rect.top;
+            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
 
-    // 建立乾淨的 placeholder（不要用 cloneNode(true)）
-    const placeholder = document.createElement('div');
-    placeholder.className = 'list-item placeholder';
-    placeholder.style.height = rect.height + 'px';
-    // 可選：讓 placeholder 顯得更明顯
-    placeholder.style.opacity = '0.4';
-    element.parentNode.insertBefore(placeholder, element);
-
-    // 將原 element 置為 fixed（相對 viewport）
-    element.classList.add('dragging');
-    element.style.transition = 'none'; // 取消任何 CSS 過渡
-    element.style.position = 'fixed';
-    element.style.left = rect.left + 'px';
-    element.style.top  = rect.top + 'px';
-    element.style.width = rect.width + 'px';
-    element.style.zIndex = '9999';
-    element.style.pointerEvents = 'none'; // 讓 elementFromPoint 回傳下面元素
-
-    // 立刻將位置設定到 finger（使用 client 座標）
-    element.style.left = (touch.clientX - dragOffset.x) + 'px';
-    element.style.top  = (touch.clientY - dragOffset.y) + 'px';
-
-    // 防止頁面在拖曳過程中滾動
-    document.body.style.overflow = 'hidden';
-    // 禁用預設觸控行為（有的瀏覽器需要在 documentElement）
-    document.documentElement.style.touchAction = 'none';
-}
-
-
-// 處理觸控拖拽
-function handleTouchDrag(e) {
-    if (!isDragging || !draggedElement) return;
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    const x = touch.clientX - dragOffset.x;
-    const y = touch.clientY - dragOffset.y;
-
-    // 平滑更新位置
-    requestAnimationFrame(() => {
-        if (draggedElement) {
-            draggedElement.style.left = x + 'px';
-            draggedElement.style.top  = y + 'px';
-        }
-    });
-
-    // 判斷當前底下的元素（使用 client 座標）
-    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-    const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
-
-    // 清除所有 drag-over 樣式
-    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
-
-    if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
-        targetItem.classList.add('drag-over');
-    }
-}
-
-// 結束觸控拖拽
-function endTouchDrag(e) {
-    if (!isDragging) return;
-
-    const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
-    if (touch) {
-        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
-
-        if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
-            const targetIndex = parseInt(targetItem.dataset.index);
-            if (!isNaN(targetIndex) && targetIndex !== draggedIndex) {
-                moveItem(draggedIndex, targetIndex);
+            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                targetItem.classList.add('drag-over');
             }
         }
-    }
 
-    // 清理拖拽狀態並還原樣式
-    isDragging = false;
+        // 結束觸控拖拽
+        function endTouchDrag(e) {
+            if (!isDragging) return;
 
-    if (draggedElement) {
-        draggedElement.classList.remove('dragging');
-        draggedElement.style.transition = '';
-        draggedElement.style.position = '';
-        draggedElement.style.left = '';
-        draggedElement.style.top = '';
-        draggedElement.style.width = '';
-        draggedElement.style.zIndex = '';
-        draggedElement.style.pointerEvents = '';
-    }
+            const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+            if (touch) {
+                const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
 
-    // 移除 placeholder（只移除第一個遇到的）
-    const placeholder = document.querySelector('.list-item.placeholder');
-    if (placeholder) placeholder.remove();
+                if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                    const targetIndex = parseInt(targetItem.dataset.index);
+                    if (!isNaN(targetIndex) && targetIndex !== draggedIndex) {
+                        moveItem(draggedIndex, targetIndex);
+                    }
+                }
+            }
 
-    // 恢復頁面滾動與觸控行為
-    document.body.style.overflow = '';
-    document.documentElement.style.touchAction = '';
+            isDragging = false;
 
-    clearDragStyles();
-    draggedElement = null;
-    draggedIndex = null;
-}
-        // 打開輸入彈窗
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement.style.transition = '';
+                draggedElement.style.position = '';
+                draggedElement.style.left = '';
+                draggedElement.style.top = '';
+                draggedElement.style.width = '';
+                draggedElement.style.zIndex = '';
+                draggedElement.style.pointerEvents = '';
+            }
+
+            const placeholder = document.querySelector('.list-item.placeholder');
+            if (placeholder) placeholder.remove();
+
+            document.body.style.overflow = '';
+            document.documentElement.style.touchAction = '';
+
+            clearDragStyles();
+            draggedElement = null;
+            draggedIndex = null;
+            // 清除記錄的捲動量（選擇性）
+            dragStartScrollY = 0;
+        }
+
         function openInputModal(index) {
             currentEditIndex = index;
             const modal = document.getElementById('inputModal');
             const textarea = document.getElementById('inputTextarea');
-            
+
             textarea.value = listItems[index];
             modal.classList.add('show');
-            
+
             setTimeout(() => {
                 textarea.focus();
                 textarea.setSelectionRange(textarea.value.length, textarea.value.length);
             }, 100);
 
-            // ESC 鍵關閉彈窗
             document.addEventListener('keydown', handleModalKeydown);
         }
 
-        // 關閉輸入彈窗
         function closeInputModal() {
             const modal = document.getElementById('inputModal');
             modal.classList.remove('show');
@@ -702,32 +676,28 @@ function endTouchDrag(e) {
             document.removeEventListener('keydown', handleModalKeydown);
         }
 
-        // 確認輸入
         function confirmInput() {
             const textarea = document.getElementById('inputTextarea');
             const value = textarea.value;
-            
+
             if (currentEditIndex >= 0) {
                 listItems[currentEditIndex] = value;
-                
-                // 如果是最後一個項目且有內容，自動添加新項目
+
                 if (currentEditIndex === listItems.length - 1 && value.trim() !== '') {
                     addNewItem();
                 }
-                
+
                 saveToStorage();
                 renderList();
             }
-            
+
             closeInputModal();
         }
 
-        // 取消輸入
         function cancelInput() {
             closeInputModal();
         }
 
-        // 處理彈窗鍵盤事件
         function handleModalKeydown(event) {
             if (event.key === 'Escape') {
                 cancelInput();
@@ -736,21 +706,18 @@ function endTouchDrag(e) {
             }
         }
 
-        // 清除拖拽樣式
         function clearDragStyles() {
             document.querySelectorAll('.list-item').forEach(item => {
                 item.classList.remove('drag-over');
             });
         }
 
-        // 添加新項目
         function addNewItem() {
             listItems.push('');
             saveToStorage();
             renderList();
         }
 
-        // 刪除項目
         function deleteItem(index) {
             if (listItems.length > 1) {
                 listItems.splice(index, 1);
@@ -761,7 +728,6 @@ function endTouchDrag(e) {
             renderList();
         }
 
-        // 移動項目
         function moveItem(fromIndex, toIndex) {
             const item = listItems.splice(fromIndex, 1)[0];
             listItems.splice(toIndex, 0, item);
@@ -769,7 +735,6 @@ function endTouchDrag(e) {
             renderList();
         }
 
-        // 清空所有項目
         function clearAll() {
             if (confirm('確定要清空所有項目嗎？')) {
                 listItems = [''];
@@ -778,26 +743,22 @@ function endTouchDrag(e) {
             }
         }
 
-        // 點擊彈窗外部關閉
         document.getElementById('inputModal').addEventListener('click', (e) => {
             if (e.target.id === 'inputModal') {
                 cancelInput();
             }
         });
 
-        // 防止頁面滾動干擾拖拽
         document.addEventListener('touchmove', (e) => {
             if (isDragging) {
                 e.preventDefault();
             }
         }, { passive: false });
 
-        // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             loadFromStorage();
         });
 
-        // 頁面卸載時自動儲存
         window.addEventListener('beforeunload', saveToStorage);
     </script>
 </body>
