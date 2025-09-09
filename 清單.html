@@ -650,6 +650,9 @@ function endTouchDrag(e) {
         placeholder.remove();
     }
     
+    // 恢復頁面滾動
+    document.body.style.overflow = '';
+    
     clearDragStyles();
     draggedElement = null;
     draggedIndex = null;
