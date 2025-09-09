@@ -569,6 +569,8 @@ function startTouchDrag(e, element, index) {
     
     const touch = e.touches[0];
     const rect = element.getBoundingClientRect();
+    
+    // 記錄初始觸摸點相對於元素的偏移
     dragOffset.x = touch.clientX - rect.left;
     dragOffset.y = touch.clientY - rect.top;
     
@@ -583,26 +585,41 @@ function startTouchDrag(e, element, index) {
     // 在原始元素變為 fixed 之前插入 placeholder
     element.parentNode.insertBefore(placeholder, element);
     
-    // 然後設置原始元素為拖拽狀態
+    // 設置拖拽元素樣式
     element.classList.add('dragging');
     element.style.position = 'fixed';
     element.style.zIndex = '1000';
     element.style.pointerEvents = 'none';
-    element.style.left = (touch.clientX - dragOffset.x) + 'px';
-    element.style.top = (touch.clientY - dragOffset.y) + 'px';
-    document.body.style.overflow = 'hidden';
     element.style.width = rect.width + 'px';
     element.style.height = rect.height + 'px';
+    
+    // 關鍵：使用 requestAnimationFrame 確保在下一個渲染幀設置位置
+    requestAnimationFrame(() => {
+        if (draggedElement) {
+            draggedElement.style.left = (touch.clientX - dragOffset.x) + 'px';
+            draggedElement.style.top = (touch.clientY - dragOffset.y) + 'px';
+        }
+    });
+    
+    // 防止頁面滾動
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
 }
 
 // 處理觸控拖拽
 function handleTouchDrag(e) {
-    if (!isDragging) return;
+    if (!isDragging || !draggedElement) return;
     e.preventDefault();
     
     const touch = e.touches[0];
-    draggedElement.style.left = (touch.clientX - dragOffset.x) + 'px';
-    draggedElement.style.top = (touch.clientY - dragOffset.y) + 'px';
+    
+    // 使用 requestAnimationFrame 來確保流暢的動畫
+    requestAnimationFrame(() => {
+        if (draggedElement) {
+            draggedElement.style.left = (touch.clientX - dragOffset.x) + 'px';
+            draggedElement.style.top = (touch.clientY - dragOffset.y) + 'px';
+        }
+    });
     
     // 檢測拖拽到哪個元素上
     const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -636,14 +653,16 @@ function endTouchDrag(e) {
     
     // 清理拖拽狀態
     isDragging = false;
-    draggedElement.classList.remove('dragging');
-    draggedElement.style.position = '';
-    draggedElement.style.zIndex = '';
-    draggedElement.style.pointerEvents = '';
-    draggedElement.style.left = '';
-    draggedElement.style.top = '';
-    draggedElement.style.width = '';
-    draggedElement.style.height = '';
+    if (draggedElement) {
+        draggedElement.classList.remove('dragging');
+        draggedElement.style.position = '';
+        draggedElement.style.zIndex = '';
+        draggedElement.style.pointerEvents = '';
+        draggedElement.style.left = '';
+        draggedElement.style.top = '';
+        draggedElement.style.width = '';
+        draggedElement.style.height = '';
+    }
     
     // 移除佔位符
     const placeholder = document.querySelector('.placeholder');
@@ -653,6 +672,7 @@ function endTouchDrag(e) {
     
     // 恢復頁面滾動
     document.body.style.overflow = '';
+    document.body.style.touchAction = '';
     
     clearDragStyles();
     draggedElement = null;
@@ -784,4 +804,3 @@ function endTouchDrag(e) {
     </script>
 </body>
 </html>
-
