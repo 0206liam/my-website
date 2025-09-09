@@ -50,6 +50,7 @@
             min-height: 40px;
             display: flex;
             align-items: center;
+            /* 防止文字選取 */
             user-select: none;
             -webkit-user-select: none;
         }
@@ -61,14 +62,36 @@
             background: rgba(50, 50, 60, 0.9);
         }
 
+        .list-item.dragging {
+            opacity: 0.8;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            cursor: grabbing;
+            transform: scale(1.05) rotate(2deg);
+            background: rgba(74, 158, 255, 0.2);
+            border-color: #4a9eff;
+        }
+
+        .list-item.drag-over {
+            border-color: #ff6b9d;
+            background: rgba(255, 107, 157, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .list-item.placeholder {
+            opacity: 0.5;
+            background: rgba(255, 107, 157, 0.1);
+            border: 2px dashed #ff6b9d;
+        }
+
         .list-text {
             width: 100%;
-            font-size: 24px;   /* ✅ 放大文字 */
+            font-size: 20px;
             color: #f0f0f0;
-            font-weight: 400;  /* ✅ 改為正常字重 */
-            padding: 4px 8px;  /* ✅ 左邊收窄，因為移除拖曳符號 */
+            font-weight: 600;
+            padding: 4px 30px 4px 25px;
             text-align: left;
-            line-height: 1.4;
+            line-height: 1.2;
             word-wrap: break-word;
             overflow: hidden;
         }
@@ -76,8 +99,13 @@
         .list-text.placeholder {
             color: #888;
             font-style: italic;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 400;
+        }
+
+        /* 待輸入區域樣式 */
+        .list-item.input-area .list-text {
+            padding: 4px 8px;
         }
 
         .delete-btn {
@@ -109,6 +137,28 @@
             transform: scale(1.1);
         }
 
+        .drag-handle {
+            position: absolute;
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: grab;
+            z-index: 5;
+        }
+
+        .list-item:hover .drag-handle {
+            opacity: 1;
+            color: #999;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
         .controls {
             display: flex;
             justify-content: center;
@@ -138,6 +188,178 @@
         .btn:active {
             transform: translateY(0);
         }
+
+        /* 輸入彈窗樣式 */
+        .input-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .input-modal.show {
+            display: flex;
+        }
+
+        .input-dialog {
+            background: rgba(30, 30, 40, 0.98);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .input-dialog h3 {
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .input-textarea {
+            width: 100%;
+            background: rgba(50, 50, 60, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            color: #f0f0f0;
+            font-size: 18px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-textarea:focus {
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+        }
+
+        .input-textarea::placeholder {
+            color: #888;
+            font-style: italic;
+        }
+
+        .input-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .input-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .input-btn.confirm {
+            background: linear-gradient(45deg, #4a9eff, #ff6b9d);
+            color: white;
+        }
+
+        .input-btn.cancel {
+            background: rgba(70, 70, 80, 0.8);
+            color: #ccc;
+        }
+
+        .input-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                margin: 0;
+                padding: 20px;
+                border-radius: 15px;
+            }
+            
+            .list-item {
+                padding: 6px 8px;
+                min-height: 45px;
+                margin-bottom: 6px;
+            }
+
+            .list-text {
+                font-size: 18px;
+                padding: 6px 30px 6px 25px;
+            }
+
+            .list-item.input-area .list-text {
+                padding: 6px 8px;
+            }
+
+            .input-dialog {
+                padding: 20px;
+                width: 95%;
+            }
+
+            /* 手機上讓拖拽手把更明顯 */
+            .drag-handle {
+                opacity: 0.6;
+                font-size: 12px;
+                color: #999;
+            }
+
+            .list-item:hover .drag-handle,
+            .list-item.dragging .drag-handle {
+                opacity: 1;
+                color: #4a9eff;
+            }
+        }
+
+        /* 動畫效果 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .list-item {
+            animation: slideIn 0.3s ease;
+        }
+
+        /* 觸控回饋 */
+        .list-item:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
@@ -148,9 +370,34 @@
         </div>
     </div>
 
+    <div id="inputModal" class="input-modal">
+        <div class="input-dialog">
+            <h3>編輯文字</h3>
+            <textarea id="inputTextarea" class="input-textarea" placeholder="請輸入文字內容..."></textarea>
+            <div class="input-buttons">
+                <button class="input-btn cancel" onclick="cancelInput()">取消</button>
+                <button class="input-btn confirm" onclick="confirmInput()">確認</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let listItems = [];
+        let draggedElement = null;
+        let draggedIndex = null;
         let currentEditIndex = -1;
+
+        // 觸控拖曳相關變數
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let longPressTimer = null;
+        let longPressTriggered = false;
+        // 新增：記錄拖曳開始時的畫面垂直捲動距離
+        let dragStartScrollY = 0;
+
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        }
 
         function loadFromStorage() {
             const stored = JSON.parse(localStorage.getItem('textListItems')) || [];
@@ -175,37 +422,294 @@
                 textDiv.className = item.trim() === '' ? 'list-text placeholder' : 'list-text';
                 textDiv.textContent = item.trim() === '' ? '請輸入文字...' : item;
 
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.textContent = '×';
-                deleteBtn.title = '刪除';
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteItem(index);
-                });
+                const isInputArea = (index === listItems.length - 1 && item.trim() === '');
 
-                div.appendChild(textDiv);
-                div.appendChild(deleteBtn);
+                if (isInputArea) {
+                    div.classList.add('input-area');
+                    div.appendChild(textDiv);
+                } else {
+                    if (!isTouchDevice()) {
+                        div.draggable = true;
+                    }
+
+                    const dragHandle = document.createElement('div');
+                    dragHandle.className = 'drag-handle';
+                    dragHandle.textContent = '⋮⋮';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.title = '刪除';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteItem(index);
+                    });
+
+                    div.appendChild(dragHandle);
+                    div.appendChild(textDiv);
+                    div.appendChild(deleteBtn);
+
+                    if (!isTouchDevice()) {
+                        setupDesktopDrag(div, index);
+                    } else {
+                        setupTouchDrag(div, index);
+                    }
+                }
 
                 div.addEventListener('click', (e) => {
                     if (e.target.classList.contains('delete-btn')) return;
-                    openInput(index);
+                    if (e.target.classList.contains('drag-handle')) return;
+                    if (isDragging || longPressTriggered) return;
+                    openInputModal(index);
                 });
 
                 container.appendChild(div);
             });
         }
 
-        function openInput(index) {
-            const value = prompt("編輯文字：", listItems[index]);
-            if (value !== null) {
-                listItems[index] = value;
-                if (index === listItems.length - 1 && value.trim() !== '') {
+        function setupDesktopDrag(element, index) {
+            element.addEventListener('dragstart', (e) => {
+                draggedElement = element;
+                draggedIndex = index;
+                element.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            element.addEventListener('dragend', () => {
+                element.classList.remove('dragging');
+                clearDragStyles();
+            });
+
+            element.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (draggedIndex !== index && draggedIndex !== null) {
+                    element.classList.add('drag-over');
+                }
+            });
+
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('drag-over');
+            });
+
+            element.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedIndex !== null && draggedIndex !== index) {
+                    moveItem(draggedIndex, index);
+                }
+                clearDragStyles();
+            });
+        }
+
+        // 設置觸控版拖拽
+        function setupTouchDrag(element, index) {
+            element.addEventListener('touchstart', (e) => {
+                longPressTriggered = false;
+                
+                longPressTimer = setTimeout(() => {
+                    if (!isDragging) {
+                        longPressTriggered = true;
+                        startTouchDrag(e, element, index);
+                    }
+                }, 500);
+            }, { passive: false });
+
+            element.addEventListener('touchmove', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+
+                if (isDragging) {
+                    handleTouchDrag(e);
+                }
+            }, { passive: false });
+
+            element.addEventListener('touchend', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                if (isDragging) {
+                    endTouchDrag(e);
+                }
+                
+                setTimeout(() => {
+                    longPressTriggered = false;
+                }, 100);
+            }, { passive: false });
+        }
+
+        // 開始觸控拖拽（已加入 Y 下移 = 畫面捲動距離）
+        function startTouchDrag(e, element, index) {
+            e.preventDefault();
+
+            isDragging = true;
+            draggedElement = element;
+            draggedIndex = index;
+
+            const touch = e.touches[0];
+            const rect = element.getBoundingClientRect();
+
+            // 使用 client 座標計算 offset
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
+
+            // 記錄拖曳開始時的畫面捲動距離（Y）
+            dragStartScrollY = window.scrollY || window.pageYOffset || 0;
+
+            // 建立乾淨的 placeholder（不要用 cloneNode）
+            const placeholder = document.createElement('div');
+            placeholder.className = 'list-item placeholder';
+            placeholder.style.height = rect.height + 'px';
+            placeholder.style.opacity = '0.4';
+            element.parentNode.insertBefore(placeholder, element);
+
+            // 將原 element 設為 fixed
+            element.classList.add('dragging');
+            element.style.transition = 'none';
+            element.style.position = 'fixed';
+            element.style.left = rect.left + 'px';
+            element.style.top  = rect.top + 'px';
+            element.style.width = rect.width + 'px';
+            element.style.zIndex = '9999';
+            element.style.pointerEvents = 'none';
+
+            // 立刻設定位置：注意這裡把 Y 加上 dragStartScrollY（你要求的下移量）
+            element.style.left = (touch.clientX - dragOffset.x) + 'px';
+            element.style.top  = (touch.clientY - dragOffset.y + dragStartScrollY) + 'px';
+
+            // 防止頁面在拖曳過程中滾動
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.touchAction = 'none';
+        }
+
+        // 處理觸控拖拽（每次移動也把 Y 加上 dragStartScrollY）
+        function handleTouchDrag(e) {
+            if (!isDragging || !draggedElement) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            const x = touch.clientX - dragOffset.x;
+            const y = touch.clientY - dragOffset.y + dragStartScrollY;
+
+            requestAnimationFrame(() => {
+                if (draggedElement) {
+                    draggedElement.style.left = x + 'px';
+                    draggedElement.style.top  = y + 'px';
+                }
+            });
+
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
+
+            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                targetItem.classList.add('drag-over');
+            }
+        }
+
+        // 結束觸控拖拽
+        function endTouchDrag(e) {
+            if (!isDragging) return;
+
+            const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+            if (touch) {
+                const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+                if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                    const targetIndex = parseInt(targetItem.dataset.index);
+                    if (!isNaN(targetIndex) && targetIndex !== draggedIndex) {
+                        moveItem(draggedIndex, targetIndex);
+                    }
+                }
+            }
+
+            isDragging = false;
+
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement.style.transition = '';
+                draggedElement.style.position = '';
+                draggedElement.style.left = '';
+                draggedElement.style.top = '';
+                draggedElement.style.width = '';
+                draggedElement.style.zIndex = '';
+                draggedElement.style.pointerEvents = '';
+            }
+
+            const placeholder = document.querySelector('.list-item.placeholder');
+            if (placeholder) placeholder.remove();
+
+            document.body.style.overflow = '';
+            document.documentElement.style.touchAction = '';
+
+            clearDragStyles();
+            draggedElement = null;
+            draggedIndex = null;
+            // 清除記錄的捲動量（選擇性）
+            dragStartScrollY = 0;
+        }
+
+        function openInputModal(index) {
+            currentEditIndex = index;
+            const modal = document.getElementById('inputModal');
+            const textarea = document.getElementById('inputTextarea');
+
+            textarea.value = listItems[index];
+            modal.classList.add('show');
+
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }, 100);
+
+            document.addEventListener('keydown', handleModalKeydown);
+        }
+
+        function closeInputModal() {
+            const modal = document.getElementById('inputModal');
+            modal.classList.remove('show');
+            currentEditIndex = -1;
+            document.removeEventListener('keydown', handleModalKeydown);
+        }
+
+        function confirmInput() {
+            const textarea = document.getElementById('inputTextarea');
+            const value = textarea.value;
+
+            if (currentEditIndex >= 0) {
+                listItems[currentEditIndex] = value;
+
+                if (currentEditIndex === listItems.length - 1 && value.trim() !== '') {
                     addNewItem();
                 }
+
                 saveToStorage();
                 renderList();
             }
+
+            closeInputModal();
+        }
+
+        function cancelInput() {
+            closeInputModal();
+        }
+
+        function handleModalKeydown(event) {
+            if (event.key === 'Escape') {
+                cancelInput();
+            } else if (event.key === 'Enter' && event.ctrlKey) {
+                confirmInput();
+            }
+        }
+
+        function clearDragStyles() {
+            document.querySelectorAll('.list-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
         }
 
         function addNewItem() {
@@ -224,6 +728,13 @@
             renderList();
         }
 
+        function moveItem(fromIndex, toIndex) {
+            const item = listItems.splice(fromIndex, 1)[0];
+            listItems.splice(toIndex, 0, item);
+            saveToStorage();
+            renderList();
+        }
+
         function clearAll() {
             if (confirm('確定要清空所有項目嗎？')) {
                 listItems = [''];
@@ -231,6 +742,18 @@
                 renderList();
             }
         }
+
+        document.getElementById('inputModal').addEventListener('click', (e) => {
+            if (e.target.id === 'inputModal') {
+                cancelInput();
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         document.addEventListener('DOMContentLoaded', function() {
             loadFromStorage();
