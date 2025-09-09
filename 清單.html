@@ -560,43 +560,48 @@ function setupTouchDrag(element, index) {
     }, { passive: false });
 }
 
+// 開始觸控拖拽
 function startTouchDrag(e, element, index) {
     e.preventDefault();
     isDragging = true;
     draggedElement = element;
     draggedIndex = index;
-
+    
     const touch = e.touches[0];
     const rect = element.getBoundingClientRect();
-
-    // rect 是相對於 viewport，要加上 scroll 才能變成文件座標
-    const elementPageLeft = rect.left + window.scrollX;
-    const elementPageTop  = rect.top  + window.scrollY;
-
-    // 用 pageX/pageY 算出觸點在元素內的偏移
-    dragOffset.x = touch.pageX - elementPageLeft;
-    dragOffset.y = touch.pageY - elementPageTop;
-
-    // 插入 placeholder ...
+    
+    // 使用 pageX/pageY 計算偏移（考慮了捲動距離）
+    dragOffset.x = touch.pageX - rect.left - window.scrollX;
+    dragOffset.y = touch.pageY - rect.top - window.scrollY;
+    
+    // 先創建佔位符並插入到正確位置
     const placeholder = element.cloneNode(true);
     placeholder.classList.add('placeholder');
+    placeholder.classList.remove('dragging');
+    placeholder.style.opacity = '0.3';
+    placeholder.style.border = '2px dashed #ccc';
+    placeholder.style.backgroundColor = 'transparent';
+    
+    // 在原始元素變為 fixed 之前插入 placeholder
     element.parentNode.insertBefore(placeholder, element);
-
-    // 設置拖拽樣式
+    
+    // 設置拖拽元素樣式
     element.classList.add('dragging');
     element.style.position = 'fixed';
     element.style.zIndex = '1000';
     element.style.pointerEvents = 'none';
     element.style.width = rect.width + 'px';
     element.style.height = rect.height + 'px';
-
+    
+    // 關鍵：使用 requestAnimationFrame 確保在下一個渲染幀設置位置
     requestAnimationFrame(() => {
         if (draggedElement) {
-            draggedElement.style.left = (touch.pageX - dragOffset.x - window.scrollX) + 'px';
-            draggedElement.style.top  = (touch.pageY - dragOffset.y - window.scrollY) + 'px';
+            draggedElement.style.left = (touch.clientX - dragOffset.x) + 'px';
+            draggedElement.style.top = (touch.clientY - dragOffset.y) + 'px';
         }
     });
-
+    
+    // 防止頁面滾動
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
 }
@@ -610,8 +615,8 @@ function handleTouchDrag(e) {
 
     requestAnimationFrame(() => {
         if (draggedElement) {
-            draggedElement.style.left = (touch.pageX - dragOffset.x - window.scrollX) + 'px';
-            draggedElement.style.top  = (touch.pageY - dragOffset.y - window.scrollY) + 'px';
+            draggedElement.style.left = (touch.pageX - dragOffset.x) + 'px';
+            draggedElement.style.top  = (touch.pageY - dragOffset.y) + 'px';
         }
     });
     
