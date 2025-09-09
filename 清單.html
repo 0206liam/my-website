@@ -570,9 +570,9 @@ function startTouchDrag(e, element, index) {
     const touch = e.touches[0];
     const rect = element.getBoundingClientRect();
     
-    // 記錄初始觸摸點相對於元素的偏移
-    dragOffset.x = touch.clientX - rect.left;
-    dragOffset.y = touch.clientY - rect.top;
+    // 使用 pageX/pageY 計算偏移（考慮了捲動距離）
+    dragOffset.x = touch.pageX - rect.left - window.scrollX;
+    dragOffset.y = touch.pageY - rect.top - window.scrollY;
     
     // 先創建佔位符並插入到正確位置
     const placeholder = element.cloneNode(true);
@@ -610,14 +610,13 @@ function startTouchDrag(e, element, index) {
 function handleTouchDrag(e) {
     if (!isDragging || !draggedElement) return;
     e.preventDefault();
-    
+
     const touch = e.touches[0];
-    
-    // 使用 requestAnimationFrame 來確保流暢的動畫
+
     requestAnimationFrame(() => {
         if (draggedElement) {
-            draggedElement.style.left = (touch.clientX - dragOffset.x) + 'px';
-            draggedElement.style.top = (touch.clientY - dragOffset.y) + 'px';
+            draggedElement.style.left = (touch.pageX - dragOffset.x) + 'px';
+            draggedElement.style.top  = (touch.pageY - dragOffset.y) + 'px';
         }
     });
     
