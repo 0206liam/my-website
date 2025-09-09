@@ -590,6 +590,7 @@ function startTouchDrag(e, element, index) {
     element.style.pointerEvents = 'none';
     element.style.left = (touch.clientX - dragOffset.x) + 'px';
     element.style.top = (touch.clientY - dragOffset.y) + 'px';
+    document.body.style.overflow = 'hidden';
     element.style.width = rect.width + 'px';
     element.style.height = rect.height + 'px';
 }
@@ -783,3 +784,4 @@ function endTouchDrag(e) {
     </script>
 </body>
 </html>
+
