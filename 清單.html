@@ -33,6 +33,97 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        /* 標題區域樣式 */
+        .title-section {
+            margin-bottom: 25px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            /* 隱藏時不佔空間 */
+            position: absolute;
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .title-section.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+            /* 顯示時恢復正常佔位 */
+            position: static;
+            visibility: visible;
+            height: auto;
+            overflow: visible;
+        }
+
+        .title-input {
+            width: 100%;
+            background: rgba(40, 40, 50, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: #f0f0f0;
+            font-size: 24px;
+            font-weight: 600;
+            font-family: inherit;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .title-input:focus {
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2), 0 4px 15px rgba(0, 0, 0, 0.2);
+            background: rgba(50, 50, 60, 0.9);
+        }
+
+        .title-input::placeholder {
+            color: #888;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .title-display {
+            background: rgba(40, 40, 50, 0.6);
+            border: 2px solid rgba(74, 158, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: #4a9eff;
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-display:hover {
+            border-color: #4a9eff;
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.2);
+            transform: translateY(-1px);
+            background: rgba(50, 50, 60, 0.7);
+        }
+
+        .title-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .title-display:hover::before {
+            left: 100%;
+        }
+
         .list-container {
             margin-bottom: 15px;
         }
@@ -284,6 +375,16 @@
                 border-radius: 15px;
             }
             
+            .title-input {
+                font-size: 20px;
+                padding: 12px 16px;
+            }
+
+            .title-display {
+                font-size: 20px;
+                padding: 12px 16px;
+            }
+            
             .list-item {
                 padding: 6px 8px;
                 min-height: 45px;
@@ -302,6 +403,11 @@
             .input-dialog {
                 padding: 20px;
                 width: 95%;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
             }
         }
 
@@ -325,12 +431,24 @@
         .list-item:active {
             transform: scale(0.98);
         }
+
+        .title-display:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 標題區域 -->
+        <div id="titleSection" class="title-section">
+            <div id="titleDisplay" class="title-display" style="display: none;" onclick="editTitle()"></div>
+            <input type="text" id="titleInput" class="title-input" placeholder="點此輸入標題..." 
+                   onblur="saveTitleAndHide()" onkeydown="handleTitleKeydown(event)">
+        </div>
+
         <div id="listContainer"></div>
         <div class="controls">
+            <button class="btn" onclick="showTitleInput()">📝 編輯標題</button>
             <button class="btn" onclick="clearAll()">🗑️ 清空所有</button>
         </div>
     </div>
@@ -351,13 +469,13 @@
         let draggedElement = null;
         let draggedIndex = null;
         let currentEditIndex = -1;
+        let listTitle = '';
 
         // 觸控拖曳相關變數
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
         let longPressTimer = null;
         let longPressTriggered = false;
-        // 新增：記錄拖曳開始時的畫面垂直捲動距離
         let dragStartScrollY = 0;
 
         function isTouchDevice() {
@@ -367,11 +485,78 @@
         function loadFromStorage() {
             const stored = JSON.parse(localStorage.getItem('textListItems')) || [];
             listItems = stored.length > 0 ? stored : [''];
+            
+            // 載入標題
+            listTitle = localStorage.getItem('listTitle') || '';
+            updateTitleDisplay();
+            
             renderList();
         }
 
         function saveToStorage() {
             localStorage.setItem('textListItems', JSON.stringify(listItems));
+            localStorage.setItem('listTitle', listTitle);
+        }
+
+        function updateTitleDisplay() {
+            const titleSection = document.getElementById('titleSection');
+            const titleDisplay = document.getElementById('titleDisplay');
+            const titleInput = document.getElementById('titleInput');
+
+            if (listTitle.trim() === '') {
+                titleSection.classList.remove('show');
+                titleDisplay.style.display = 'none';
+                titleInput.style.display = 'block';
+                titleInput.value = '';
+            } else {
+                titleSection.classList.add('show');
+                titleDisplay.style.display = 'block';
+                titleInput.style.display = 'none';
+                titleDisplay.textContent = listTitle;
+                titleInput.value = listTitle;
+            }
+        }
+
+        function showTitleInput() {
+            const titleSection = document.getElementById('titleSection');
+            const titleDisplay = document.getElementById('titleDisplay');
+            const titleInput = document.getElementById('titleInput');
+
+            titleSection.classList.add('show');
+            titleDisplay.style.display = 'none';
+            titleInput.style.display = 'block';
+            titleInput.value = listTitle;
+            
+            setTimeout(() => {
+                titleInput.focus();
+                titleInput.select();
+            }, 100);
+        }
+
+        function editTitle() {
+            showTitleInput();
+        }
+
+        function saveTitleAndHide() {
+            const titleInput = document.getElementById('titleInput');
+            const newTitle = titleInput.value.trim();
+            
+            setTimeout(() => {
+                listTitle = newTitle;
+                saveToStorage();
+                updateTitleDisplay();
+            }, 100);
+        }
+
+        function handleTitleKeydown(event) {
+            if (event.key === 'Enter') {
+                event.target.blur();
+            }
+            if (event.key === 'Escape') {
+                const titleInput = document.getElementById('titleInput');
+                titleInput.value = listTitle; // 恢復原值
+                titleInput.blur();
+            }
         }
 
         function renderList() {
@@ -459,7 +644,6 @@
             });
         }
 
-        // 設置觸控版拖拽
         function setupTouchDrag(element, index) {
             element.addEventListener('touchstart', (e) => {
                 longPressTriggered = false;
@@ -499,7 +683,6 @@
             }, { passive: false });
         }
 
-        // 開始觸控拖拽（已加入 Y 下移 = 畫面捲動距離）
         function startTouchDrag(e, element, index) {
             e.preventDefault();
 
@@ -510,21 +693,17 @@
             const touch = e.touches[0];
             const rect = element.getBoundingClientRect();
 
-            // 使用 client 座標計算 offset
             dragOffset.x = touch.clientX - rect.left;
             dragOffset.y = touch.clientY - rect.top;
 
-            // 記錄拖曳開始時的畫面捲動距離（Y）
             dragStartScrollY = window.scrollY || window.pageYOffset || 0;
 
-            // 建立乾淨的 placeholder（不要用 cloneNode）
             const placeholder = document.createElement('div');
             placeholder.className = 'list-item placeholder';
             placeholder.style.height = rect.height + 'px';
             placeholder.style.opacity = '0.4';
             element.parentNode.insertBefore(placeholder, element);
 
-            // 將原 element 設為 fixed
             element.classList.add('dragging');
             element.style.transition = 'none';
             element.style.position = 'fixed';
@@ -534,16 +713,13 @@
             element.style.zIndex = '9999';
             element.style.pointerEvents = 'none';
 
-            // 立刻設定位置：注意這裡把 Y 加上 dragStartScrollY（你要求的下移量）
             element.style.left = (touch.clientX - dragOffset.x) + 'px';
             element.style.top  = (touch.clientY - dragOffset.y + dragStartScrollY) + 'px';
 
-            // 防止頁面在拖曳過程中滾動
             document.body.style.overflow = 'hidden';
             document.documentElement.style.touchAction = 'none';
         }
 
-        // 處理觸控拖拽（每次移動也把 Y 加上 dragStartScrollY）
         function handleTouchDrag(e) {
             if (!isDragging || !draggedElement) return;
             e.preventDefault();
@@ -569,7 +745,6 @@
             }
         }
 
-        // 結束觸控拖拽
         function endTouchDrag(e) {
             if (!isDragging) return;
 
@@ -608,7 +783,6 @@
             clearDragStyles();
             draggedElement = null;
             draggedIndex = null;
-            // 清除記錄的捲動量（選擇性）
             dragStartScrollY = 0;
         }
 
