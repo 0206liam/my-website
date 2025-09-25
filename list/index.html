@@ -13,10 +13,7 @@
       padding: 20px;
     }
     h1 { margin-bottom: 20px; }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
+    ul { list-style: none; padding: 0; }
     li {
       background: #16213e;
       margin: 10px auto;
@@ -28,11 +25,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    a {
-      color: #4a9eff;
-      text-decoration: none;
-      font-weight: bold;
-    }
+    a { color: #4a9eff; text-decoration: none; font-weight: bold; }
     button {
       background: #ff4757;
       color: white;
@@ -54,18 +47,33 @@
   <button id="addBtn">➕ 新增清單</button>
 
   <script>
-    const STORAGE_KEY = "allLists";
-    let allLists = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-
     const container = document.getElementById("listContainer");
 
+    function getAllLists() {
+      const lists = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("list_")) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            lists.push({
+              id: key,
+              title: data.title || key.replace(/^list_/, "")
+            });
+          } catch (e) { /* 忽略無效資料 */ }
+        }
+      }
+      return lists;
+    }
+
     function render() {
+      const allLists = getAllLists();
       container.innerHTML = "";
-      allLists.forEach(name => {
+      allLists.forEach(list => {
         const li = document.createElement("li");
         li.innerHTML = `
-          <a href="list.html?id=${encodeURIComponent(name)}">${name}</a>
-          <button onclick="deleteList('${name}')">刪除</button>
+          <a href="list.html?id=${encodeURIComponent(list.id)}">${list.title}</a>
+          <button onclick="deleteList('${list.id}')">刪除</button>
         `;
         container.appendChild(li);
       });
@@ -74,20 +82,16 @@
     function addList() {
       const name = prompt("請輸入新清單名稱：");
       if (!name) return;
-      if (allLists.includes(name)) {
-        alert("已經有這個清單了！");
-        return;
-      }
-      allLists.push(name);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allLists));
+
+      const id = "list_" + Date.now();
+      const data = { title: name, items: [] };
+      localStorage.setItem(id, JSON.stringify(data));
       render();
     }
 
-    function deleteList(name) {
-      if (!confirm(`確定要刪除清單「${name}」嗎？`)) return;
-      allLists = allLists.filter(n => n !== name);
-      localStorage.removeItem("list_" + name); // 同時刪掉內容
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allLists));
+    function deleteList(id) {
+      if (!confirm(`確定要刪除清單嗎？`)) return;
+      localStorage.removeItem(id);
       render();
     }
 
