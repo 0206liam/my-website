@@ -44,7 +44,6 @@
 <body>
   <h1>📂 我的清單</h1>
   <ul id="listContainer"></ul>
-  <button id="addBtn">➕ 新增清單</button>
 
   <script>
     const container = document.getElementById("listContainer");
@@ -56,11 +55,11 @@
         if (key.startsWith("list_")) {
           try {
             const data = JSON.parse(localStorage.getItem(key));
-            lists.push({
-              id: key,
-              title: data.title || key.replace(/^list_/, "")
-            });
-          } catch (e) { /* 忽略無效資料 */ }
+            const title = data.title && data.title.trim() !== "" ? data.title : "未命名清單";
+            lists.push({ id: key, title });
+          } catch(e) {
+            // 忽略非 JSON 或無效資料
+          }
         }
       }
       return lists;
@@ -79,23 +78,11 @@
       });
     }
 
-    function addList() {
-      const name = prompt("請輸入新清單名稱：");
-      if (!name) return;
-
-      const id = "list_" + Date.now();
-      const data = { title: name, items: [] };
-      localStorage.setItem(id, JSON.stringify(data));
-      render();
-    }
-
     function deleteList(id) {
-      if (!confirm(`確定要刪除清單嗎？`)) return;
+      if (!confirm("確定要刪除這個清單嗎？")) return;
       localStorage.removeItem(id);
       render();
     }
-
-    document.getElementById("addBtn").addEventListener("click", addList);
 
     render();
   </script>
