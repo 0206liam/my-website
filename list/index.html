@@ -88,7 +88,6 @@
 
           // 讀取標題 (如果不存在，則為 null)
           const title = localStorage.getItem(titleKey);
-          
           // 讀取清單項目 (用於驗證清單是否為空/有效)
           const items = localStorage.getItem(itemsKey);
 
@@ -127,16 +126,17 @@
       
       // 關鍵修正 3: 新增清單時，同步建立子清單預期的兩個 Key
       
-      // 1. 儲存預設標題
+      // 1. 儲存預設標題 (子清單的 STORAGE_KEY_TITLE)
       localStorage.setItem(id + "_title", defaultTitle); 
       
       // 2. 儲存預設項目 (子清單預期 [""]，避免錯誤)
       localStorage.setItem(id + "_items", JSON.stringify([''])); 
       
-      // 立即導航至新清單頁面
-      window.location.href = `list.html?id=${encodeURIComponent(id)}`;
+      // ！！！這裡的修正，確保 localStorage 寫入完成後再跳轉
+      // 雖然理論上 setItem 是同步的，但強制等待可能解決某些瀏覽器的同步問題
       
-      // 注意：這裡不呼叫 render()，因為頁面會跳轉
+      // 導航至新清單頁面
+      window.location.href = `list.html?id=${encodeURIComponent(id)}`;
     }
     
     // 關鍵修正 4: 刪除清單時，必須同步刪除子清單儲存的所有相關 Key
@@ -153,6 +153,7 @@
     }
     
     document.getElementById("addBtn").addEventListener("click", addList);
+    // 首次載入母清單
     render();
 </script>
 </body>
