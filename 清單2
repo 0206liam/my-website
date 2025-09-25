@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字清單管理器</title>
+<style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+            
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(30, 30, 40, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 標題區域樣式 */
+        .title-section {
+            margin-bottom: 25px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            /* 隱藏時不佔空間 */
+            position: absolute;
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .title-section.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+            /* 顯示時恢復正常佔位 */
+            position: static;
+            visibility: visible;
+            height: auto;
+            overflow: visible;
+        }
+
+        .title-input {
+            width: 100%;
+            background: rgba(40, 40, 50, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: #f0f0f0;
+            font-size: 24px;
+            font-weight: 600;
+            font-family: inherit;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .title-input:focus {
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2), 0 4px 15px rgba(0, 0, 0, 0.2);
+            background: rgba(50, 50, 60, 0.9);
+        }
+
+        .title-input::placeholder {
+            color: #888;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .title-display {
+            background: rgba(40, 40, 50, 0.6);
+            border: 2px solid rgba(74, 158, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: #4a9eff;
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-display:hover {
+            border-color: #4a9eff;
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.2);
+            transform: translateY(-1px);
+            background: rgba(50, 50, 60, 0.7);
+        }
+
+        .title-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .title-display:hover::before {
+            left: 100%;
+        }
+
+        .list-container {
+            margin-bottom: 15px;
+        }
+
+        .list-item {
+            background: rgba(40, 40, 50, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 4px 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            /* 防止文字選取 */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .list-item:hover {
+            border-color: #4a9eff;
+            box-shadow: 0 3px 15px rgba(74, 158, 255, 0.2);
+            transform: translateY(-1px);
+            background: rgba(50, 50, 60, 0.9);
+        }
+
+        .list-item.dragging {
+            opacity: 0.8;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            cursor: grabbing;
+            transform: scale(1.05) rotate(2deg);
+            background: rgba(74, 158, 255, 0.2);
+            border-color: #4a9eff;
+        }
+
+        .list-item.drag-over {
+            border-color: #ff6b9d;
+            background: rgba(255, 107, 157, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .list-item.placeholder {
+            opacity: 0.5;
+            background: rgba(255, 107, 157, 0.1);
+            border: 2px dashed #ff6b9d;
+        }
+
+        .list-text {
+            width: 100%;
+            font-size: 20px;
+            color: #f0f0f0;
+            font-weight: normal;
+            padding: 4px 30px 4px 8px;
+            text-align: left;
+            line-height: 1.2;
+            word-wrap: break-word;
+            overflow: hidden;
+        }
+
+        .list-text.placeholder {
+            color: #888;
+            font-style: italic;
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        /* 待輸入區域樣式 */
+        .list-item.input-area .list-text {
+            padding: 4px 8px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .list-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: #ff3742;
+            transform: scale(1.1);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4a9eff, #ff6b9d);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* 輸入彈窗樣式 */
+        .input-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .input-modal.show {
+            display: flex;
+        }
+
+        .input-dialog {
+            background: rgba(30, 30, 40, 0.98);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .input-dialog h3 {
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .input-textarea {
+            width: 100%;
+            background: rgba(50, 50, 60, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            color: #f0f0f0;
+            font-size: 18px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-textarea:focus {
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+        }
+
+        .input-textarea::placeholder {
+            color: #888;
+            font-style: italic;
+        }
+
+        .input-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .input-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .input-btn.confirm {
+            background: linear-gradient(45deg, #4a9eff, #ff6b9d);
+            color: white;
+        }
+
+        .input-btn.cancel {
+            background: rgba(70, 70, 80, 0.8);
+            color: #ccc;
+        }
+
+        .input-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                margin: 0;
+                padding: 20px;
+                border-radius: 15px;
+            }
+            
+            .title-input {
+                font-size: 20px;
+                padding: 12px 16px;
+            }
+
+            .title-display {
+                font-size: 20px;
+                padding: 12px 16px;
+            }
+            
+            .list-item {
+                padding: 6px 8px;
+                min-height: 45px;
+                margin-bottom: 6px;
+            }
+
+            .list-text {
+                font-size: 18px;
+                padding: 6px 30px 6px 8px;
+            }
+
+            .list-item.input-area .list-text {
+                padding: 6px 8px;
+            }
+
+            .input-dialog {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* 動畫效果 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .list-item {
+            animation: slideIn 0.3s ease;
+        }
+
+        /* 觸控回饋 */
+        .list-item:active {
+            transform: scale(0.98);
+        }
+
+        .title-display:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 標題區域 -->
+        <div id="titleSection" class="title-section">
+            <div id="titleDisplay" class="title-display" style="display: none;" onclick="editTitle()"></div>
+            <input type="text" id="titleInput" class="title-input" placeholder="點此輸入標題..." 
+                   onblur="saveTitleAndHide()" onkeydown="handleTitleKeydown(event)">
+        </div>
+
+        <div id="listContainer"></div>
+        <div class="controls">
+            <button class="btn" onclick="showTitleInput()">📝 編輯標題</button>
+            <button class="btn" onclick="clearAll()">🗑️ 清空所有</button>
+        </div>
+    </div>
+
+    <div id="inputModal" class="input-modal">
+        <div class="input-dialog">
+            <h3>編輯文字</h3>
+            <textarea id="inputTextarea" class="input-textarea" placeholder="請輸入文字內容..."></textarea>
+            <div class="input-buttons">
+                <button class="input-btn cancel" onclick="cancelInput()">取消</button>
+                <button class="input-btn confirm" onclick="confirmInput()">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let listItems = [];
+        let draggedElement = null;
+        let draggedIndex = null;
+        let currentEditIndex = -1;
+        let listTitle = '';
+
+        // 觸控拖曳相關變數
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let longPressTimer = null;
+        let longPressTriggered = false;
+        let dragStartScrollY = 0;
+
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        }
+
+        function loadFromStorage() {
+            const stored = JSON.parse(localStorage.getItem('textListItems')) || [];
+            listItems = stored.length > 0 ? stored : [''];
+            
+            // 載入標題
+            listTitle = localStorage.getItem('listTitle') || '';
+            updateTitleDisplay();
+            
+            renderList();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('textListItems', JSON.stringify(listItems));
+            localStorage.setItem('listTitle', listTitle);
+        }
+
+        function updateTitleDisplay() {
+            const titleSection = document.getElementById('titleSection');
+            const titleDisplay = document.getElementById('titleDisplay');
+            const titleInput = document.getElementById('titleInput');
+
+            if (listTitle.trim() === '') {
+                titleSection.classList.remove('show');
+                titleDisplay.style.display = 'none';
+                titleInput.style.display = 'block';
+                titleInput.value = '';
+            } else {
+                titleSection.classList.add('show');
+                titleDisplay.style.display = 'block';
+                titleInput.style.display = 'none';
+                titleDisplay.textContent = listTitle;
+                titleInput.value = listTitle;
+            }
+        }
+
+        function showTitleInput() {
+            const titleSection = document.getElementById('titleSection');
+            const titleDisplay = document.getElementById('titleDisplay');
+            const titleInput = document.getElementById('titleInput');
+
+            titleSection.classList.add('show');
+            titleDisplay.style.display = 'none';
+            titleInput.style.display = 'block';
+            titleInput.value = listTitle;
+            
+            setTimeout(() => {
+                titleInput.focus();
+                titleInput.select();
+            }, 100);
+        }
+
+        function editTitle() {
+            showTitleInput();
+        }
+
+        function saveTitleAndHide() {
+            const titleInput = document.getElementById('titleInput');
+            const newTitle = titleInput.value.trim();
+            
+            setTimeout(() => {
+                listTitle = newTitle;
+                saveToStorage();
+                updateTitleDisplay();
+            }, 100);
+        }
+
+        function handleTitleKeydown(event) {
+            if (event.key === 'Enter') {
+                event.target.blur();
+            }
+            if (event.key === 'Escape') {
+                const titleInput = document.getElementById('titleInput');
+                titleInput.value = listTitle; // 恢復原值
+                titleInput.blur();
+            }
+        }
+
+        function renderList() {
+            const container = document.getElementById('listContainer');
+            container.innerHTML = '';
+
+            listItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.dataset.index = index;
+
+                const textDiv = document.createElement('div');
+                textDiv.className = item.trim() === '' ? 'list-text placeholder' : 'list-text';
+                textDiv.textContent = item.trim() === '' ? '請輸入文字...' : item;
+
+                const isInputArea = (index === listItems.length - 1 && item.trim() === '');
+
+                if (isInputArea) {
+                    div.classList.add('input-area');
+                    div.appendChild(textDiv);
+                } else {
+                    if (!isTouchDevice()) {
+                        div.draggable = true;
+                    }
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.title = '刪除';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteItem(index);
+                    });
+
+                    div.appendChild(textDiv);
+                    div.appendChild(deleteBtn);
+
+                    if (!isTouchDevice()) {
+                        setupDesktopDrag(div, index);
+                    } else {
+                        setupTouchDrag(div, index);
+                    }
+                }
+
+                div.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('delete-btn')) return;
+                    if (isDragging || longPressTriggered) return;
+                    openInputModal(index);
+                });
+
+                container.appendChild(div);
+            });
+        }
+
+        function setupDesktopDrag(element, index) {
+            element.addEventListener('dragstart', (e) => {
+                draggedElement = element;
+                draggedIndex = index;
+                element.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            element.addEventListener('dragend', () => {
+                element.classList.remove('dragging');
+                clearDragStyles();
+            });
+
+            element.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (draggedIndex !== index && draggedIndex !== null) {
+                    element.classList.add('drag-over');
+                }
+            });
+
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('drag-over');
+            });
+
+            element.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedIndex !== null && draggedIndex !== index) {
+                    moveItem(draggedIndex, index);
+                }
+                clearDragStyles();
+            });
+        }
+
+        function setupTouchDrag(element, index) {
+            element.addEventListener('touchstart', (e) => {
+                longPressTriggered = false;
+                
+                longPressTimer = setTimeout(() => {
+                    if (!isDragging) {
+                        longPressTriggered = true;
+                        startTouchDrag(e, element, index);
+                    }
+                }, 500);
+            }, { passive: false });
+
+            element.addEventListener('touchmove', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+
+                if (isDragging) {
+                    handleTouchDrag(e);
+                }
+            }, { passive: false });
+
+            element.addEventListener('touchend', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                if (isDragging) {
+                    endTouchDrag(e);
+                }
+                
+                setTimeout(() => {
+                    longPressTriggered = false;
+                }, 100);
+            }, { passive: false });
+        }
+
+        function startTouchDrag(e, element, index) {
+            e.preventDefault();
+
+            isDragging = true;
+            draggedElement = element;
+            draggedIndex = index;
+
+            const touch = e.touches[0];
+            const rect = element.getBoundingClientRect();
+
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
+
+            dragStartScrollY = window.scrollY || window.pageYOffset || 0;
+
+            const placeholder = document.createElement('div');
+            placeholder.className = 'list-item placeholder';
+            placeholder.style.height = rect.height + 'px';
+            placeholder.style.opacity = '0.4';
+            element.parentNode.insertBefore(placeholder, element);
+
+            element.classList.add('dragging');
+            element.style.transition = 'none';
+            element.style.position = 'fixed';
+            element.style.left = rect.left + 'px';
+            element.style.top  = rect.top + 'px';
+            element.style.width = rect.width + 'px';
+            element.style.zIndex = '9999';
+            element.style.pointerEvents = 'none';
+
+            element.style.left = (touch.clientX - dragOffset.x) + 'px';
+            element.style.top  = (touch.clientY - dragOffset.y + dragStartScrollY) + 'px';
+
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.touchAction = 'none';
+        }
+
+        function handleTouchDrag(e) {
+            if (!isDragging || !draggedElement) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            const x = touch.clientX - dragOffset.x;
+            const y = touch.clientY - dragOffset.y + dragStartScrollY;
+
+            requestAnimationFrame(() => {
+                if (draggedElement) {
+                    draggedElement.style.left = x + 'px';
+                    draggedElement.style.top  = y + 'px';
+                }
+            });
+
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
+
+            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                targetItem.classList.add('drag-over');
+            }
+        }
+
+        function endTouchDrag(e) {
+            if (!isDragging) return;
+
+            const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+            if (touch) {
+                const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+                if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                    const targetIndex = parseInt(targetItem.dataset.index);
+                    if (!isNaN(targetIndex) && targetIndex !== draggedIndex) {
+                        moveItem(draggedIndex, targetIndex);
+                    }
+                }
+            }
+
+            isDragging = false;
+
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement.style.transition = '';
+                draggedElement.style.position = '';
+                draggedElement.style.left = '';
+                draggedElement.style.top = '';
+                draggedElement.style.width = '';
+                draggedElement.style.zIndex = '';
+                draggedElement.style.pointerEvents = '';
+            }
+
+            const placeholder = document.querySelector('.list-item.placeholder');
+            if (placeholder) placeholder.remove();
+
+            document.body.style.overflow = '';
+            document.documentElement.style.touchAction = '';
+
+            clearDragStyles();
+            draggedElement = null;
+            draggedIndex = null;
+            dragStartScrollY = 0;
+        }
+
+        function openInputModal(index) {
+            currentEditIndex = index;
+            const modal = document.getElementById('inputModal');
+            const textarea = document.getElementById('inputTextarea');
+
+            textarea.value = listItems[index];
+            modal.classList.add('show');
+
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }, 100);
+
+            document.addEventListener('keydown', handleModalKeydown);
+        }
+
+        function closeInputModal() {
+            const modal = document.getElementById('inputModal');
+            modal.classList.remove('show');
+            currentEditIndex = -1;
+            document.removeEventListener('keydown', handleModalKeydown);
+        }
+
+        function confirmInput() {
+            const textarea = document.getElementById('inputTextarea');
+            const value = textarea.value;
+
+            if (currentEditIndex >= 0) {
+                listItems[currentEditIndex] = value;
+
+                if (currentEditIndex === listItems.length - 1 && value.trim() !== '') {
+                    addNewItem();
+                }
+
+                saveToStorage();
+                renderList();
+            }
+
+            closeInputModal();
+        }
+
+        function cancelInput() {
+            closeInputModal();
+        }
+
+        function handleModalKeydown(event) {
+            if (event.key === 'Escape') {
+                cancelInput();
+            } else if (event.key === 'Enter' && event.ctrlKey) {
+                confirmInput();
+            }
+        }
+
+        function clearDragStyles() {
+            document.querySelectorAll('.list-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+
+        function addNewItem() {
+            listItems.push('');
+            saveToStorage();
+            renderList();
+        }
+
+        function deleteItem(index) {
+            if (listItems.length > 1) {
+                listItems.splice(index, 1);
+            } else {
+                listItems[0] = '';
+            }
+            saveToStorage();
+            renderList();
+        }
+
+        function moveItem(fromIndex, toIndex) {
+            const item = listItems.splice(fromIndex, 1)[0];
+            listItems.splice(toIndex, 0, item);
+            saveToStorage();
+            renderList();
+        }
+
+        function clearAll() {
+            if (confirm('確定要清空所有項目嗎？')) {
+                listItems = [''];
+                saveToStorage();
+                renderList();
+            }
+        }
+
+        document.getElementById('inputModal').addEventListener('click', (e) => {
+            if (e.target.id === 'inputModal') {
+                cancelInput();
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFromStorage();
+        });
+
+        window.addEventListener('beforeunload', saveToStorage);
+    </script>
+</body>
+</html>
