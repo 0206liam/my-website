@@ -54,6 +54,7 @@
       return 'list_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     }
 
+    // 取得所有子清單資料
     function getAllLists() {
       const lists = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -61,13 +62,19 @@
         if (key.startsWith("list_")) {
           try {
             const data = JSON.parse(localStorage.getItem(key));
-            const title = data.title && data.title.trim() !== "" ? data.title : "未命名清單";
+            const title = data.listTitle && data.listTitle.trim() !== "" ? data.listTitle : "未命名清單";
             lists.push({ id: key, title });
           } catch(e) {
             // 忽略非 JSON 或無效資料
           }
         }
       }
+      // 按時間排序（可選）
+      lists.sort((a,b) => {
+        const tA = parseInt(a.id.split('_')[1]) || 0;
+        const tB = parseInt(b.id.split('_')[1]) || 0;
+        return tB - tA; // 最新在前
+      });
       return lists;
     }
 
@@ -87,9 +94,9 @@
     function addList() {
       const id = generateId();
       // 新清單初始內容為空，標題留空
-      localStorage.setItem(id, JSON.stringify({ title: "" }));
+      localStorage.setItem(id, JSON.stringify({ listTitle: "" }));
       render();
-      // 自動打開新清單頁面（可選）
+      // 自動打開新清單頁面
       window.location.href = `list.html?id=${encodeURIComponent(id)}`;
     }
 
@@ -101,6 +108,7 @@
 
     document.getElementById("addBtn").addEventListener("click", addList);
 
+    // 每次載入頁面都渲染最新資料
     render();
   </script>
 </body>
