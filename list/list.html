@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>清單</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f3460;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #16213e;
+      margin: 8px auto;
+      padding: 8px 12px;
+      border-radius: 6px;
+      width: 80%;
+      max-width: 400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    input[type="text"] {
+      padding: 6px;
+      border-radius: 4px;
+      border: none;
+      width: 70%;
+    }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background: #1e90ff; }
+    .completed {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="listTitle">📋 我的清單</h1>
+  <ul id="itemContainer"></ul>
+
+  <input type="text" id="newItem" placeholder="輸入新項目">
+  <button onclick="addItem()">新增</button>
+
+  <p><a href="index.html" style="color:#ff6b9d">⬅ 回到清單總管</a></p>
+
+  <script>
+    // 取得網址參數 id
+    const urlParams = new URLSearchParams(window.location.search);
+    const listId = urlParams.get("id") || "未命名清單";
+
+    // localStorage key
+    const STORAGE_KEY_ITEMS = "list_" + listId + "_items";
+    const STORAGE_KEY_TITLE = "list_" + listId + "_title";
+
+    // 資料
+    let listTitle = localStorage.getItem(STORAGE_KEY_TITLE) || listId;
+    let items = JSON.parse(localStorage.getItem(STORAGE_KEY_ITEMS)) || [];
+
+    // DOM 元素
+    const titleEl = document.getElementById("listTitle");
+    const container = document.getElementById("itemContainer");
+    const newItemInput = document.getElementById("newItem");
+
+    // 初始化
+    titleEl.textContent = "📋 " + listTitle;
+    render();
+
+    function render() {
+      container.innerHTML = "";
+      items.forEach((item, idx) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span class="${item.completed ? 'completed' : ''}" onclick="toggleComplete(${idx})">
+            ${item.text}
+          </span>
+          <button onclick="deleteItem(${idx})">刪除</button>
+        `;
+        container.appendChild(li);
+      });
+      save();
+    }
+
+    function addItem() {
+      const text = newItemInput.value.trim();
+      if (!text) return;
+      items.push({ text, completed: false });
+      newItemInput.value = "";
+      render();
+    }
+
+    function deleteItem(idx) {
+      items.splice(idx, 1);
+      render();
+    }
+
+    function toggleComplete(idx) {
+      items[idx].completed = !items[idx].completed;
+      render();
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY_TITLE, listTitle);
+      localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
+    }
+  </script>
+</body>
+</html>
