@@ -44,9 +44,15 @@
 <body>
   <h1>📂 我的清單</h1>
   <ul id="listContainer"></ul>
+  <button id="addBtn">➕ 新增清單</button>
 
   <script>
     const container = document.getElementById("listContainer");
+
+    // 生成唯一 ID
+    function generateId() {
+      return 'list_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    }
 
     function getAllLists() {
       const lists = [];
@@ -78,11 +84,22 @@
       });
     }
 
+    function addList() {
+      const id = generateId();
+      // 新清單初始內容為空，標題留空
+      localStorage.setItem(id, JSON.stringify({ title: "" }));
+      render();
+      // 自動打開新清單頁面（可選）
+      window.location.href = `list.html?id=${encodeURIComponent(id)}`;
+    }
+
     function deleteList(id) {
       if (!confirm("確定要刪除這個清單嗎？")) return;
       localStorage.removeItem(id);
       render();
     }
+
+    document.getElementById("addBtn").addEventListener("click", addList);
 
     render();
   </script>
