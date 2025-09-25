@@ -47,111 +47,113 @@
   <button id="addBtn">➕ 新增清單</button>
 
    <script>
-      const container = document.getElementById("listContainer");
-      
-      // 關鍵修正 1: 確保 ID 帶有 'list_' 前綴 (這是子清單依賴的基礎 ID)
-      function generateId() {
-        // 產生類似 'list_1727339064000123' 的 ID
-        return 'list_' + Date.now() + '' + Math.floor(Math.random() * 1000);
+    const container = document.getElementById("listContainer");
+    
+    // 關鍵修正 1: 確保 ID 帶有 'list_' 前綴且足夠唯一
+    function generateId() {
+      // 使用更長的 ID 確保唯一性
+      return 'list_' + Date.now() + '' + Math.floor(Math.random() * 99999);
+    }
+    
+    // 關鍵修正 2: 穩健地讀取清單列表
+    function getAllLists() {
+      const lists = [];
+      const idSet = new Set(); // 用於存儲不重複的基礎 ID
+
+      // 步驟 A: 遍歷所有 localStorage keys，尋找所有清單的基礎 ID
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+
+        if (key.startsWith("list_")) {
+            let baseId = null;
+            
+            // 從子清單的 Key 中解析出基礎 ID (list_XXX)
+            if (key.endsWith("_title")) {
+                baseId = key.replace("_title", "");
+            } else if (key.endsWith("_items")) {
+                baseId = key.replace("_items", "");
+            }
+            
+            // 只有成功解析出基礎 ID 才加入 Set
+            if (baseId) {
+                idSet.add(baseId);
+            }
+        }
       }
-      
-      // 關鍵修正 2: 根據子清單的雙 Key 結構讀取標題
-      function getAllLists() {
-        const lists = [];
-        const keys = [];
-  
-        // 步驟 A: 遍歷所有 localStorage keys
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-  
-          // 步驟 B: 過濾出清單的基礎 ID (例如: "list_123")
-          // 子清單儲存的 Keys 會有: "list_123_items" 和 "list_123_title"
-          // 我們需要從這些 keys 中解析出共同的 "list_123"
-          if (key.startsWith("list_")) {
-              // 處理標題 Key: 移除 "_title" 尾巴
-              if (key.endsWith("_title")) {
-                  keys.push(key.replace("_title", ""));
-              // 處理內容 Key: 移除 "_items" 尾巴
-              } else if (key.endsWith("_items")) {
-                  keys.push(key.replace("_items", ""));
-              // 處理可能是舊版或錯誤儲存的單一 Key (為了避免重複，這裡可以忽略)
-              } else {
-                  // 如果子清單確定只存 items 和 title 兩個 Key，這裡可以忽略
-                  // 如果您不確定，可以加上 keys.push(key);
-              }
+
+      // 步驟 B: 根據基礎 ID 讀取標題，並確認清單內容是否存在
+      idSet.forEach(id => {
+          const titleKey = id + "_title";
+          const itemsKey = id + "_items";
+
+          // 讀取標題 (如果不存在，則為 null)
+          const title = localStorage.getItem(titleKey);
+          
+          // 讀取清單項目 (用於驗證清單是否為空/有效)
+          const items = localStorage.getItem(itemsKey);
+
+          // 只有當至少有標題 Key 或內容 Key 存在時，才視為有效清單
+          if (title !== null || items !== null) {
+              // 如果標題為 null 或空字串，則使用預設值
+              const listTitle = (title && title.trim() !== "") ? title : "未命名清單";
+              
+              // 加入列表
+              lists.push({ id: id, title: listTitle });
           }
-        }
-  
-        // 步驟 C: 建立不重複的基礎 ID 清單 (Set)
-        const uniqueListIds = [...new Set(keys)];
-  
-        // 步驟 D: 根據基礎 ID 讀取標題
-        uniqueListIds.forEach(id => {
-            // 組合出子清單儲存標題的 Key
-            const titleKey = id + "_title";
-            const title = localStorage.getItem(titleKey);
-  
-            // 驗證標題是否存在
-            const listTitle = title && title.trim() !== "" ? title : "未命名清單";
-  
-            // 將結果加入清單
-            lists.push({ id: id, title: listTitle });
-        });
-  
-        return lists;
+      });
+
+      return lists;
+    }
+    
+    function render() {
+      const allLists = getAllLists();
+      container.innerHTML = "";
+      if (allLists.length === 0) {
+          container.innerHTML = '<li style="justify-content: center; background: #16213e;">目前沒有任何清單。</li>';
+          return;
       }
+      allLists.forEach(list => {
+        const li = document.createElement("li");
+        li.innerHTML = 
+          `<a href="list.html?id=${encodeURIComponent(list.id)}">${list.title}</a>
+          <button onclick="deleteList('${list.id}')">刪除</button>`;
+        container.appendChild(li);
+      });
+    }
+
+    function addList() {
+      const id = generateId();
+      const defaultTitle = "新清單"; 
       
-      function render() {
-        const allLists = getAllLists();
-        container.innerHTML = "";
-        if (allLists.length === 0) {
-            container.innerHTML = '<li style="justify-content: center; background: #16213e;">目前沒有任何清單。</li>';
-            return;
-        }
-        allLists.forEach(list => {
-          const li = document.createElement("li");
-          li.innerHTML = 
-            `<a href="list.html?id=${encodeURIComponent(list.id)}">${list.title}</a>
-            <button onclick="deleteList('${list.id}')">刪除</button>`;
-          container.appendChild(li);
-        });
-      }
-  
-      function addList() {
-        const id = generateId();
-        const defaultTitle = "新清單"; // 新清單預設標題
-        
-        // 關鍵修正 3: 新增清單時，需同步建立子清單預期的兩個 Key
-        
-        // 1. 儲存預設標題 (子清單的 STORAGE_KEY_TITLE)
-        localStorage.setItem(id + "_title", defaultTitle); 
-        
-        // 2. 儲存預設項目 (子清單的 STORAGE_KEY_ITEMS)
-        // 為了避免子清單首次加載錯誤，我們存一個空項目陣列 ['']
-        localStorage.setItem(id + "_items", JSON.stringify([''])); 
-        
-        render();
-        // 自動打開新清單頁面
-        window.location.href = `list.html?id=${encodeURIComponent(id)}`;
-      }
+      // 關鍵修正 3: 新增清單時，同步建立子清單預期的兩個 Key
       
-      // 關鍵修正 4: 刪除清單時，必須同步刪除子清單儲存的所有相關 Key
-      function deleteList(id) {
-        if (!confirm("確定要刪除這個清單嗎？")) return;
-        
-        // 刪除標題 Key
-        localStorage.removeItem(id + "_title");
-        
-        // 刪除項目 Key
-        localStorage.removeItem(id + "_items");
-        
-        // 注意：由於您的子清單只使用這兩個 Key，我們只需刪除這兩個
-        
-        render();
-      }
+      // 1. 儲存預設標題
+      localStorage.setItem(id + "_title", defaultTitle); 
       
-      document.getElementById("addBtn").addEventListener("click", addList);
-      render();
-  </script>
+      // 2. 儲存預設項目 (子清單預期 [""]，避免錯誤)
+      localStorage.setItem(id + "_items", JSON.stringify([''])); 
+      
+      // 立即導航至新清單頁面
+      window.location.href = `list.html?id=${encodeURIComponent(id)}`;
+      
+      // 注意：這裡不呼叫 render()，因為頁面會跳轉
+    }
+    
+    // 關鍵修正 4: 刪除清單時，必須同步刪除子清單儲存的所有相關 Key
+    function deleteList(id) {
+      if (!confirm("確定要刪除這個清單嗎？這將同時移除清單標題和內容。")) return;
+      
+      // 刪除標題 Key
+      localStorage.removeItem(id + "_title");
+      
+      // 刪除項目 Key
+      localStorage.removeItem(id + "_items");
+      
+      render(); // 重新渲染母清單
+    }
+    
+    document.getElementById("addBtn").addEventListener("click", addList);
+    render();
+</script>
 </body>
 </html>
