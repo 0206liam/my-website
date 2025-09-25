@@ -12,13 +12,8 @@
       text-align: center;
       padding: 20px;
     }
-    h1 {
-      margin-bottom: 20px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
+    h1 { margin-bottom: 20px; cursor: pointer; }
+    ul { list-style: none; padding: 0; }
     li {
       background: #16213e;
       margin: 8px auto;
@@ -61,19 +56,19 @@
   <p><a href="index.html" style="color:#ff6b9d">⬅ 回到清單總管</a></p>
 
   <script>
-    // 取得網址參數 id
+    // 取得網址參數 id（清單名稱）
     const urlParams = new URLSearchParams(window.location.search);
-    const listId = urlParams.get("id") || "未命名清單";
+    const listId = urlParams.get("id") || "default";
 
-    // localStorage key
+    // localStorage key (每個清單都不同)
     const STORAGE_KEY_ITEMS = "list_" + listId + "_items";
     const STORAGE_KEY_TITLE = "list_" + listId + "_title";
 
-    // 資料
+    // 讀取資料
     let listTitle = localStorage.getItem(STORAGE_KEY_TITLE) || listId;
     let items = JSON.parse(localStorage.getItem(STORAGE_KEY_ITEMS)) || [];
 
-    // DOM 元素
+    // DOM
     const titleEl = document.getElementById("listTitle");
     const container = document.getElementById("itemContainer");
     const newItemInput = document.getElementById("newItem");
@@ -82,6 +77,7 @@
     titleEl.textContent = "📋 " + listTitle;
     render();
 
+    // --- 功能 ---
     function render() {
       container.innerHTML = "";
       items.forEach((item, idx) => {
@@ -119,6 +115,16 @@
       localStorage.setItem(STORAGE_KEY_TITLE, listTitle);
       localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
     }
+
+    // 點擊標題 → 修改清單名稱
+    titleEl.addEventListener("click", () => {
+      const newTitle = prompt("輸入新的清單名稱：", listTitle);
+      if (newTitle) {
+        listTitle = newTitle;
+        titleEl.textContent = "📋 " + listTitle;
+        save();
+      }
+    });
   </script>
 </body>
 </html>
