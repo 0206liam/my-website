@@ -469,12 +469,21 @@
 
         // 取得網址參數 ?id=清單名稱
         const urlParams = new URLSearchParams(window.location.search);
-        const listId = urlParams.get("id") || "default";
+        let rawListId = urlParams.get("id") || "default";
+
+        // 關鍵修正：確保不會重複添加 "list_" 前綴
+        let listId;
+        if (rawListId.startsWith("list_")) {
+            // 如果 URL 中的 ID 已經包含 "list_" 前綴，直接使用
+            listId = rawListId;
+        } else {
+            // 如果沒有前綴，則添加
+            listId = "list_" + rawListId;
+        }
 
         // 每個清單專屬的 key
-        const STORAGE_KEY_ITEMS = "list_" + listId + "_items";
-        const STORAGE_KEY_TITLE = "list_" + listId + "_title";
-
+        const STORAGE_KEY_ITEMS = listId + "_items";
+        const STORAGE_KEY_TITLE = listId + "_title";
 
         let listItems = [];
         let draggedElement = null;
