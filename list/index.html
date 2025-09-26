@@ -39,122 +39,209 @@
       margin-top: 20px;
       background: linear-gradient(45deg, #4a9eff, #ff6b9d);
     }
+    .error-message {
+      background: #ff4757;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px auto;
+      max-width: 400px;
+    }
   </style>
 </head>
 <body>
   <h1>📂 我的清單</h1>
+  <div id="errorContainer"></div>
   <ul id="listContainer"></ul>
   <button id="addBtn">➕ 新增清單</button>
 
-   <script>
+  <script>
     const container = document.getElementById("listContainer");
+    const errorContainer = document.getElementById("errorContainer");
     
-    // 關鍵修正 1: 確保 ID 帶有 'list_' 前綴且足夠唯一
+    // 改善的 ID 生成函數
     function generateId() {
-      // 使用更長的 ID 確保唯一性
-      return 'list_' + Date.now() + '' + Math.floor(Math.random() * 99999);
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substr(2, 9);
+      return `list_${timestamp}_${random}`;
     }
     
-    // 關鍵修正 2: 穩健地讀取清單列表
+    // HTML 轉義函數，防止 XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // 錯誤處理函數
+    function showError(message) {
+      errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+      setTimeout(() => {
+        errorContainer.innerHTML = '';
+      }, 5000);
+    }
+    
+    // localStorage 安全操作包裝
+    function safeGetItem(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        showError('讀取資料時發生錯誤');
+        return null;
+      }
+    }
+    
+    function safeSetItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (e) {
+        showError('儲存資料時發生錯誤，可能是儲存空間不足');
+        return false;
+      }
+    }
+    
+    function safeRemoveItem(key) {
+      try {
+        localStorage.removeItem(key);
+        return true;
+      } catch (e) {
+        showError('刪除資料時發生錯誤');
+        return false;
+      }
+    }
+    
+    // 改善的清單讀取函數
     function getAllLists() {
       const lists = [];
-      const idSet = new Set(); // 用於存儲不重複的基礎 ID
+      const processedIds = new Set();
 
-      // 步驟 A: 遍歷所有 localStorage keys，尋找所有清單的基礎 ID
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-
-        if (key.startsWith("list_")) {
-            let baseId = null;
-            
-            // 從子清單的 Key 中解析出基礎 ID (list_XXX)
-            if (key.endsWith("_title")) {
-                baseId = key.replace("_title", "");
-            } else if (key.endsWith("_items")) {
-                baseId = key.replace("_items", "");
-            }
-            
-            // 只有成功解析出基礎 ID 才加入 Set
-            if (baseId) {
-                idSet.add(baseId);
-            }
-        }
-      }
-
-      // 步驟 B: 根據基礎 ID 讀取標題，並確認清單內容是否存在
-      idSet.forEach(id => {
-          const titleKey = id + "_title";
-          const itemsKey = id + "_items";
-
-          // 讀取標題 (如果不存在，則為 null)
-          const title = localStorage.getItem(titleKey);
-          // 讀取清單項目 (用於驗證清單是否為空/有效)
-          const items = localStorage.getItem(itemsKey);
-
-          // 只有當至少有標題 Key 或內容 Key 存在時，才視為有效清單
-          if (title !== null || items !== null) {
-              // 如果標題為 null 或空字串，則使用預設值
-              const listTitle = (title && title.trim() !== "") ? title : "未命名清單";
-              
-              // 加入列表
-              lists.push({ id: id, title: listTitle });
+      try {
+        // 遍歷 localStorage keys
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          
+          if (!key || !key.startsWith("list_")) continue;
+          
+          let baseId = null;
+          
+          // 解析基礎 ID
+          if (key.endsWith("_title")) {
+            baseId = key.slice(0, -6); // 移除 "_title"
+          } else if (key.endsWith("_items")) {
+            baseId = key.slice(0, -6); // 移除 "_items"
           }
-      });
-
-      return lists;
+          
+          // 避免重複處理同一個清單
+          if (baseId && !processedIds.has(baseId)) {
+            processedIds.add(baseId);
+            
+            const titleKey = baseId + "_title";
+            const itemsKey = baseId + "_items";
+            
+            const title = safeGetItem(titleKey);
+            const items = safeGetItem(itemsKey);
+            
+            // 確保至少有一個 key 存在
+            if (title !== null || items !== null) {
+              const listTitle = (title && title.trim() !== "") ? title : "未命名清單";
+              lists.push({ id: baseId, title: listTitle });
+            }
+          }
+        }
+      } catch (e) {
+        showError('載入清單時發生錯誤');
+      }
+      
+      // 按 ID 排序，確保顯示順序一致
+      return lists.sort((a, b) => a.id.localeCompare(b.id));
     }
     
+    // 改善的渲染函數
     function render() {
       const allLists = getAllLists();
       container.innerHTML = "";
+      
       if (allLists.length === 0) {
-          container.innerHTML = '<li style="justify-content: center; background: #16213e;">目前沒有任何清單。</li>';
-          return;
+        container.innerHTML = '<li style="justify-content: center; background: #16213e;">目前沒有任何清單。</li>';
+        return;
       }
+      
       allLists.forEach(list => {
         const li = document.createElement("li");
-        li.innerHTML = 
-          `<a href="list.html?id=${encodeURIComponent(list.id)}">${list.title}</a>
-          <button onclick="deleteList('${list.id}')">刪除</button>`;
+        
+        // 創建連結元素
+        const link = document.createElement("a");
+        link.href = `list.html?id=${encodeURIComponent(list.id)}`;
+        link.textContent = list.title; // 使用 textContent 防止 XSS
+        
+        // 創建刪除按鈕
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "刪除";
+        deleteBtn.addEventListener("click", () => deleteList(list.id));
+        
+        li.appendChild(link);
+        li.appendChild(deleteBtn);
         container.appendChild(li);
       });
     }
 
+    // 改善的新增清單函數
     function addList() {
       const id = generateId();
-      const defaultTitle = "新清單"; 
+      const defaultTitle = "新清單";
       
-      // 關鍵修正 3: 新增清單時，同步建立子清單預期的兩個 Key
+      // 檢查 ID 是否已存在（雖然機率很低）
+      if (safeGetItem(id + "_title") !== null || safeGetItem(id + "_items") !== null) {
+        showError('產生唯一 ID 失敗，請重試');
+        return;
+      }
       
-      // 1. 儲存預設標題 (子清單的 STORAGE_KEY_TITLE)
-      localStorage.setItem(id + "_title", defaultTitle); 
+      // 儲存資料
+      const titleSaved = safeSetItem(id + "_title", defaultTitle);
+      const itemsSaved = safeSetItem(id + "_items", JSON.stringify(['']));
       
-      // 2. 儲存預設項目 (子清單預期 [""]，避免錯誤)
-      localStorage.setItem(id + "_items", JSON.stringify([''])); 
-      
-      // ！！！這裡的修正，確保 localStorage 寫入完成後再跳轉
-      // 雖然理論上 setItem 是同步的，但強制等待可能解決某些瀏覽器的同步問題
-      
-      // 導航至新清單頁面
-      window.location.href = `list.html?id=${encodeURIComponent(id)}`;
+      if (titleSaved && itemsSaved) {
+        // 確保資料已儲存後再導航
+        window.location.href = `list.html?id=${encodeURIComponent(id)}`;
+      }
     }
     
-    // 關鍵修正 4: 刪除清單時，必須同步刪除子清單儲存的所有相關 Key
+    // 改善的刪除清單函數
     function deleteList(id) {
-      if (!confirm("確定要刪除這個清單嗎？這將同時移除清單標題和內容。")) return;
+      if (!confirm("確定要刪除這個清單嗎？這將同時移除清單標題和內容。")) {
+        return;
+      }
       
-      // 刪除標題 Key
-      localStorage.removeItem(id + "_title");
+      // 刪除相關的所有 keys
+      const titleRemoved = safeRemoveItem(id + "_title");
+      const itemsRemoved = safeRemoveItem(id + "_items");
       
-      // 刪除項目 Key
-      localStorage.removeItem(id + "_items");
-      
-      render(); // 重新渲染母清單
+      if (titleRemoved && itemsRemoved) {
+        render(); // 重新渲染
+      }
     }
     
+    // 事件監聽器
     document.getElementById("addBtn").addEventListener("click", addList);
-    // 首次載入母清單
-    render();
-</script>
+    
+    // 頁面載入時檢查 localStorage 是否可用
+    function checkLocalStorageAvailability() {
+      try {
+        const testKey = '__test_key__';
+        localStorage.setItem(testKey, 'test');
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (e) {
+        showError('瀏覽器不支援本地儲存功能，應用可能無法正常運作');
+        return false;
+      }
+    }
+    
+    // 初始化
+    if (checkLocalStorageAvailability()) {
+      render();
+    }
+  </script>
 </body>
 </html>
