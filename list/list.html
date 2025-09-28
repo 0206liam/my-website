@@ -435,10 +435,58 @@
         .title-display:active {
             transform: scale(0.98);
         }
+
+        /* 返回按鈕樣式 */
+        .back-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(74, 158, 255, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-btn:hover {
+            background: rgba(74, 158, 255, 1);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+        }
+
+        .back-btn:active {
+            transform: translateY(0) scale(0.95);
+        }
+
+        /* 手機版調整 */
+        @media (max-width: 480px) {
+            .back-btn {
+                bottom: 15px;
+                left: 15px;
+                width: 45px;
+                height: 45px;
+                font-size: 16px;
+            }
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 返回按鈕 -->
+        <button class="back-btn" onclick="goBack()" title="返回清單">←</button>
+
+
+
+
         <!-- 標題區域 -->
         <div id="titleSection" class="title-section">
             <div id="titleDisplay" class="title-display" style="display: none;" onclick="editTitle()"></div>
@@ -911,6 +959,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadFromStorage();
         });
+
+        // 返回功能
+        function goBack() {
+            // 儲存當前狀態
+            saveToStorage();
+            
+            // 返回主清單頁面
+            window.location.href = 'index.html';
+        }
 
         window.addEventListener('beforeunload', saveToStorage);
     </script>
