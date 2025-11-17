@@ -207,7 +207,9 @@
     </div>
 
     <script>
+        // 原始題目列表 (保留用於統計追蹤)
         const originalQuestions = [
+            // q: "A + B", a: 個位數結果
             {q: "9 + 2", a: 1}, {q: "8 + 3", a: 1}, {q: "7 + 4", a: 1}, {q: "6 + 5", a: 1},
             {q: "9 + 3", a: 2}, {q: "8 + 4", a: 2}, {q: "7 + 5", a: 2}, {q: "6 + 6", a: 2},
             {q: "9 + 4", a: 3}, {q: "8 + 5", a: 3}, {q: "7 + 6", a: 3}, {q: "9 + 5", a: 4},
@@ -215,7 +217,7 @@
             {q: "9 + 7", a: 6}, {q: "8 + 8", a: 6}, {q: "9 + 8", a: 7}, {q: "9 + 9", a: 8}
         ];
         
-        let currentQuestions = [];
+        let currentQuestions = []; // 實際測驗用的題目列表
         let currentIndex = 0;
         let score = 0;
         let startTime;
@@ -268,10 +270,10 @@
         // 清除統計資料：真正清除 localStorage 並重設狀態
         function resetStats() {
             if (confirm('確定要清除所有累積的答題紀錄嗎？清除後將無法復原。')) {
-                localStorage.removeItem('additionQuizStatsV2'); // ✅ 關鍵：真正刪除
-                initializeStats(); // 重設記憶體資料
-                saveStats();       // （可選）可確保一致，但 removeItem 已足夠
-                location.reload(); // 重新載入乾淨狀態
+                localStorage.removeItem('additionQuizStatsV2');
+                initializeStats();
+                saveStats();       
+                location.reload(); 
             }
         }
 
@@ -325,10 +327,53 @@
             }
             return newArray;
         }
+
+        /**
+         * 根據原始題目生成包含順序交換的實際測驗題目列表
+         * @returns {Array} 包含 {q: "實際題目", a: 個位數結果, originalQ: "原始題目A+B", originalIndex: index} 的列表
+         */
+        function generateQuestions() {
+            const quizList = [];
+            
+            originalQuestions.forEach((originalQ, index) => {
+                // 每個原始題目 (例如 "9 + 5") 有 50% 機會換成反向 (例如 "5 + 9")
+                if (Math.random() < 0.5) {
+                    const parts = originalQ.q.split(' + ');
+                    // 確保能拆成 A 和 B
+                    if (parts.length === 2) {
+                        const [a, b] = parts.map(s => s.trim());
+                        
+                        // 檢查 A 和 B 是否相同 (例如 6 + 6)，如果相同則不交換
+                        if (a !== b) {
+                            const newQ = `${b} + ${a}`; // 交換順序
+                            quizList.push({
+                                q: newQ,
+                                a: originalQ.a,
+                                originalQ: originalQ.q, // 儲存原始題目用於統計查找
+                                originalIndex: index
+                            });
+                            return; // 跳過 originalQ 的 push
+                        }
+                    }
+                }
+                
+                // 如果是 A+B (例如 6+6)，或隨機決定不交換，則使用原始題目
+                quizList.push({
+                    q: originalQ.q,
+                    a: originalQ.a,
+                    originalQ: originalQ.q,
+                    originalIndex: index // 關鍵：儲存原始索引用於統計追蹤
+                });
+            });
+            
+            // 將生成的 20 題隨機打亂
+            return shuffleArray(quizList);
+        }
         
         function startQuiz() {
             loadStats();
-            currentQuestions = shuffleArray(originalQuestions);
+            // 使用新的 generateQuestions 函式來產生隨機順序且可能經過交換的題目列表
+            currentQuestions = generateQuestions();
             currentIndex = 0;
             score = 0;
             startTime = Date.now();
@@ -388,8 +433,10 @@
                 document.getElementById('feedback').style.color = '#f44336';
             }
             
-            const statsIndex = originalQuestions.findIndex(q => q.q === currentQ.q);
-            if (statsIndex !== -1) {
+            // 使用儲存在題目物件中的原始索引來查找統計項目
+            const statsIndex = currentQ.originalIndex; 
+            
+            if (statsIndex !== undefined && statsIndex !== -1) {
                 const statsItem = quizStats.questions[statsIndex];
                 statsItem.totalCumulativeScore = parseFloat((statsItem.totalCumulativeScore + cumulativePointChange).toFixed(2));
                 statsItem.totalAttempts++;
@@ -437,10 +484,22 @@
         }
 
         document.addEventListener('keydown', function(e) {
-            if (document.querySelector('.start-screen').classList.contains('active') && (e.key === 'Enter' || e.keyCode === 13)) {
+            // 判斷按鍵是否為 Enter 鍵
+            const isEnter = (e.key === 'Enter' || e.keyCode === 13);
+
+            // 1. 在開始畫面時，按 Enter 開始測驗
+            if (document.querySelector('.start-screen').classList.contains('active') && isEnter) {
                 startQuiz();
                 return; 
             }
+
+            // 2. 在結果畫面時，按 Enter 重新開始
+            if (document.querySelector('.result-screen').classList.contains('active') && isEnter) {
+                location.reload();
+                return;
+            }
+
+            // 3. 在作答畫面時，處理數字鍵
             if (document.querySelector('.quiz-screen').classList.contains('active')) {
                 const key = e.key;
                 if (key >= '0' && key <= '9') {
