@@ -177,7 +177,11 @@
         <div class="stats-screen">
             <h2>📊 題目累積評分統計</h2>
             <p style="font-size: 0.9em; color: #764ba2; margin-bottom: 15px;">
-                評分標準：答對 = -秒數 | 答錯 = -10 (持續累積) | 平均評分 = 累計評分/次數
+                評分標準：<br>
+                • 答對 ≤2.5秒：-秒數<br>
+                • 答對 >2.5秒：-秒數 - 2（最低為 -10）<br>
+                • 答錯：-10<br>
+                （平均評分 = 累計評分 / 總次數）
             </p>
             <div style="max-height: 300px; overflow-y: scroll;">
                 <table id="statsTable"></table>
@@ -207,9 +211,7 @@
     </div>
 
     <script>
-        // 原始題目列表 (保留用於統計追蹤)
         const originalQuestions = [
-            // q: "A + B", a: 個位數結果
             {q: "9 + 2", a: 1}, {q: "8 + 3", a: 1}, {q: "7 + 4", a: 1}, {q: "6 + 5", a: 1},
             {q: "9 + 3", a: 2}, {q: "8 + 4", a: 2}, {q: "7 + 5", a: 2}, {q: "6 + 6", a: 2},
             {q: "9 + 4", a: 3}, {q: "8 + 5", a: 3}, {q: "7 + 6", a: 3}, {q: "9 + 5", a: 4},
@@ -217,7 +219,7 @@
             {q: "9 + 7", a: 6}, {q: "8 + 8", a: 6}, {q: "9 + 8", a: 7}, {q: "9 + 9", a: 8}
         ];
         
-        let currentQuestions = []; // 實際測驗用的題目列表
+        let currentQuestions = [];
         let currentIndex = 0;
         let score = 0;
         let startTime;
@@ -225,12 +227,10 @@
         let timerInterval;
         let container = document.querySelector('.container'); 
         
-        // 跨回合統計資料結構
         let quizStats = {
             questions: []
         };
 
-        // 無條件初始化統計資料
         function initializeStats() {
             quizStats.questions = originalQuestions.map(q => ({
                 q: q.q,
@@ -241,7 +241,6 @@
             }));
         }
 
-        // 載入統計資料（含驗證）
         function loadStats() {
             const storedStats = localStorage.getItem('additionQuizStatsV2');
             if (storedStats) {
@@ -262,12 +261,10 @@
             initializeStats();
         }
 
-        // 儲存統計資料
         function saveStats() {
             localStorage.setItem('additionQuizStatsV2', JSON.stringify(quizStats));
         }
 
-        // 清除統計資料：真正清除 localStorage 並重設狀態
         function resetStats() {
             if (confirm('確定要清除所有累積的答題紀錄嗎？清除後將無法復原。')) {
                 localStorage.removeItem('additionQuizStatsV2');
@@ -283,12 +280,10 @@
         }
 
         function showStats() {
-            loadStats(); // 確保載入最新資料
-            
+            loadStats();
             document.querySelector('.start-screen').classList.remove('active');
             document.querySelector('.stats-screen').classList.add('active');
             
-            // 按累積評分由低到高排序（越差越前）
             const sortedStats = [...quizStats.questions].sort((a, b) => {
                 return a.totalCumulativeScore - b.totalCumulativeScore;
             });
@@ -304,7 +299,6 @@
             `;
 
             sortedStats.forEach((item, index) => {
-                // 計算平均評分：累計評分/次數，若無作答則顯示"-" 
                 const avgScore = item.totalAttempts > 0 ? (item.totalCumulativeScore / item.totalAttempts).toFixed(2) : "-";
                 tableHTML += `
                     <tr>
@@ -328,59 +322,43 @@
             return newArray;
         }
 
-        /**
-         * 根據原始題目生成包含順序交換的實際測驗題目列表
-         * @returns {Array} 包含 {q: "實際題目", a: 個位數結果, originalQ: "原始題目A+B", originalIndex: index} 的列表
-         */
         function generateQuestions() {
             const quizList = [];
-            
             originalQuestions.forEach((originalQ, index) => {
-                // 每個原始題目 (例如 "9 + 5") 有 50% 機會換成反向 (例如 "5 + 9")
                 if (Math.random() < 0.5) {
                     const parts = originalQ.q.split(' + ');
-                    // 確保能拆成 A 和 B
                     if (parts.length === 2) {
                         const [a, b] = parts.map(s => s.trim());
-                        
-                        // 檢查 A 和 B 是否相同 (例如 6 + 6)，如果相同則不交換
                         if (a !== b) {
-                            const newQ = `${b} + ${a}`; // 交換順序
+                            const newQ = `${b} + ${a}`;
                             quizList.push({
                                 q: newQ,
                                 a: originalQ.a,
-                                originalQ: originalQ.q, // 儲存原始題目用於統計查找
+                                originalQ: originalQ.q,
                                 originalIndex: index
                             });
-                            return; // 跳過 originalQ 的 push
+                            return;
                         }
                     }
                 }
-                
-                // 如果是 A+B (例如 6+6)，或隨機決定不交換，則使用原始題目
                 quizList.push({
                     q: originalQ.q,
                     a: originalQ.a,
                     originalQ: originalQ.q,
-                    originalIndex: index // 關鍵：儲存原始索引用於統計追蹤
+                    originalIndex: index
                 });
             });
-            
-            // 將生成的 20 題隨機打亂
             return shuffleArray(quizList);
         }
         
         function startQuiz() {
             loadStats();
-            // 使用新的 generateQuestions 函式來產生隨機順序且可能經過交換的題目列表
             currentQuestions = generateQuestions();
             currentIndex = 0;
             score = 0;
             startTime = Date.now();
-            
             document.querySelector('.start-screen').classList.remove('active');
             document.querySelector('.quiz-screen').classList.add('active');
-            
             showQuestion();
             startTimer();
         }
@@ -419,7 +397,17 @@
             
             if (userAnswer === correctAnswer) {
                 score += 5;
-                cumulativePointChange = -timeElapsed;
+
+                // ✅ 修正：加入評分封頂邏輯
+                let rawScore;
+                if (timeElapsed > 2.5) {
+                    rawScore = -(timeElapsed + 2);
+                } else {
+                    rawScore = -timeElapsed;
+                }
+                // 評分不得低於 -10（與答錯同分）
+                cumulativePointChange = Math.max(-10, rawScore);
+
                 document.getElementById('currentScore').textContent = score;
                 document.getElementById('feedback').textContent = '✓';
                 document.getElementById('feedback').style.color = '#4CAF50';
@@ -433,7 +421,6 @@
                 document.getElementById('feedback').style.color = '#f44336';
             }
             
-            // 使用儲存在題目物件中的原始索引來查找統計項目
             const statsIndex = currentQ.originalIndex; 
             
             if (statsIndex !== undefined && statsIndex !== -1) {
@@ -484,22 +471,15 @@
         }
 
         document.addEventListener('keydown', function(e) {
-            // 判斷按鍵是否為 Enter 鍵
             const isEnter = (e.key === 'Enter' || e.keyCode === 13);
-
-            // 1. 在開始畫面時，按 Enter 開始測驗
             if (document.querySelector('.start-screen').classList.contains('active') && isEnter) {
                 startQuiz();
                 return; 
             }
-
-            // 2. 在結果畫面時，按 Enter 重新開始
             if (document.querySelector('.result-screen').classList.contains('active') && isEnter) {
                 location.reload();
                 return;
             }
-
-            // 3. 在作答畫面時，處理數字鍵
             if (document.querySelector('.quiz-screen').classList.contains('active')) {
                 const key = e.key;
                 if (key >= '0' && key <= '9') {
@@ -508,7 +488,6 @@
             }
         });
         
-        // 初始化統計資料（頁面載入時）
         loadStats();
     </script>
 </body>
