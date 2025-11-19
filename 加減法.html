@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加減法練習測驗</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            transition: background 0.05s ease-in-out; 
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            overflow-y: auto; 
+            max-height: 90vh; 
+        }
+
+        .container.error-flash {
+            background: #ffc0cb;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .start-screen, .quiz-screen, .result-screen, .stats-screen {
+            display: none;
+        }
+        
+        .start-screen.active, .quiz-screen.active, .result-screen.active, .stats-screen.active {
+            display: block;
+        }
+        
+        .start-btn, .restart-btn, .stats-btn, .back-btn, .reset-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            margin: 5px;
+        }
+
+        .stats-btn, .back-btn {
+            background: #764ba2;
+        }
+        
+        .reset-btn {
+            background: #f44336;
+        }
+        
+        .start-btn:hover, .restart-btn:hover, .stats-btn:hover, .back-btn:hover, .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .timer {
+            font-size: 1.5em;
+            color: #764ba2;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .progress {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .question {
+            font-size: 3em;
+            color: #333;
+            margin: 30px 0;
+            font-weight: bold;
+        }
+        
+        .current-score {
+            font-size: 1.5em;
+            color: #4CAF50;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .hint {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+        
+        .result-score {
+            font-size: 4em;
+            color: #667eea;
+            margin: 30px 0;
+            font-weight: bold;
+        }
+        
+        .result-time {
+            font-size: 1.3em;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .feedback {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        
+        .correct-answer {
+            color: #4CAF50;
+            margin-top: 10px;
+            font-size: 1.2em;
+        }
+
+        .stats-screen table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .stats-screen th, .stats-screen td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .stats-screen th {
+            background-color: #f2f2f2;
+            color: #764ba2;
+        }
+
+        .stats-screen td:nth-child(2) {
+            text-align: left;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧮 加減法練習測驗</h1>
+        
+        <div class="start-screen active">
+            <p style="font-size: 1.2em; margin-bottom: 30px; color: #666;">
+                準備好挑戰10題加減法了嗎？<br>
+                只需要輸入個位數字即可！
+            </p>
+            <div>
+                <button class="start-btn" onclick="startQuiz()">開始作答</button>
+                <button class="stats-btn" onclick="showStats()">答題統計</button>
+            </div>
+        </div>
+        
+        <div class="stats-screen">
+            <h2>📊 題目累積評分統計</h2>
+            <p style="font-size: 0.9em; color: #764ba2; margin-bottom: 15px;">
+                評分標準：<br>
+                • 答對 ≤2.5秒：-秒數<br>
+                • 答對 >2.5秒：-秒數 - 2（最低為 -10）<br>
+                • 答錯：-10<br>
+                （平均評分 = 累計評分 / 總次數）<br>
+                • 當題目答題次數滿5次時，該題統計會重置
+            </p>
+            <div style="max-height: 300px; overflow-y: scroll;">
+                <table id="statsTable"></table>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="back-btn" onclick="goBackToStart()">返回</button>
+                <button class="reset-btn" onclick="resetStats()">清除統計紀錄</button>
+            </div>
+        </div>
+        
+        <div class="quiz-screen">
+            <div class="timer">⏱️ <span id="time">00:00</span></div>
+            <div class="progress">第 <span id="current">1</span> / 10 題</div>
+            <div class="current-score">得分：<span id="currentScore">0</span> 分</div>
+            <div class="question" id="question">11 + 2 = ?</div>
+            <div class="correct-answer" id="feedback"></div>
+            <div class="hint">請按鍵盤 0-9 作答</div>
+        </div>
+        
+        <div class="result-screen">
+            <div class="feedback" id="finalFeedback">🎉</div>
+            <div class="result-score"><span id="score">0</span> 分</div>
+            <div class="result-time">用時：<span id="finalTime">00:00</span></div>
+            <button class="restart-btn" onclick="location.reload()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        // 題庫 - 共56題
+        const originalQuestions = [
+            // 加法題目 (20題)
+            {q: "9 + 2", a: 1, type: "addition"}, // 11 → 個位數1
+            {q: "8 + 3", a: 1, type: "addition"}, // 11 → 個位數1
+            {q: "7 + 4", a: 1, type: "addition"}, // 11 → 個位數1
+            {q: "6 + 5", a: 1, type: "addition"}, // 11 → 個位數1
+            {q: "9 + 3", a: 2, type: "addition"}, // 12 → 個位數2
+            {q: "8 + 4", a: 2, type: "addition"}, // 12 → 個位數2
+            {q: "7 + 5", a: 2, type: "addition"}, // 12 → 個位數2
+            {q: "6 + 6", a: 2, type: "addition"}, // 12 → 個位數2
+            {q: "9 + 4", a: 3, type: "addition"}, // 13 → 個位數3
+            {q: "8 + 5", a: 3, type: "addition"}, // 13 → 個位數3
+            {q: "7 + 6", a: 3, type: "addition"}, // 13 → 個位數3
+            {q: "9 + 5", a: 4, type: "addition"}, // 14 → 個位數4
+            {q: "8 + 6", a: 4, type: "addition"}, // 14 → 個位數4
+            {q: "7 + 7", a: 4, type: "addition"}, // 14 → 個位數4
+            {q: "9 + 6", a: 5, type: "addition"}, // 15 → 個位數5
+            {q: "8 + 7", a: 5, type: "addition"}, // 15 → 個位數5
+            {q: "9 + 7", a: 6, type: "addition"}, // 16 → 個位數6
+            {q: "8 + 8", a: 6, type: "addition"}, // 16 → 個位數6
+            {q: "9 + 8", a: 7, type: "addition"}, // 17 → 個位數7
+            {q: "9 + 9", a: 8, type: "addition"}, // 18 → 個位數8
+            
+            // 減法題目 (36題)
+            {q: "11 − 2", a: 9, type: "subtraction"},
+            {q: "11 − 3", a: 8, type: "subtraction"},
+            {q: "11 − 4", a: 7, type: "subtraction"},
+            {q: "11 − 5", a: 6, type: "subtraction"},
+            {q: "11 − 6", a: 5, type: "subtraction"},
+            {q: "11 − 7", a: 4, type: "subtraction"},
+            {q: "11 − 8", a: 3, type: "subtraction"},
+            {q: "11 − 9", a: 2, type: "subtraction"},
+            {q: "12 − 3", a: 9, type: "subtraction"},
+            {q: "12 − 4", a: 8, type: "subtraction"},
+            {q: "12 − 5", a: 7, type: "subtraction"},
+            {q: "12 − 6", a: 6, type: "subtraction"},
+            {q: "12 − 7", a: 5, type: "subtraction"},
+            {q: "12 − 8", a: 4, type: "subtraction"},
+            {q: "12 − 9", a: 3, type: "subtraction"},
+            {q: "13 − 4", a: 9, type: "subtraction"},
+            {q: "13 − 5", a: 8, type: "subtraction"},
+            {q: "13 − 6", a: 7, type: "subtraction"},
+            {q: "13 − 7", a: 6, type: "subtraction"},
+            {q: "13 − 8", a: 5, type: "subtraction"},
+            {q: "13 − 9", a: 4, type: "subtraction"},
+            {q: "14 − 5", a: 9, type: "subtraction"},
+            {q: "14 − 6", a: 8, type: "subtraction"},
+            {q: "14 − 7", a: 7, type: "subtraction"},
+            {q: "14 − 8", a: 6, type: "subtraction"},
+            {q: "14 − 9", a: 5, type: "subtraction"},
+            {q: "15 − 6", a: 9, type: "subtraction"},
+            {q: "15 − 7", a: 8, type: "subtraction"},
+            {q: "15 − 8", a: 7, type: "subtraction"},
+            {q: "15 − 9", a: 6, type: "subtraction"},
+            {q: "16 − 7", a: 9, type: "subtraction"},
+            {q: "16 − 8", a: 8, type: "subtraction"},
+            {q: "16 − 9", a: 7, type: "subtraction"},
+            {q: "17 − 8", a: 9, type: "subtraction"},
+            {q: "17 − 9", a: 8, type: "subtraction"},
+            {q: "18 − 9", a: 9, type: "subtraction"}
+        ];
+        
+        const TOTAL_QUESTIONS = 10;
+        const SCORE_PER_QUESTION = 100 / TOTAL_QUESTIONS; // 10分一題
+        const RESET_AFTER_ATTEMPTS = 5; // 答題次數達到5次時重置
+        
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let startTime;
+        let questionStartTime;
+        let timerInterval;
+        let container = document.querySelector('.container'); 
+        
+        let quizStats = {
+            questions: []
+        };
+
+        function initializeStats() {
+            quizStats.questions = originalQuestions.map(q => ({
+                q: q.q,
+                type: q.type,
+                totalCumulativeScore: 0,
+                totalAttempts: 0,
+                totalCorrectTime: 0,
+                errorCount: 0,
+                // 暫存重置前的評分資料
+                previousCumulativeScore: 0,
+                previousAttempts: 0
+            }));
+        }
+
+        function loadStats() {
+            const storedStats = localStorage.getItem('arithmeticQuizStats');
+            if (storedStats) {
+                try {
+                    const loadedStats = JSON.parse(storedStats);
+                    if (
+                        loadedStats &&
+                        Array.isArray(loadedStats.questions) &&
+                        loadedStats.questions.length === originalQuestions.length
+                    ) {
+                        // 確保新版本的資料結構相容性
+                        quizStats.questions = loadedStats.questions.map(item => ({
+                            ...item,
+                            previousCumulativeScore: item.previousCumulativeScore || 0,
+                            previousAttempts: item.previousAttempts || 0
+                        }));
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Invalid stats data, resetting.');
+                }
+            }
+            initializeStats();
+        }
+
+        function saveStats() {
+            localStorage.setItem('arithmeticQuizStats', JSON.stringify(quizStats));
+        }
+
+        function resetStats() {
+            if (confirm('確定要清除所有累積的答題紀錄嗎？清除後將無法復原。')) {
+                localStorage.removeItem('arithmeticQuizStats');
+                initializeStats();
+                saveStats();       
+                location.reload(); 
+            }
+        }
+
+        function goBackToStart() {
+            document.querySelector('.stats-screen').classList.remove('active');
+            document.querySelector('.start-screen').classList.add('active');
+        }
+
+        function showStats() {
+            loadStats();
+            document.querySelector('.start-screen').classList.remove('active');
+            document.querySelector('.stats-screen').classList.add('active');
+            
+            // 計算平均評分並排序（使用暫存資料）
+            const sortedStats = [...quizStats.questions].sort((a, b) => {
+                // 計算顯示用的平均評分（包含暫存資料）
+                const avgScoreA = calculateDisplayAverageScore(a);
+                const avgScoreB = calculateDisplayAverageScore(b);
+                return avgScoreA - avgScoreB;
+            });
+
+            const tableBody = document.getElementById('statsTable');
+            let tableHTML = `
+                <tr>
+                    <th>#</th>
+                    <th>題目</th>
+                    <th>類型</th>
+                    <th>當前評分</th>
+                    <th>平均評分</th>
+                    <th>答題次數</th>
+                </tr>
+            `;
+
+            sortedStats.forEach((item, index) => {
+                const displayAvgScore = calculateDisplayAverageScore(item).toFixed(2);
+                
+                tableHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item.q} = ?</td>
+                        <td>${item.type === "addition" ? "加法" : "減法"}</td>
+                        <td>${item.totalCumulativeScore.toFixed(2)}</td>
+                        <td>${displayAvgScore}</td>
+                        <td>${item.totalAttempts}</td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = tableHTML;
+        }
+
+        // 計算顯示用的平均評分（包含暫存資料）
+        function calculateDisplayAverageScore(statsItem) {
+            if (statsItem.previousAttempts > 0) {
+                // 如果有暫存資料，使用暫存資料計算平均評分
+                return statsItem.previousCumulativeScore / statsItem.previousAttempts;
+            } else if (statsItem.totalAttempts > 0) {
+                // 如果沒有暫存資料但當前有答題紀錄，使用當前資料
+                return statsItem.totalCumulativeScore / statsItem.totalAttempts;
+            } else {
+                // 如果都沒有資料，設為0
+                return 0;
+            }
+        }
+
+        // 根據統計數據選擇題目
+        function selectQuestions() {
+            loadStats();
+            
+            // 複製題庫和統計數據
+            const questionPool = [...originalQuestions];
+            const statsPool = [...quizStats.questions];
+            
+            // 計算每個題目的平均評分（用於出題邏輯，不使用暫存資料）
+            const questionsWithStats = questionPool.map((q, index) => {
+                const stat = statsPool[index];
+                const avgScore = stat.totalAttempts > 0 ? 
+                    (stat.totalCumulativeScore / stat.totalAttempts) : 0;
+                
+                return {
+                    ...q,
+                    originalIndex: index,
+                    totalAttempts: stat.totalAttempts,
+                    avgScore: avgScore // 這裡使用當前實際的評分，不是暫存資料
+                };
+            });
+            
+            // 優先選擇從未出過的題目（答題次數為0）
+            const neverAttempted = questionsWithStats.filter(q => q.totalAttempts === 0);
+            
+            // 如果從未出過的題目不足10題，則從剩餘題目中選擇平均評分最低的
+            let selectedQuestions = [];
+            
+            if (neverAttempted.length >= TOTAL_QUESTIONS) {
+                // 從未出過的題目足夠，隨機選擇10題
+                selectedQuestions = shuffleArray(neverAttempted).slice(0, TOTAL_QUESTIONS);
+            } else {
+                // 先加入所有從未出過的題目
+                selectedQuestions = [...neverAttempted];
+                
+                // 從剩餘題目中選擇平均評分最低的
+                const remainingQuestions = questionsWithStats.filter(q => q.totalAttempts > 0);
+                
+                // 按平均評分排序（從低到高）
+                remainingQuestions.sort((a, b) => a.avgScore - b.avgScore);
+                
+                // 選擇需要的題目數量
+                const needed = TOTAL_QUESTIONS - selectedQuestions.length;
+                selectedQuestions = [...selectedQuestions, ...remainingQuestions.slice(0, needed)];
+                
+                // 隨機打亂最終選擇的題目
+                selectedQuestions = shuffleArray(selectedQuestions);
+            }
+            
+            return selectedQuestions;
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function startQuiz() {
+            currentQuestions = selectQuestions();
+            currentIndex = 0;
+            score = 0;
+            startTime = Date.now();
+            document.querySelector('.start-screen').classList.remove('active');
+            document.querySelector('.quiz-screen').classList.add('active');
+            showQuestion();
+            startTimer();
+        }
+        
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                document.getElementById('time').textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        let feedbackTimeout;
+        
+        function showQuestion() {
+            const q = currentQuestions[currentIndex];
+            document.getElementById('question').textContent = `${q.q} = ?`;
+            document.getElementById('current').textContent = currentIndex + 1;
+            document.getElementById('currentScore').textContent = Math.round(score);
+            questionStartTime = Date.now();
+        }
+        
+        function submitAnswer(userAnswer) {
+            const timeElapsed = (Date.now() - questionStartTime) / 1000;
+            const currentQ = currentQuestions[currentIndex];
+            const correctAnswer = currentQ.a;
+            
+            let cumulativePointChange = 0;
+            
+            if (feedbackTimeout) {
+                clearTimeout(feedbackTimeout);
+                document.getElementById('feedback').textContent = '';
+            }
+            
+            if (userAnswer === correctAnswer) {
+                score += SCORE_PER_QUESTION;
+
+                // 評分計算
+                let rawScore;
+                if (timeElapsed > 2.5) {
+                    rawScore = -(timeElapsed + 2);
+                } else {
+                    rawScore = -timeElapsed;
+                }
+                // 評分不得低於 -10（與答錯同分）
+                cumulativePointChange = Math.max(-10, rawScore);
+
+                document.getElementById('currentScore').textContent = Math.round(score);
+                document.getElementById('feedback').textContent = '✓';
+                document.getElementById('feedback').style.color = '#4CAF50';
+            } else {
+                cumulativePointChange = -10;
+                container.classList.add('error-flash');
+                setTimeout(() => {
+                    container.classList.remove('error-flash');
+                }, 50); 
+                document.getElementById('feedback').textContent = `✗ ${correctAnswer}`;
+                document.getElementById('feedback').style.color = '#f44336';
+            }
+            
+            const statsIndex = currentQ.originalIndex; 
+            
+            if (statsIndex !== undefined && statsIndex !== -1) {
+                const statsItem = quizStats.questions[statsIndex];
+                
+                // 檢查是否需要重置該題統計
+                if (statsItem.totalAttempts + 1 >= RESET_AFTER_ATTEMPTS) {
+                    // 重置前先保存暫存資料
+                    statsItem.previousCumulativeScore = statsItem.totalCumulativeScore + cumulativePointChange;
+                    statsItem.previousAttempts = statsItem.totalAttempts + 1;
+                    
+                    // 重置該題統計
+                    statsItem.totalCumulativeScore = 0;
+                    statsItem.totalAttempts = 0;
+                    statsItem.totalCorrectTime = 0;
+                    statsItem.errorCount = 0;
+                } else {
+                    // 正常更新統計
+                    statsItem.totalCumulativeScore = parseFloat((statsItem.totalCumulativeScore + cumulativePointChange).toFixed(2));
+                    statsItem.totalAttempts++;
+                    if (userAnswer === correctAnswer) {
+                        statsItem.totalCorrectTime += timeElapsed;
+                    } else {
+                        statsItem.errorCount++;
+                    }
+                }
+                
+                saveStats(); 
+            }
+            
+            feedbackTimeout = setTimeout(() => {
+                document.getElementById('feedback').textContent = '';
+            }, 800);
+            
+            currentIndex++;
+            if (currentIndex < TOTAL_QUESTIONS) {
+                setTimeout(() => showQuestion(), 50); 
+            } else {
+                setTimeout(() => showResult(), 800);
+            }
+        } 
+        
+        function showResult() {
+            clearInterval(timerInterval);
+            const elapsed = Date.now() - startTime;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            
+            document.querySelector('.quiz-screen').classList.remove('active');
+            document.querySelector('.result-screen').classList.add('active');
+            
+            document.getElementById('score').textContent = Math.round(score);
+            document.getElementById('finalTime').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            let feedback = '';
+            if (score >= 99) feedback = '🏆 完美！滿分！';
+            else if (score >= 90) feedback = '🌟 太棒了！';
+            else if (score >= 80) feedback = '👍 很好！';
+            else if (score >= 70) feedback = '😊 不錯喔！';
+            else feedback = '💪 繼續加油！';
+            
+            document.getElementById('finalFeedback').textContent = feedback;
+        }
+
+        document.addEventListener('keydown', function(e) {
+            const isEnter = (e.key === 'Enter' || e.keyCode === 13);
+            if (document.querySelector('.start-screen').classList.contains('active') && isEnter) {
+                startQuiz();
+                return; 
+            }
+            if (document.querySelector('.result-screen').classList.contains('active') && isEnter) {
+                location.reload();
+                return;
+            }
+            if (document.querySelector('.quiz-screen').classList.contains('active')) {
+                const key = e.key;
+                if (key >= '0' && key <= '9') {
+                    submitAnswer(parseInt(key));
+                }
+            }
+        });
+        
+        loadStats();
+    </script>
+</body>
+</html>
