@@ -115,7 +115,6 @@
             padding: 10px;
             border-radius: 5px;
         }
-        /* 移除語音測試按鈕的樣式 */
     </style>
 </head>
 <body>
@@ -139,7 +138,6 @@
         </div>
         <button class="play-btn" id="playBtn">開始訓練</button>
         <button class="stop-btn" id="stopBtn" style="display:none;">停止</button>
-        <!-- 移除語音測試按鈕 -->
         <div class="debug-info" id="debugInfo"></div>
     </div>
 
@@ -161,7 +159,7 @@
         // 延遲初始化音頻上下文
         let audioContext = null;
         let voiceAvailable = false;
-        let voiceInitialized = false; // 重命名為語音已初始化
+        let voiceActivated = false;
         
         // 初始化音頻上下文
         async function initAudioContext() {
@@ -183,40 +181,46 @@
             return true;
         }
         
-        // 初始化語音系統 - 整合到主流程中
-        async function initVoiceSystem() {
-            // 檢查語音合成是否可用
-            voiceAvailable = 'speechSynthesis' in window;
-            
-            if (!voiceAvailable) {
-                console.log("語音合成不可用");
+        // 激活語音系統 - 關鍵函數！
+        function activateVoiceSystem() {
+            if (!('speechSynthesis' in window)) {
+                voiceAvailable = false;
+                console.log("瀏覽器不支持語音合成");
                 return false;
             }
             
-            // 嘗試初始化語音系統
+            voiceAvailable = true;
+            
+            // 立即停止所有現有語音
+            speechSynthesis.cancel();
+            
+            // 創建一個簡短的激活語音
+            const activationUtterance = new SpeechSynthesisUtterance("");
+            activationUtterance.text = "準備開始"; // 有實際內容
+            activationUtterance.volume = 0.5; // 中等音量
+            activationUtterance.rate = 1.0;
+            activationUtterance.pitch = 1.0;
+            activationUtterance.lang = 'zh-TW';
+            
+            // 立即播放激活語音
             try {
-                // 播放一個無聲的語音來激活語音系統
-                const utterance = new SpeechSynthesisUtterance("");
-                utterance.volume = 0; // 無聲
-                utterance.onstart = () => {
-                    console.log("語音系統激活成功");
-                    speechSynthesis.cancel(); // 立即取消無聲語音
-                    voiceInitialized = true;
-                };
-                utterance.onerror = (error) => {
-                    console.error("語音系統激活失敗:", error);
-                };
-                
-                speechSynthesis.speak(utterance);
+                speechSynthesis.speak(activationUtterance);
+                voiceActivated = true;
+                console.log("語音系統已激活");
                 
                 // 顯示調試信息
                 const debugInfo = document.getElementById('debugInfo');
                 debugInfo.style.display = 'block';
-                debugInfo.innerHTML = "初始化語音系統...";
+                debugInfo.innerHTML = "語音系統激活成功";
+                
+                // 100ms後取消激活語音（如果還在播放）
+                setTimeout(() => {
+                    speechSynthesis.cancel();
+                }, 100);
                 
                 return true;
             } catch (error) {
-                console.error("語音初始化失敗:", error);
+                console.error("語音激活失敗:", error);
                 return false;
             }
         }
@@ -229,7 +233,6 @@
             }
             
             try {
-                // 確保音頻上下文已啟動
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
@@ -253,10 +256,10 @@
             }
         }
         
-        // 語音合成函數 - 簡化版本
+        // 語音合成函數
         function speakNumber(number) {
-            if (!voiceAvailable || !voiceInitialized) {
-                console.log("語音系統不可用或未初始化，跳過語音提示");
+            if (!voiceAvailable || !voiceActivated) {
+                console.log("語音系統未激活，跳過語音提示");
                 return;
             }
             
@@ -264,24 +267,22 @@
                 // 停止任何正在進行的語音
                 speechSynthesis.cancel();
                 
-                setTimeout(() => {
-                    const utterance = new SpeechSynthesisUtterance(number.toString());
-                    utterance.lang = 'zh-TW';
-                    utterance.rate = 0.9;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
-                    
-                    // 針對iOS優化
-                    if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-                        utterance.rate = 0.85;
-                    }
-                    
-                    utterance.onerror = function(event) {
-                        console.error("語音合成錯誤:", event.error);
-                    };
-                    
-                    speechSynthesis.speak(utterance);
-                }, 50);
+                // 立即創建並播放語音
+                const utterance = new SpeechSynthesisUtterance(number.toString());
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                    utterance.rate = 0.85;
+                }
+                
+                utterance.onerror = function(event) {
+                    console.error("語音合成錯誤:", event.error);
+                };
+                
+                speechSynthesis.speak(utterance);
                 
             } catch (error) {
                 console.error("語音合成失敗:", error);
@@ -290,23 +291,21 @@
         
         // 語音合成文字
         function speakText(text) {
-            if (!voiceAvailable || !voiceInitialized) {
-                console.log("語音系統不可用或未初始化，跳過語音提示");
+            if (!voiceAvailable || !voiceActivated) {
+                console.log("語音系統未激活，跳過語音提示");
                 return;
             }
             
             try {
                 speechSynthesis.cancel();
                 
-                setTimeout(() => {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'zh-TW';
-                    utterance.rate = 0.9;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
-                    
-                    speechSynthesis.speak(utterance);
-                }, 50);
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                speechSynthesis.speak(utterance);
             } catch (error) {
                 console.error("語音合成失敗:", error);
             }
@@ -424,26 +423,14 @@
         async function startWorkout() {
             if (intervalId) return;
             
-            // 初始化音頻
+            // 1. 先激活語音系統（在用戶點擊的同一事件循環中）
+            activateVoiceSystem();
+            
+            // 2. 初始化音頻
             await initAudioContext();
             
-            // 初始化語音系統
-            await initVoiceSystem();
-            
-            // 顯示狀態
-            const debugInfo = document.getElementById('debugInfo');
-            if (voiceAvailable && voiceInitialized) {
-                debugInfo.innerHTML = "語音系統已準備就緒";
-            } else if (voiceAvailable) {
-                debugInfo.innerHTML = "語音系統初始化中...";
-            } else {
-                debugInfo.innerHTML = "語音功能不可用，將使用嗶聲提示";
-            }
-            
-            // 播放測試音
-            setTimeout(() => {
-                playBeep();
-            }, 100);
+            // 3. 播放測試嗶聲
+            playBeep();
             
             // 獲取輸入值
             const repsInput = document.getElementById('repsInput');
@@ -494,12 +481,10 @@
                 intervalId = null;
             }
             
-            // 停止任何語音
             if (speechSynthesis) {
                 speechSynthesis.cancel();
             }
             
-            // 恢復UI
             document.getElementById('playBtn').style.display = 'inline-block';
             document.getElementById('stopBtn').style.display = 'none';
             document.getElementById('repsInput').disabled = false;
@@ -511,21 +496,8 @@
         
         // 頁面初始化
         document.addEventListener('DOMContentLoaded', function() {
-            // 設置按鈕事件
             document.getElementById('playBtn').addEventListener('click', startWorkout);
             document.getElementById('stopBtn').addEventListener('click', stopWorkout);
-            
-            // 檢查語音可用性（僅記錄，不初始化）
-            voiceAvailable = 'speechSynthesis' in window;
-            console.log("語音合成可用:", voiceAvailable);
-            
-            // iOS 語音初始化
-            if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-                setTimeout(() => {
-                    const voices = speechSynthesis.getVoices();
-                    console.log("iOS 語音列表:", voices.length);
-                }, 500);
-            }
         });
     </script>
 </body>
