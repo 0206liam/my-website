@@ -5,132 +5,339 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>健身節奏計時器</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #121212 0%, #1a1a2e 100%);
+            color: #e0e0e0;
         }
+        
         .container {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            background: rgba(30, 30, 40, 0.9);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6),
+                        0 4px 12px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
             text-align: center;
-            min-width: 300px;
+            min-width: 320px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
+        
         h1 {
-            color: #333;
-            margin-bottom: 30px;
+            color: #ffffff;
+            margin-bottom: 32px;
+            font-size: 28px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.5px;
         }
+        
         .counter {
-            font-size: 72px;
-            font-weight: bold;
-            color: #667eea;
-            margin: 30px 0;
+            font-size: 80px;
+            font-weight: 700;
+            color: #7c3aed;
+            margin: 32px 0;
+            text-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
         }
+        
         .phase {
-            font-size: 24px;
-            color: #666;
-            margin: 20px 0;
-            min-height: 30px;
+            font-size: 22px;
+            color: #a0a0c0;
+            margin: 24px 0;
+            min-height: 32px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
         }
+        
         .progress-bar {
             width: 100%;
-            height: 30px;
-            background: #e0e0e0;
-            border-radius: 15px;
+            height: 14px;
+            background: rgba(60, 60, 80, 0.5);
+            border-radius: 7px;
             overflow: hidden;
-            margin: 20px 0;
+            margin: 32px 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
         }
+        
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%);
             width: 0%;
-            transition: width 0.1s linear;
+            transition: width 0.1s ease-out;
+            border-radius: 7px;
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
         }
-        button {
-            font-size: 20px;
-            padding: 15px 40px;
-            margin: 10px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .play-btn {
-            background: #667eea;
-            color: white;
-        }
-        .play-btn:hover {
-            background: #5568d3;
-            transform: scale(1.05);
-        }
-        .stop-btn {
-            background: #f44336;
-            color: white;
-        }
-        .stop-btn:hover {
-            background: #da190b;
-            transform: scale(1.05);
-        }
+        
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
+        
         .input-group label {
-            font-size: 18px;
-            color: #333;
-            margin-right: 10px;
+            font-size: 16px;
+            color: #c0c0e0;
+            font-weight: 500;
+            min-width: 120px;
+            text-align: right;
         }
+        
         .input-group input {
             font-size: 18px;
-            padding: 8px 15px;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            width: 80px;
+            padding: 12px 16px;
+            background: rgba(40, 40, 55, 0.8);
+            border: 2px solid rgba(124, 58, 237, 0.4);
+            border-radius: 12px;
+            width: 100px;
+            text-align: center;
+            color: #ffffff;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2),
+                        0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-group input:hover {
+            border-color: #7c3aed;
+        }
+        
+        .input-group input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: rgba(124, 58, 237, 0.2);
+        }
+        
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 32px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            font-size: 18px;
+            padding: 18px 36px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            min-width: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .play-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+        }
+        
+        .play-btn:hover {
+            background: linear-gradient(135deg, #6d28d9 0%, #9333ea 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(124, 58, 237, 0.4);
+        }
+        
+        .stop-btn {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+        }
+        
+        .stop-btn:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(220, 38, 38, 0.4);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .stat-item {
             text-align: center;
         }
-        .debug-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 20px;
-            display: none;
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #7c3aed;
+            margin-bottom: 4px;
         }
-        .voice-test-btn {
-            background: #4CAF50;
-            color: white;
-            font-size: 16px;
-            padding: 10px 20px;
-            margin: 5px;
+        
+        .stat-label {
+            font-size: 14px;
+            color: #a0a0c0;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 24px;
+                border-radius: 20px;
+                min-width: unset;
+                width: 95%;
+            }
+            
+            h1 {
+                font-size: 24px;
+                margin-bottom: 24px;
+            }
+            
+            .counter {
+                font-size: 64px;
+                margin: 24px 0;
+            }
+            
+            .phase {
+                font-size: 20px;
+                margin: 20px 0;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .input-group label {
+                text-align: center;
+                min-width: unset;
+            }
+            
+            .input-group input {
+                width: 100%;
+                max-width: 200px;
+                margin: 0 auto;
+            }
+            
+            .buttons-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 280px;
+                padding: 16px 32px;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+        
+        /* 動畫效果 */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .active {
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <h1>🏋️ 健身節奏計時器</h1>
+        
         <div class="input-group">
             <label for="repsInput">每組次數：</label>
             <input type="number" id="repsInput" value="12" min="1" max="50">
         </div>
+        
         <div class="input-group">
             <label for="setsInput">組數：</label>
             <input type="number" id="setsInput" value="3" min="1" max="10">
         </div>
+        
         <div class="input-group">
             <label for="restInput">組間休息(秒)：</label>
             <input type="number" id="restInput" value="60" min="10" max="300" step="5">
         </div>
+        
         <div class="counter" id="counter">準備開始</div>
         <div class="phase" id="phase"></div>
+        
         <div class="progress-bar">
             <div class="progress-fill" id="progress"></div>
         </div>
-        <button class="play-btn" id="playBtn">開始訓練</button>
-        <button class="stop-btn" id="stopBtn" style="display:none;">停止</button>
-        <button class="voice-test-btn" id="voiceTestBtn">測試語音</button>
-        <div class="debug-info" id="debugInfo"></div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="currentSetDisplay">0/3</div>
+                <div class="stat-label">當前組數</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="currentRepDisplay">0/12</div>
+                <div class="stat-label">當前次數</div>
+            </div>
+        </div>
+        
+        <div class="buttons-container">
+            <button class="play-btn" id="playBtn">
+                <span>▶️ 開始訓練</span>
+            </button>
+            <button class="stop-btn" id="stopBtn" style="display:none;">
+                <span>⏹️ 停止</span>
+            </button>
+        </div>
     </div>
 
     <script>
@@ -151,7 +358,6 @@
         // 延遲初始化音頻上下文
         let audioContext = null;
         let voiceAvailable = false;
-        let voiceTested = false;
         
         // 初始化音頻上下文
         async function initAudioContext() {
@@ -163,7 +369,6 @@
                         await audioContext.resume();
                     }
                     
-                    console.log("音頻上下文已初始化");
                     return true;
                 } catch (error) {
                     console.error("音頻初始化失敗:", error);
@@ -178,15 +383,14 @@
             voiceAvailable = 'speechSynthesis' in window;
             
             if (voiceAvailable) {
-                // iOS 需要等待語音列表加載
+                // 預載語音列表
                 setTimeout(() => {
                     const voices = speechSynthesis.getVoices();
-                    console.log("可用語音:", voices.length);
-                    
-                    // 檢查是否有中文語音
                     const chineseVoices = voices.filter(v => v.lang.includes('zh'));
-                    if (chineseVoices.length > 0) {
-                        console.log("找到中文語音:", chineseVoices.map(v => v.name));
+                    
+                    if (chineseVoices.length === 0) {
+                        console.log("未找到中文語音");
+                        voiceAvailable = false;
                     }
                 }, 100);
             }
@@ -194,31 +398,13 @@
             return voiceAvailable;
         }
         
-        // 測試語音功能
-        function testVoice() {
-            if (!voiceAvailable) {
-                alert("您的瀏覽器不支持語音合成功能");
-                return;
-            }
-            
-            speakNumber("測試", true);
-            voiceTested = true;
-            
-            // 顯示調試信息
-            const debugInfo = document.getElementById('debugInfo');
-            debugInfo.style.display = 'block';
-            debugInfo.innerHTML = `語音合成: 可用<br>語音已測試: ${voiceTested}`;
-        }
-        
         // 播放嗶聲
         function playBeep() {
             if (!audioContext) {
-                console.log("音頻上下文未初始化");
                 return;
             }
             
             try {
-                // 確保音頻上下文已啟動
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
@@ -242,48 +428,29 @@
             }
         }
         
-        // 語音合成函數 - 針對手機優化
-        function speakNumber(number, isTest = false) {
-            if (!voiceAvailable && !isTest) {
-                console.log("語音合成不可用，跳過語音提示");
-                return;
-            }
-            
-            if (!voiceTested && !isTest) {
-                console.log("語音未測試，跳過語音提示");
+        // 語音合成函數
+        function speakNumber(number) {
+            if (!voiceAvailable) {
                 return;
             }
             
             try {
-                // 先停止任何正在進行的語音
                 speechSynthesis.cancel();
                 
-                // 等待一小段時間讓系統重置
                 setTimeout(() => {
                     try {
                         const utterance = new SpeechSynthesisUtterance(number.toString());
                         
-                        // 設置語音參數
                         utterance.lang = 'zh-TW';
-                        utterance.rate = 0.9; // 手機上稍慢一點
+                        utterance.rate = 0.9;
                         utterance.pitch = 1.0;
                         utterance.volume = 1.0;
                         
-                        // 針對iOS優化
+                        // iOS優化
                         if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
                             utterance.rate = 0.85;
                         }
                         
-                        // 設置回調以監控狀態
-                        utterance.onstart = function() {
-                            console.log(`開始朗讀: ${number}`);
-                        };
-                        
-                        utterance.onerror = function(event) {
-                            console.error("語音合成錯誤:", event.error);
-                        };
-                        
-                        // 播放語音
                         speechSynthesis.speak(utterance);
                         
                     } catch (error) {
@@ -292,14 +459,13 @@
                 }, 50);
                 
             } catch (error) {
-                console.error("語音合成初始化失敗:", error);
+                console.error("語音合成失敗:", error);
             }
         }
         
         // 語音合成文字
         function speakText(text) {
-            if (!voiceAvailable || !voiceTested) {
-                console.log("語音合成不可用或未測試，跳過語音提示");
+            if (!voiceAvailable) {
                 return;
             }
             
@@ -325,11 +491,24 @@
             const counter = document.getElementById('counter');
             const phase = document.getElementById('phase');
             const progress = document.getElementById('progress');
+            const currentSetDisplay = document.getElementById('currentSetDisplay');
+            const currentRepDisplay = document.getElementById('currentRepDisplay');
+            
+            // 更新統計顯示
+            currentSetDisplay.textContent = `${currentSet}/${totalSets}`;
+            currentRepDisplay.textContent = `${Math.min(currentRep + 1, totalReps)}/${totalReps}`;
             
             if (isPreparation) {
                 const remaining = Math.ceil(preparationTime - currentTime);
                 counter.textContent = remaining > 0 ? remaining : '開始!';
                 phase.textContent = '準備中...';
+                
+                if (remaining <= 0) {
+                    counter.classList.add('active');
+                } else {
+                    counter.classList.remove('active');
+                }
+                
                 const progressPercent = (currentTime / preparationTime) * 100;
                 progress.style.width = progressPercent + '%';
                 return;
@@ -340,6 +519,8 @@
                 const restRemaining = Math.ceil(restTime - restElapsed);
                 counter.textContent = `休息中`;
                 phase.textContent = `${restRemaining} 秒後開始第 ${currentSet + 1} 組`;
+                counter.classList.remove('active');
+                
                 const progressPercent = (restElapsed / restTime) * 100;
                 progress.style.width = progressPercent + '%';
                 return;
@@ -348,6 +529,7 @@
             const phaseTime = currentTime % repDuration;
             
             counter.textContent = `第 ${currentRep + 1} 下`;
+            counter.classList.add('active');
             
             if (phaseTime < 1.5) {
                 phase.textContent = '出力 (向心)';
@@ -373,13 +555,14 @@
                         isPreparation = false;
                         currentTime = 0;
                         hasSpoken = true;
-                        if (voiceAvailable && voiceTested) {
+                        if (voiceAvailable) {
                             speakNumber(1);
                         }
+                        playBeep();
                     }
                 } else if (isResting) {
                     if (currentTime >= restTime - 10 && !hasWarned) {
-                        if (voiceAvailable && voiceTested) {
+                        if (voiceAvailable) {
                             speakText('準備開始');
                         }
                         hasWarned = true;
@@ -391,9 +574,10 @@
                         hasSpoken = true;
                         currentTime = 0;
                         currentRep = 0;
-                        if (voiceAvailable && voiceTested) {
+                        if (voiceAvailable) {
                             speakNumber(1);
                         }
+                        playBeep();
                     }
                 } else {
                     const phaseTime = currentTime % repDuration;
@@ -409,10 +593,14 @@
                                 currentTime = 0;
                                 hasWarned = false;
                                 hasSpoken = false;
+                                playBeep();
                             } else {
                                 stopWorkout();
                                 document.getElementById('counter').textContent = '完成!';
                                 document.getElementById('phase').textContent = '所有組數訓練結束';
+                                document.getElementById('counter').classList.remove('active');
+                                playBeep();
+                                setTimeout(() => playBeep(), 200);
                                 return;
                             }
                         } else {
@@ -421,7 +609,7 @@
                     }
                     
                     if (phaseTime < 0.15 && !hasSpoken && currentRep < totalReps) {
-                        if (voiceAvailable && voiceTested) {
+                        if (voiceAvailable) {
                             speakNumber(currentRep + 1);
                         }
                         hasSpoken = true;
@@ -443,13 +631,7 @@
             // 初始化音頻
             await initAudioContext();
             
-            // 檢查語音可用性
-            if (!voiceTested) {
-                alert("建議先點擊「測試語音」按鈕確認語音功能正常");
-                return;
-            }
-            
-            // 播放測試音
+            // 播放開始提示音
             setTimeout(() => {
                 playBeep();
             }, 100);
@@ -478,7 +660,7 @@
             
             // 更新UI
             document.getElementById('playBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'inline-block';
+            document.getElementById('stopBtn').style.display = 'flex';
             repsInput.disabled = true;
             setsInput.disabled = true;
             restInput.disabled = true;
@@ -509,12 +691,13 @@
             }
             
             // 恢復UI
-            document.getElementById('playBtn').style.display = 'inline-block';
+            document.getElementById('playBtn').style.display = 'flex';
             document.getElementById('stopBtn').style.display = 'none';
             document.getElementById('repsInput').disabled = false;
             document.getElementById('setsInput').disabled = false;
             document.getElementById('restInput').disabled = false;
             document.getElementById('progress').style.width = '0%';
+            document.getElementById('counter').classList.remove('active');
         }
         
         // 頁面初始化
@@ -525,15 +708,32 @@
             // 設置按鈕事件
             document.getElementById('playBtn').addEventListener('click', startWorkout);
             document.getElementById('stopBtn').addEventListener('click', stopWorkout);
-            document.getElementById('voiceTestBtn').addEventListener('click', testVoice);
             
             // iOS 語音初始化
             if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
                 setTimeout(() => {
-                    const voices = speechSynthesis.getVoices();
-                    console.log("iOS 語音列表:", voices.length);
+                    speechSynthesis.getVoices();
                 }, 500);
             }
+            
+            // 輸入框限制
+            document.getElementById('repsInput').addEventListener('change', function() {
+                let value = parseInt(this.value);
+                if (value < 1) this.value = 1;
+                if (value > 50) this.value = 50;
+            });
+            
+            document.getElementById('setsInput').addEventListener('change', function() {
+                let value = parseInt(this.value);
+                if (value < 1) this.value = 1;
+                if (value > 10) this.value = 10;
+            });
+            
+            document.getElementById('restInput').addEventListener('change', function() {
+                let value = parseInt(this.value);
+                if (value < 10) this.value = 10;
+                if (value > 300) this.value = 300;
+            });
         });
     </script>
 </body>
