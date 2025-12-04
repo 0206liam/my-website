@@ -1,555 +1,566 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>健身節奏計時器</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-        }
-        .container {
-            background: rgba(15, 23, 42, 0.9);
-            padding: 40px 35px;
-            border-radius: 25px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7),
-                        0 0 0 1px rgba(255, 255, 255, 0.1);
-            text-align: center;
-            min-width: 320px;
-            max-width: 450px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .counter {
-            font-size: 80px;
-            font-weight: 800;
-            color: #4cc9f0;
-            margin: 20px 0 25px;
-            text-shadow: 0 0 20px rgba(76, 201, 240, 0.5),
-                         0 0 40px rgba(76, 201, 240, 0.3);
-            letter-spacing: -2px;
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Arial Black', 'Segoe UI', sans-serif;
-        }
-        .phase {
-            font-size: 22px;
-            color: #cbd5e1;
-            margin: 20px 0 25px;
-            min-height: 30px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        .progress-container {
-            margin: 30px 0;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 18px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%);
-            width: 0%;
-            transition: width 0.1s linear;
-            position: relative;
-            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
-        }
-        .progress-fill:after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                transparent 0%, 
-                rgba(255, 255, 255, 0.1) 50%, 
-                transparent 100%);
-            animation: shimmer 2s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        .input-group {
-            margin-bottom: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .input-group label {
-            font-size: 17px;
-            color: #e2e8f0;
-            font-weight: 500;
-            min-width: 110px;
-            text-align: right;
-        }
-        .input-group input {
-            font-size: 17px;
-            padding: 10px 15px;
-            border: 2px solid #4361ee;
-            border-radius: 10px;
-            width: 90px;
-            text-align: center;
-            background: rgba(15, 23, 42, 0.8);
-            color: #ffffff;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-        .input-group input:focus {
-            outline: none;
-            border-color: #4cc9f0;
-            box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.2);
-            transform: translateY(-2px);
-        }
-        .input-group input:disabled {
-            background: rgba(51, 65, 85, 0.6);
-            color: #cbd5e1;
-            border-color: #475569;
-            opacity: 0.7;
-        }
-        .button-group {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 30px;
-        }
-        button {
-            font-size: 18px;
-            padding: 16px 35px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            min-width: 140px;
-            position: relative;
-            overflow: hidden;
-        }
-        button:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255, 255, 255, 0.2), 
-                transparent);
-            transition: 0.5s;
-        }
-        button:hover:before {
-            left: 100%;
-        }
-        .play-btn {
-            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
-            color: white;
-            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
-        }
-        .play-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(67, 97, 238, 0.4);
-        }
-        .stop-btn {
-            background: linear-gradient(135deg, #f72545 0%, #b5179e 100%);
-            color: white;
-            box-shadow: 0 8px 20px rgba(247, 37, 69, 0.3);
-        }
-        .stop-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(247, 37, 69, 0.4);
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身節奏計時器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        }
+        .container {
+            background: rgba(15, 23, 42, 0.9);
+            padding: 40px 35px;
+            border-radius: 25px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7),
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            text-align: center;
+            min-width: 320px;
+            max-width: 450px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .counter {
+            font-size: 80px;
+            font-weight: 800;
+            color: #4cc9f0;
+            margin: 20px 0 25px;
+            text-shadow: 0 0 20px rgba(76, 201, 240, 0.5),
+                         0 0 40px rgba(76, 201, 240, 0.3);
+            letter-spacing: -2px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial Black', 'Segoe UI', sans-serif;
+        }
+        .phase {
+            font-size: 22px;
+            color: #cbd5e1;
+            margin: 20px 0 25px;
+            min-height: 30px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .progress-container {
+            margin: 30px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 18px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%);
+            width: 0%;
+            transition: width 0.1s linear;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        .progress-fill:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.1) 50%, 
+                transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .input-group {
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .input-group label {
+            font-size: 17px;
+            color: #e2e8f0;
+            font-weight: 500;
+            min-width: 110px;
+            text-align: right;
+        }
+        .input-group input {
+            font-size: 17px;
+            padding: 10px 15px;
+            border: 2px solid #4361ee;
+            border-radius: 10px;
+            width: 90px;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.8);
+            color: #ffffff;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #4cc9f0;
+            box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.2);
+            transform: translateY(-2px);
+        }
+        .input-group input:disabled {
+            background: rgba(51, 65, 85, 0.6);
+            color: #cbd5e1;
+            border-color: #475569;
+            opacity: 0.7;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        button {
+            font-size: 18px;
+            padding: 16px 35px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+        button:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.2), 
+                transparent);
+            transition: 0.5s;
+        }
+        button:hover:before {
+            left: 100%;
+        }
+        .play-btn {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+        }
+        .play-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(67, 97, 238, 0.4);
+        }
+        .stop-btn {
+            background: linear-gradient(135deg, #f72545 0%, #b5179e 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(247, 37, 69, 0.3);
+        }
+        .stop-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(247, 37, 69, 0.4);
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="counter" id="counter">準備開始</div>
-        <div class="phase" id="phase"></div>
-        
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress"></div>
-            </div>
-        </div>
-        
-        <div class="input-group">
-            <label for="repsInput">每組次數：</label>
-            <input type="number" id="repsInput" value="12" min="1" max="50">
-        </div>
-        <div class="input-group">
-            <label for="setsInput">組數：</label>
-            <input type="number" id="setsInput" value="3" min="1" max="10">
-        </div>
-        <div class="input-group">
-            <label for="restInput">組間休息(秒)：</label>
-            <input type="number" id="restInput" value="60" min="10" max="300" step="5">
-        </div>
-        
-        <div class="button-group">
-            <button class="play-btn" id="playBtn">開始訓練</button>
-            <button class="stop-btn" id="stopBtn" style="display:none;">停止訓練</button>
-        </div>
-    </div>
+    <div class="container">
+        <div class="counter" id="counter">準備開始</div>
+        <div class="phase" id="phase"></div>
+        
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress"></div>
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label for="repsInput">每組次數：</label>
+            <input type="number" id="repsInput" value="12" min="1" max="50">
+        </div>
+        <div class="input-group">
+            <label for="setsInput">組數：</label>
+            <input type="number" id="setsInput" value="3" min="1" max="10">
+        </div>
+        <div class="input-group">
+            <label for="restInput">組間休息(秒)：</label>
+            <input type="number" id="restInput" value="60" min="10" max="300" step="5">
+        </div>
+        
+        <div class="button-group">
+            <button class="play-btn" id="playBtn">開始訓練</button>
+            <button class="stop-btn" id="stopBtn" style="display:none;">停止訓練</button>
+        </div>
+    </div>
 
-    <script>
-        let intervalId = null;
-        let currentRep = 0;
-        let currentSet = 0;
-        let currentTime = 0;
-        let totalReps = 12;
-        let totalSets = 3;
-        let restTime = 60;
-        let isPreparation = true;
-        let isResting = false;
-        let hasWarned = false;
-        let hasSpoken = false;
-        let preparationTime = 10.0;
-        const repDuration = 4.5;
-        
-        // 延遲初始化音頻上下文
-        let audioContext = null;
-        let voiceAvailable = false;
-        let voiceActivated = false;
-        
-        // 初始化音頻上下文
-        async function initAudioContext() {
-            if (!audioContext) {
-                try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    if (audioContext.state === 'suspended') {
-                        await audioContext.resume();
-                    }
-                    
-                    return true;
-                } catch (error) {
-                    console.error("音頻初始化失敗:", error);
-                    return false;
-                }
-            }
-            return true;
-        }
-        
-        // 激活語音系統
-        function activateVoiceSystem() {
-            if (!('speechSynthesis' in window)) {
-                voiceAvailable = false;
-                return false;
-            }
-            
-            voiceAvailable = true;
-            
-            speechSynthesis.cancel();
-            
-            const activationUtterance = new SpeechSynthesisUtterance("");
-            activationUtterance.text = "準備開始";
-            activationUtterance.volume = 0.5;
-            activationUtterance.rate = 1.0;
-            activationUtterance.pitch = 1.0;
-            activationUtterance.lang = 'zh-TW';
-            
-            try {
-                speechSynthesis.speak(activationUtterance);
-                voiceActivated = true;
-                
-                setTimeout(() => {
-                    speechSynthesis.cancel();
-                }, 100);
-                
-                return true;
-            } catch (error) {
-                console.error("語音激活失敗:", error);
-                return false;
-            }
-        }
-        
-        // 播放嗶聲
-        function playBeep() {
-            if (!audioContext) {
-                return;
-            }
-            
-            try {
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
-            } catch (error) {
-                console.error("播放嗶聲失敗:", error);
-            }
-        }
-        
-        // 語音合成函數
-        function speakNumber(number) {
-            if (!voiceAvailable || !voiceActivated) {
-                return;
-            }
-            
-            try {
-                speechSynthesis.cancel();
-                
-                const utterance = new SpeechSynthesisUtterance(number.toString());
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.0;
-                utterance.volume = 1.0;
-                
-                if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-                    utterance.rate = 0.85;
-                }
-                
-                speechSynthesis.speak(utterance);
-                
-            } catch (error) {
-                console.error("語音合成失敗:", error);
-            }
-        }
-        
-        // 語音合成文字
-        function speakText(text) {
-            if (!voiceAvailable || !voiceActivated) {
-                return;
-            }
-            
-            try {
-                speechSynthesis.cancel();
-                
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.0;
-                utterance.volume = 1.0;
-                
-                speechSynthesis.speak(utterance);
-            } catch (error) {
-                console.error("語音合成失敗:", error);
-            }
-        }
-        
-        // 更新顯示
-        function updateDisplay() {
-            const counter = document.getElementById('counter');
-            const phase = document.getElementById('phase');
-            const progress = document.getElementById('progress');
-            
-            if (isPreparation) {
-                const remaining = Math.ceil(preparationTime - currentTime);
-                counter.textContent = remaining > 0 ? remaining : '開始!';
-                phase.textContent = '準備中...';
-                const percent = (currentTime / preparationTime) * 100;
-                progress.style.width = percent + '%';
-                return;
-            }
-            
-            if (isResting) {
-                const restElapsed = currentTime;
-                const restRemaining = Math.ceil(restTime - restElapsed);
-                counter.textContent = `休息`;
-                phase.textContent = `${restRemaining} 秒後開始第 ${currentSet + 1} 組`;
-                const percent = (restElapsed / restTime) * 100;
-                progress.style.width = percent + '%';
-                return;
-            }
-            
-            const phaseTime = currentTime % repDuration;
-            
-            counter.textContent = `第 ${currentRep + 1} 下`;
-            
-            if (phaseTime < 1.5) {
-                phase.textContent = '出力 (向心)';
-            } else if (phaseTime < 2.0) {
-                phase.textContent = '頂端停頓';
-            } else if (phaseTime < 4.0) {
-                phase.textContent = '放下 (離心)';
-            } else {
-                phase.textContent = '底部停頓';
-            }
-            
-            const percent = (phaseTime / repDuration) * 100;
-            progress.style.width = percent + '%';
-        }
-        
-        // 開始計時器
-        function startTimer() {
-            intervalId = setInterval(() => {
-                currentTime += 0.1;
-                
-                if (isPreparation) {
-                    if (currentTime >= preparationTime) {
-                        isPreparation = false;
-                        currentTime = 0;
-                        hasSpoken = true;
-                        speakNumber(1);
-                    }
-                } else if (isResting) {
-                    if (currentTime >= restTime - 10 && !hasWarned) {
-                        speakText('準備開始');
-                        hasWarned = true;
-                    }
-                    
-                    if (currentTime >= restTime) {
-                        isResting = false;
-                        hasWarned = false;
-                        hasSpoken = true;
-                        currentTime = 0;
-                        currentRep = 0;
-                        speakNumber(1);
-                    }
-                } else {
-                    const phaseTime = currentTime % repDuration;
-                    const completedReps = Math.floor(currentTime / repDuration);
-                    
-                    if (completedReps !== currentRep) {
-                        currentRep = completedReps;
-                        
-                        if (currentRep >= totalReps) {
-                            currentSet++;
-                            if (currentSet < totalSets) {
-                                isResting = true;
-                                currentTime = 0;
-                                hasWarned = false;
-                                hasSpoken = false;
-                            } else {
-                                stopWorkout();
-                                document.getElementById('counter').textContent = '完成!';
-                                document.getElementById('phase').textContent = '所有組數訓練結束';
-                                return;
-                            }
-                        } else {
-                            hasSpoken = false;
-                        }
-                    }
-                    
-                    if (phaseTime < 0.15 && !hasSpoken && currentRep < totalReps) {
-                        speakNumber(currentRep + 1);
-                        hasSpoken = true;
-                    }
-                    
-                    if (Math.abs(phaseTime - 2.0) < 0.05) {
-                        playBeep();
-                    }
-                }
-                
-                updateDisplay();
-            }, 100);
-        }
-        
-        // 開始訓練
-        async function startWorkout() {
-            if (intervalId) return;
-            
-            // 1. 先激活語音系統
-            activateVoiceSystem();
-            
-            // 2. 初始化音頻
-            await initAudioContext();
-            
-            // 3. 播放測試嗶聲
-            playBeep();
-            
-            // 獲取輸入值
-            const repsInput = document.getElementById('repsInput');
-            const setsInput = document.getElementById('setsInput');
-            const restInput = document.getElementById('restInput');
-            
-            totalReps = parseInt(repsInput.value) || 12;
-            totalSets = parseInt(setsInput.value) || 3;
-            restTime = parseInt(restInput.value) || 60;
-            
-            if (totalReps < 1 || totalReps > 50) {
-                alert('請輸入1-50之間的次數');
-                return;
-            }
-            if (totalSets < 1 || totalSets > 10) {
-                alert('請輸入1-10之間的組數');
-                return;
-            }
-            if (restTime < 10 || restTime > 300) {
-                alert('請輸入10-300秒之間的休息時間');
-                return;
-            }
-            
-            // 更新UI
-            document.getElementById('playBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'block';
-            repsInput.disabled = true;
-            setsInput.disabled = true;
-            restInput.disabled = true;
-            
-            // 重置狀態
-            currentRep = 0;
-            currentSet = 0;
-            currentTime = 0;
-            isPreparation = true;
-            isResting = false;
-            hasWarned = false;
-            hasSpoken = false;
-            
-            // 開始計時器
-            startTimer();
-        }
-        
-        // 停止訓練
-        function stopWorkout() {
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
-            }
-            
-            if (speechSynthesis) {
-                speechSynthesis.cancel();
-            }
-            
-            document.getElementById('playBtn').style.display = 'block';
-            document.getElementById('stopBtn').style.display = 'none';
-            document.getElementById('repsInput').disabled = false;
-            document.getElementById('setsInput').disabled = false;
-            document.getElementById('restInput').disabled = false;
-            document.getElementById('progress').style.width = '0%';
-            
-            // 重置顯示
-            document.getElementById('counter').textContent = '準備開始';
-            document.getElementById('phase').textContent = '';
-        }
-        
-        // 頁面初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('playBtn').addEventListener('click', startWorkout);
-            document.getElementById('stopBtn').addEventListener('click', stopWorkout);
-        });
-    </script>
+    <script>
+        let intervalId = null;
+        let currentRep = 0;
+        let currentSet = 0;
+        let currentTime = 0;
+        let totalReps = 12;
+        let totalSets = 3;
+        let restTime = 60;
+        let isPreparation = true;
+        let isResting = false;
+        let hasWarned = false;
+        let hasSpoken = false;
+        let preparationTime = 10.0;
+        const repDuration = 4.5;
+        
+        // === 新增/確認 全域狀態追蹤變數 ===
+        let beepPlayedForPhase = false; 
+        // =================================
+        
+        // 延遲初始化音頻上下文
+        let audioContext = null;
+        let voiceAvailable = false;
+        let voiceActivated = false;
+        
+        // 初始化音頻上下文
+        async function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    if (audioContext.state === 'suspended') {
+                        // 嘗試在使用者互動後立即恢復
+                        await audioContext.resume();
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error("音頻初始化失敗:", error);
+                    return false;
+                }
+            }
+            // 確保每次都被恢復，處理中途暫停
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            return true;
+        }
+        
+        // 激活語音系統
+        function activateVoiceSystem() {
+            if (!('speechSynthesis' in window)) {
+                voiceAvailable = false;
+                return false;
+            }
+            
+            voiceAvailable = true;
+            
+            // 嘗試發出一個靜音或短暫的語音，強制喚醒語音引擎
+            speechSynthesis.cancel();
+            
+            const activationUtterance = new SpeechSynthesisUtterance(".");
+            activationUtterance.volume = 0.01; // 幾乎靜音
+            activationUtterance.lang = 'zh-TW';
+            
+            try {
+                speechSynthesis.speak(activationUtterance);
+                voiceActivated = true;
+                return true;
+            } catch (error) {
+                console.error("語音激活失敗:", error);
+                return false;
+            }
+        }
+        
+        // 播放嗶聲
+        function playBeep() {
+            if (!audioContext) return;
+            
+            try {
+                // 再次確認音頻上下文狀態，提高容錯性
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (error) {
+                console.error("播放嗶聲失敗:", error);
+            }
+        }
+        
+        // 語音合成函數 (speakNumber, speakText 保持不變)
+        function speakNumber(number) {
+            if (!voiceAvailable || !voiceActivated) {
+                return;
+            }
+            
+            try {
+                speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(number.toString());
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                    utterance.rate = 0.85;
+                }
+                
+                speechSynthesis.speak(utterance);
+                
+            } catch (error) {
+                console.error("語音合成失敗:", error);
+            }
+        }
+        
+        function speakText(text) {
+            if (!voiceAvailable || !voiceActivated) {
+                return;
+            }
+            
+            try {
+                speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                speechSynthesis.speak(utterance);
+            } catch (error) {
+                console.error("語音合成失敗:", error);
+            }
+        }
+        
+        // 更新顯示 (維持不變)
+        function updateDisplay() {
+            const counter = document.getElementById('counter');
+            const phase = document.getElementById('phase');
+            const progress = document.getElementById('progress');
+            
+            if (isPreparation) {
+                const remaining = Math.ceil(preparationTime - currentTime);
+                counter.textContent = remaining > 0 ? remaining : '開始!';
+                phase.textContent = '準備中...';
+                const percent = (currentTime / preparationTime) * 100;
+                progress.style.width = percent + '%';
+                return;
+            }
+            
+            if (isResting) {
+                const restElapsed = currentTime;
+                const restRemaining = Math.ceil(restTime - restElapsed);
+                counter.textContent = `休息`;
+                phase.textContent = `${restRemaining} 秒後開始第 ${currentSet + 1} 組`;
+                const percent = (restElapsed / restTime) * 100;
+                progress.style.width = percent + '%';
+                return;
+            }
+            
+            const phaseTime = currentTime % repDuration;
+            
+            counter.textContent = `第 ${currentRep + 1} 下`;
+            
+            if (phaseTime < 1.5) {
+                phase.textContent = '出力 (向心)';
+            } else if (phaseTime < 2.0) {
+                phase.textContent = '頂端停頓';
+            } else if (phaseTime < 4.0) {
+                phase.textContent = '放下 (離心)';
+            } else {
+                phase.textContent = '底部停頓';
+            }
+            
+            const percent = (phaseTime / repDuration) * 100;
+            progress.style.width = percent + '%';
+        }
+        
+        // 開始計時器
+        function startTimer() {
+            intervalId = setInterval(() => {
+                currentTime += 0.1;
+                
+                if (isPreparation) {
+                    if (currentTime >= preparationTime) {
+                        isPreparation = false;
+                        currentTime = 0;
+                        hasSpoken = true;
+                        speakNumber(1);
+                    }
+                } else if (isResting) {
+                    if (currentTime >= restTime - 10 && !hasWarned) {
+                        speakText('準備開始');
+                        hasWarned = true;
+                    }
+                    
+                    if (currentTime >= restTime) {
+                        isResting = false;
+                        hasWarned = false;
+                        hasSpoken = true;
+                        currentTime = 0;
+                        currentRep = 0;
+                        speakNumber(1);
+                    }
+                } else {
+                    const phaseTime = currentTime % repDuration;
+                    const completedReps = Math.floor(currentTime / repDuration);
+                    
+                    if (completedReps !== currentRep) {
+                        currentRep = completedReps;
+                        
+                        if (currentRep >= totalReps) {
+                            currentSet++;
+                            if (currentSet < totalSets) {
+                                isResting = true;
+                                currentTime = 0;
+                                hasWarned = false;
+                                hasSpoken = false;
+                                beepPlayedForPhase = false; // 重置嗶聲追蹤
+                            } else {
+                                stopWorkout();
+                                document.getElementById('counter').textContent = '完成!';
+                                document.getElementById('phase').textContent = '所有組數訓練結束';
+                                return;
+                            }
+                        } else {
+                            hasSpoken = false;
+                            beepPlayedForPhase = false; // 重置嗶聲追蹤
+                        }
+                    }
+                    
+                    if (phaseTime < 0.15 && !hasSpoken && currentRep < totalReps) {
+                        speakNumber(currentRep + 1);
+                        hasSpoken = true;
+                    }
+                    
+                    // === 優化後的嗶聲邏輯：在 2.0s 區間響起，提高手機容錯率 ===
+                    // 2.0s 是從 '頂端停頓' 轉換到 '放下 (離心)' 的開始
+                    if (phaseTime >= 2.0 && phaseTime < 2.1) {
+                        if (!beepPlayedForPhase) {
+                            playBeep();
+                            beepPlayedForPhase = true;
+                        }
+                    } else if (phaseTime < 2.0) {
+                        // 當時間小於 2.0s 時，重置標記，準備下一次循環
+                        beepPlayedForPhase = false;
+                    }
+                    // ====================================================
+                }
+                
+                updateDisplay();
+            }, 100);
+        }
+        
+        // 開始訓練
+        async function startWorkout() {
+            if (intervalId) return;
+            
+            // 1. 先激活語音系統 (防止語音被阻擋)
+            activateVoiceSystem();
+            
+            // 2. 初始化音頻 (並嘗試恢復 suspended 狀態)
+            await initAudioContext();
+            
+            // 3. 播放測試嗶聲 (確保 AudioContext 完全解鎖)
+            playBeep();
+            
+            // 獲取輸入值 (保持不變)
+            const repsInput = document.getElementById('repsInput');
+            const setsInput = document.getElementById('setsInput');
+            const restInput = document.getElementById('restInput');
+            
+            totalReps = parseInt(repsInput.value) || 12;
+            totalSets = parseInt(setsInput.value) || 3;
+            restTime = parseInt(restInput.value) || 60;
+            
+            if (totalReps < 1 || totalReps > 50) {
+                alert('請輸入1-50之間的次數');
+                return;
+            }
+            if (totalSets < 1 || totalSets > 10) {
+                alert('請輸入1-10之間的組數');
+                return;
+            }
+            if (restTime < 10 || restTime > 300) {
+                alert('請輸入10-300秒之間的休息時間');
+                return;
+            }
+            
+            // 更新UI
+            document.getElementById('playBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
+            repsInput.disabled = true;
+            setsInput.disabled = true;
+            restInput.disabled = true;
+            
+            // 重置狀態
+            currentRep = 0;
+            currentSet = 0;
+            currentTime = 0;
+            isPreparation = true;
+            isResting = false;
+            hasWarned = false;
+            hasSpoken = false;
+            beepPlayedForPhase = false; // 重置嗶聲追蹤
+            
+            // 開始計時器
+            startTimer();
+        }
+        
+        // 停止訓練 (維持不變)
+        function stopWorkout() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            
+            if (speechSynthesis) {
+                speechSynthesis.cancel();
+            }
+            
+            document.getElementById('playBtn').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('repsInput').disabled = false;
+            document.getElementById('setsInput').disabled = false;
+            document.getElementById('restInput').disabled = false;
+            document.getElementById('progress').style.width = '0%';
+            
+            // 重置顯示
+            document.getElementById('counter').textContent = '準備開始';
+            document.getElementById('phase').textContent = '';
+        }
+        
+        // 頁面初始化 (維持不變)
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('playBtn').addEventListener('click', startWorkout);
+            document.getElementById('stopBtn').addEventListener('click', stopWorkout);
+        });
+    </script>
 </body>
 </html>
-
