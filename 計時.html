@@ -26,31 +26,11 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        h1 {
-            color: #ffffff;
-            margin-bottom: 30px;
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            position: relative;
-            display: inline-block;
-        }
-        h1:after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 25%;
-            width: 50%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #4cc9f0, transparent);
-            border-radius: 3px;
-        }
         .counter {
             font-size: 80px;
             font-weight: 800;
             color: #4cc9f0;
-            margin: 25px 0;
+            margin: 20px 0 25px;
             text-shadow: 0 0 20px rgba(76, 201, 240, 0.5),
                          0 0 40px rgba(76, 201, 240, 0.3);
             letter-spacing: -2px;
@@ -70,15 +50,6 @@
         }
         .progress-container {
             margin: 30px 0;
-            position: relative;
-        }
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            color: #94a3b8;
-            font-size: 14px;
-            font-weight: 500;
         }
         .progress-bar {
             width: 100%;
@@ -206,56 +177,14 @@
             transform: translateY(-3px);
             box-shadow: 0 12px 25px rgba(247, 37, 69, 0.4);
         }
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 20px;
-            color: #94a3b8;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .pulse-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #10b981;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-        .sets-info {
-            background: rgba(30, 41, 59, 0.6);
-            border-radius: 12px;
-            padding: 12px 20px;
-            margin: 15px 0;
-            color: #cbd5e1;
-            font-weight: 500;
-            font-size: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏋️‍♂️ 健身節奏計時器</h1>
-        
-        <div class="sets-info" id="setsInfo">
-            第 1 / 3 組 • 共 12 次
-        </div>
-        
         <div class="counter" id="counter">準備開始</div>
         <div class="phase" id="phase"></div>
         
         <div class="progress-container">
-            <div class="progress-label">
-                <span>進度</span>
-                <span id="progressPercent">0%</span>
-            </div>
             <div class="progress-bar">
                 <div class="progress-fill" id="progress"></div>
             </div>
@@ -277,11 +206,6 @@
         <div class="button-group">
             <button class="play-btn" id="playBtn">開始訓練</button>
             <button class="stop-btn" id="stopBtn" style="display:none;">停止訓練</button>
-        </div>
-        
-        <div class="status-indicator" id="statusIndicator">
-            <div class="pulse-dot"></div>
-            <span>準備就緒</span>
         </div>
     </div>
 
@@ -333,10 +257,8 @@
             
             voiceAvailable = true;
             
-            // 立即停止所有現有語音
             speechSynthesis.cancel();
             
-            // 創建一個簡短的激活語音
             const activationUtterance = new SpeechSynthesisUtterance("");
             activationUtterance.text = "準備開始";
             activationUtterance.volume = 0.5;
@@ -348,7 +270,6 @@
                 speechSynthesis.speak(activationUtterance);
                 voiceActivated = true;
                 
-                // 100ms後取消激活語音
                 setTimeout(() => {
                     speechSynthesis.cancel();
                 }, 100);
@@ -437,32 +358,11 @@
             }
         }
         
-        // 更新組數資訊
-        function updateSetsInfo() {
-            const setsInfo = document.getElementById('setsInfo');
-            setsInfo.textContent = `第 ${currentSet + 1} / ${totalSets} 組 • 共 ${totalReps} 次`;
-        }
-        
-        // 更新狀態指示器
-        function updateStatusIndicator() {
-            const statusIndicator = document.getElementById('statusIndicator');
-            const pulseDot = statusIndicator.querySelector('.pulse-dot');
-            
-            if (isPreparation) {
-                statusIndicator.innerHTML = '<div class="pulse-dot" style="background:#f59e0b"></div><span>準備中...</span>';
-            } else if (isResting) {
-                statusIndicator.innerHTML = '<div class="pulse-dot" style="background:#10b981"></div><span>休息中</span>';
-            } else {
-                statusIndicator.innerHTML = '<div class="pulse-dot" style="background:#ef4444"></div><span>訓練中</span>';
-            }
-        }
-        
         // 更新顯示
         function updateDisplay() {
             const counter = document.getElementById('counter');
             const phase = document.getElementById('phase');
             const progress = document.getElementById('progress');
-            const progressPercent = document.getElementById('progressPercent');
             
             if (isPreparation) {
                 const remaining = Math.ceil(preparationTime - currentTime);
@@ -470,8 +370,6 @@
                 phase.textContent = '準備中...';
                 const percent = (currentTime / preparationTime) * 100;
                 progress.style.width = percent + '%';
-                progressPercent.textContent = Math.round(percent) + '%';
-                updateStatusIndicator();
                 return;
             }
             
@@ -482,9 +380,6 @@
                 phase.textContent = `${restRemaining} 秒後開始第 ${currentSet + 1} 組`;
                 const percent = (restElapsed / restTime) * 100;
                 progress.style.width = percent + '%';
-                progressPercent.textContent = Math.round(percent) + '%';
-                updateStatusIndicator();
-                updateSetsInfo();
                 return;
             }
             
@@ -504,9 +399,6 @@
             
             const percent = (phaseTime / repDuration) * 100;
             progress.style.width = percent + '%';
-            progressPercent.textContent = Math.round(percent) + '%';
-            updateStatusIndicator();
-            updateSetsInfo();
         }
         
         // 開始計時器
@@ -553,8 +445,6 @@
                                 stopWorkout();
                                 document.getElementById('counter').textContent = '完成!';
                                 document.getElementById('phase').textContent = '所有組數訓練結束';
-                                document.getElementById('statusIndicator').innerHTML = 
-                                    '<div class="pulse-dot" style="background:#8b5cf6"></div><span>訓練完成</span>';
                                 return;
                             }
                         } else {
@@ -627,10 +517,6 @@
             hasWarned = false;
             hasSpoken = false;
             
-            // 初始化顯示
-            updateSetsInfo();
-            updateStatusIndicator();
-            
             // 開始計時器
             startTimer();
         }
@@ -652,36 +538,16 @@
             document.getElementById('setsInput').disabled = false;
             document.getElementById('restInput').disabled = false;
             document.getElementById('progress').style.width = '0%';
-            document.getElementById('progressPercent').textContent = '0%';
             
             // 重置顯示
             document.getElementById('counter').textContent = '準備開始';
             document.getElementById('phase').textContent = '';
-            document.getElementById('setsInfo').textContent = `第 1 / ${totalSets} 組 • 共 ${totalReps} 次`;
-            document.getElementById('statusIndicator').innerHTML = 
-                '<div class="pulse-dot"></div><span>準備就緒</span>';
         }
         
         // 頁面初始化
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('playBtn').addEventListener('click', startWorkout);
             document.getElementById('stopBtn').addEventListener('click', stopWorkout);
-            
-            // 初始化組數資訊
-            updateSetsInfo();
-            
-            // 輸入框變更時更新顯示
-            const repsInput = document.getElementById('repsInput');
-            const setsInput = document.getElementById('setsInput');
-            
-            function updateInitialInfo() {
-                const totalReps = parseInt(repsInput.value) || 12;
-                const totalSets = parseInt(setsInput.value) || 3;
-                document.getElementById('setsInfo').textContent = `第 1 / ${totalSets} 組 • 共 ${totalReps} 次`;
-            }
-            
-            repsInput.addEventListener('change', updateInitialInfo);
-            setsInput.addEventListener('change', updateInitialInfo);
         });
     </script>
 </body>
