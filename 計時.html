@@ -6,252 +6,131 @@
     <title>健身節奏計時器</title>
     <style>
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #e2e8f0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         .container {
-            background: #1e293b;
+            background: white;
             padding: 40px;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             text-align: center;
-            min-width: 320px;
-            border: 1px solid #334155;
+            min-width: 300px;
         }
         h1 {
-            color: #60a5fa;
+            color: #333;
             margin-bottom: 30px;
-            font-size: 28px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         .counter {
             font-size: 72px;
             font-weight: bold;
-            color: #60a5fa;
+            color: #667eea;
             margin: 30px 0;
-            text-shadow: 0 2px 10px rgba(96, 165, 250, 0.3);
-            min-height: 85px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .phase {
             font-size: 24px;
-            color: #94a3b8;
+            color: #666;
             margin: 20px 0;
             min-height: 30px;
-            font-weight: 500;
         }
         .progress-bar {
             width: 100%;
             height: 30px;
-            background: #334155;
+            background: #e0e0e0;
             border-radius: 15px;
             overflow: hidden;
-            margin: 30px 0;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            margin: 20px 0;
         }
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             width: 0%;
             transition: width 0.1s linear;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
         button {
-            font-size: 18px;
-            padding: 16px 40px;
+            font-size: 20px;
+            padding: 15px 40px;
             margin: 10px;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .play-btn {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: #667eea;
             color: white;
         }
         .play-btn:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
-        }
-        .play-btn:active {
-            transform: translateY(0);
+            background: #5568d3;
+            transform: scale(1.05);
         }
         .stop-btn {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            background: #f44336;
             color: white;
         }
         .stop-btn:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(220, 38, 38, 0.3);
-        }
-        .stop-btn:active {
-            transform: translateY(0);
+            background: #da190b;
+            transform: scale(1.05);
         }
         .input-group {
-            margin-bottom: 25px;
-            text-align: left;
-            background: #334155;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .input-group label {
-            font-size: 16px;
-            color: #cbd5e1;
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
+            font-size: 18px;
+            color: #333;
+            margin-right: 10px;
         }
         .input-group input {
             font-size: 18px;
-            padding: 12px 15px;
-            background: #1e293b;
-            border: 2px solid #475569;
+            padding: 8px 15px;
+            border: 2px solid #667eea;
             border-radius: 8px;
-            width: calc(100% - 30px);
-            text-align: center;
-            color: #e2e8f0;
-            transition: border-color 0.3s;
-        }
-        .input-group input:focus {
-            outline: none;
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-        }
-        .input-group input:disabled {
-            background: #475569;
-            color: #94a3b8;
-            border-color: #64748b;
-        }
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 25px 0;
-            background: #334155;
-            padding: 15px;
-            border-radius: 12px;
-        }
-        .stat-item {
+            width: 80px;
             text-align: center;
         }
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #60a5fa;
+        .debug-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 20px;
+            display: none;
         }
-        .stat-label {
-            font-size: 14px;
-            color: #94a3b8;
-            margin-top: 5px;
-        }
-        .instructions {
-            font-size: 14px;
-            color: #94a3b8;
-            margin-top: 30px;
-            padding: 15px;
-            background: #334155;
-            border-radius: 12px;
-            text-align: left;
-            line-height: 1.6;
-        }
-        .instructions h3 {
-            color: #60a5fa;
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        .instructions ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        .instructions li {
-            margin-bottom: 5px;
-        }
-        @media (max-width: 480px) {
-            .container {
-                padding: 25px 20px;
-                margin: 15px;
-                min-width: auto;
-                width: calc(100% - 40px);
-            }
-            .counter {
-                font-size: 56px;
-                min-height: 70px;
-            }
-            button {
-                padding: 14px 30px;
-                font-size: 16px;
-                width: calc(100% - 20px);
-                margin: 8px 0;
-            }
+        .voice-test-btn {
+            background: #4CAF50;
+            color: white;
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏋️‍♂️ 健身節奏計時器</h1>
-        
         <div class="input-group">
-            <label for="repsInput">每組次數</label>
+            <label for="repsInput">每組次數：</label>
             <input type="number" id="repsInput" value="12" min="1" max="50">
         </div>
-        
         <div class="input-group">
-            <label for="setsInput">組數</label>
+            <label for="setsInput">組數：</label>
             <input type="number" id="setsInput" value="3" min="1" max="10">
         </div>
-        
         <div class="input-group">
-            <label for="restInput">組間休息時間（秒）</label>
+            <label for="restInput">組間休息(秒)：</label>
             <input type="number" id="restInput" value="60" min="10" max="300" step="5">
         </div>
-        
         <div class="counter" id="counter">準備開始</div>
         <div class="phase" id="phase"></div>
-        
         <div class="progress-bar">
             <div class="progress-fill" id="progress"></div>
         </div>
-        
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-value" id="currentSet">0</div>
-                <div class="stat-label">當前組數</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="currentRep">0</div>
-                <div class="stat-label">當前次數</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="totalSets">3</div>
-                <div class="stat-label">總組數</div>
-            </div>
-        </div>
-        
         <button class="play-btn" id="playBtn">開始訓練</button>
-        <button class="stop-btn" id="stopBtn" style="display:none;">停止訓練</button>
-        
-        <div class="instructions">
-            <h3>使用說明</h3>
-            <ul>
-                <li>每次動作分為：出力(1.5s) → 頂端停頓(0.5s) → 放下(2.0s) → 底部停頓(0.5s)</li>
-                <li>每完成一次動作會有語音提示（需允許瀏覽器語音權限）</li>
-                <li>組間休息結束前10秒會有語音提醒</li>
-                <li>訓練開始前有5秒準備時間</li>
-            </ul>
-        </div>
+        <button class="stop-btn" id="stopBtn" style="display:none;">停止</button>
+        <button class="voice-test-btn" id="voiceTestBtn">測試語音</button>
+        <div class="debug-info" id="debugInfo"></div>
     </div>
 
     <script>
@@ -269,10 +148,12 @@
         let preparationTime = 5.0;
         const repDuration = 4.5;
         
+        // 延遲初始化音頻上下文
         let audioContext = null;
         let voiceAvailable = false;
-        let isSpeaking = false;
+        let voiceTested = false;
         
+        // 初始化音頻上下文
         async function initAudioContext() {
             if (!audioContext) {
                 try {
@@ -282,6 +163,7 @@
                         await audioContext.resume();
                     }
                     
+                    console.log("音頻上下文已初始化");
                     return true;
                 } catch (error) {
                     console.error("音頻初始化失敗:", error);
@@ -291,19 +173,44 @@
             return true;
         }
         
+        // 檢查語音合成是否可用
         function checkVoiceAvailability() {
             voiceAvailable = 'speechSynthesis' in window;
             
             if (voiceAvailable) {
+                // iOS 需要等待語音列表加載
                 setTimeout(() => {
                     const voices = speechSynthesis.getVoices();
                     console.log("可用語音:", voices.length);
+                    
+                    // 檢查是否有中文語音
+                    const chineseVoices = voices.filter(v => v.lang.includes('zh'));
+                    if (chineseVoices.length > 0) {
+                        console.log("找到中文語音:", chineseVoices.map(v => v.name));
+                    }
                 }, 100);
             }
             
             return voiceAvailable;
         }
         
+        // 測試語音功能
+        function testVoice() {
+            if (!voiceAvailable) {
+                alert("您的瀏覽器不支持語音合成功能");
+                return;
+            }
+            
+            speakNumber("測試", true);
+            voiceTested = true;
+            
+            // 顯示調試信息
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.style.display = 'block';
+            debugInfo.innerHTML = `語音合成: 可用<br>語音已測試: ${voiceTested}`;
+        }
+        
+        // 播放嗶聲
         function playBeep() {
             if (!audioContext) {
                 console.log("音頻上下文未初始化");
@@ -311,6 +218,7 @@
             }
             
             try {
+                // 確保音頻上下文已啟動
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
@@ -334,60 +242,66 @@
             }
         }
         
-        function speakNumber(number) {
-            if (!voiceAvailable) {
+        // 語音合成函數 - 針對手機優化
+        function speakNumber(number, isTest = false) {
+            if (!voiceAvailable && !isTest) {
                 console.log("語音合成不可用，跳過語音提示");
                 return;
             }
             
-            if (isSpeaking) return;
+            if (!voiceTested && !isTest) {
+                console.log("語音未測試，跳過語音提示");
+                return;
+            }
             
             try {
+                // 先停止任何正在進行的語音
                 speechSynthesis.cancel();
                 
+                // 等待一小段時間讓系統重置
                 setTimeout(() => {
                     try {
                         const utterance = new SpeechSynthesisUtterance(number.toString());
+                        
+                        // 設置語音參數
                         utterance.lang = 'zh-TW';
-                        utterance.rate = 0.9;
+                        utterance.rate = 0.9; // 手機上稍慢一點
                         utterance.pitch = 1.0;
                         utterance.volume = 1.0;
                         
+                        // 針對iOS優化
                         if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
                             utterance.rate = 0.85;
                         }
                         
+                        // 設置回調以監控狀態
                         utterance.onstart = function() {
-                            isSpeaking = true;
+                            console.log(`開始朗讀: ${number}`);
                         };
                         
-                        utterance.onend = function() {
-                            isSpeaking = false;
+                        utterance.onerror = function(event) {
+                            console.error("語音合成錯誤:", event.error);
                         };
                         
-                        utterance.onerror = function() {
-                            isSpeaking = false;
-                        };
-                        
+                        // 播放語音
                         speechSynthesis.speak(utterance);
+                        
                     } catch (error) {
                         console.error("創建語音失敗:", error);
-                        isSpeaking = false;
                     }
-                }, 100);
+                }, 50);
+                
             } catch (error) {
                 console.error("語音合成初始化失敗:", error);
-                isSpeaking = false;
             }
         }
         
+        // 語音合成文字
         function speakText(text) {
-            if (!voiceAvailable) {
-                console.log("語音合成不可用，跳過語音提示");
+            if (!voiceAvailable || !voiceTested) {
+                console.log("語音合成不可用或未測試，跳過語音提示");
                 return;
             }
-            
-            if (isSpeaking) return;
             
             try {
                 speechSynthesis.cancel();
@@ -399,31 +313,18 @@
                     utterance.pitch = 1.0;
                     utterance.volume = 1.0;
                     
-                    utterance.onstart = function() {
-                        isSpeaking = true;
-                    };
-                    
-                    utterance.onend = function() {
-                        isSpeaking = false;
-                    };
-                    
                     speechSynthesis.speak(utterance);
-                }, 100);
+                }, 50);
             } catch (error) {
                 console.error("語音合成失敗:", error);
-                isSpeaking = false;
             }
         }
         
+        // 更新顯示
         function updateDisplay() {
             const counter = document.getElementById('counter');
             const phase = document.getElementById('phase');
             const progress = document.getElementById('progress');
-            const currentSetEl = document.getElementById('currentSet');
-            const currentRepEl = document.getElementById('currentRep');
-            const totalSetsEl = document.getElementById('totalSets');
-            
-            totalSetsEl.textContent = totalSets;
             
             if (isPreparation) {
                 const remaining = Math.ceil(preparationTime - currentTime);
@@ -431,8 +332,6 @@
                 phase.textContent = '準備中...';
                 const progressPercent = (currentTime / preparationTime) * 100;
                 progress.style.width = progressPercent + '%';
-                currentSetEl.textContent = '0';
-                currentRepEl.textContent = '0';
                 return;
             }
             
@@ -443,16 +342,12 @@
                 phase.textContent = `${restRemaining} 秒後開始第 ${currentSet + 1} 組`;
                 const progressPercent = (restElapsed / restTime) * 100;
                 progress.style.width = progressPercent + '%';
-                currentSetEl.textContent = currentSet;
-                currentRepEl.textContent = '0';
                 return;
             }
             
             const phaseTime = currentTime % repDuration;
             
             counter.textContent = `第 ${currentRep + 1} 下`;
-            currentSetEl.textContent = currentSet + 1;
-            currentRepEl.textContent = currentRep + 1;
             
             if (phaseTime < 1.5) {
                 phase.textContent = '出力 (向心)';
@@ -468,6 +363,7 @@
             progress.style.width = progressPercent + '%';
         }
         
+        // 開始計時器
         function startTimer() {
             intervalId = setInterval(() => {
                 currentTime += 0.1;
@@ -477,13 +373,13 @@
                         isPreparation = false;
                         currentTime = 0;
                         hasSpoken = true;
-                        if (voiceAvailable) {
+                        if (voiceAvailable && voiceTested) {
                             speakNumber(1);
                         }
                     }
                 } else if (isResting) {
                     if (currentTime >= restTime - 10 && !hasWarned) {
-                        if (voiceAvailable) {
+                        if (voiceAvailable && voiceTested) {
                             speakText('準備開始');
                         }
                         hasWarned = true;
@@ -495,7 +391,7 @@
                         hasSpoken = true;
                         currentTime = 0;
                         currentRep = 0;
-                        if (voiceAvailable) {
+                        if (voiceAvailable && voiceTested) {
                             speakNumber(1);
                         }
                     }
@@ -515,10 +411,8 @@
                                 hasSpoken = false;
                             } else {
                                 stopWorkout();
-                                document.getElementById('counter').textContent = '訓練完成!';
+                                document.getElementById('counter').textContent = '完成!';
                                 document.getElementById('phase').textContent = '所有組數訓練結束';
-                                document.getElementById('progress').style.width = '100%';
-                                playBeep();
                                 return;
                             }
                         } else {
@@ -527,7 +421,7 @@
                     }
                     
                     if (phaseTime < 0.15 && !hasSpoken && currentRep < totalReps) {
-                        if (voiceAvailable) {
+                        if (voiceAvailable && voiceTested) {
                             speakNumber(currentRep + 1);
                         }
                         hasSpoken = true;
@@ -542,11 +436,25 @@
             }, 100);
         }
         
+        // 開始訓練
         async function startWorkout() {
             if (intervalId) return;
             
+            // 初始化音頻
             await initAudioContext();
             
+            // 檢查語音可用性
+            if (!voiceTested) {
+                alert("建議先點擊「測試語音」按鈕確認語音功能正常");
+                return;
+            }
+            
+            // 播放測試音
+            setTimeout(() => {
+                playBeep();
+            }, 100);
+            
+            // 獲取輸入值
             const repsInput = document.getElementById('repsInput');
             const setsInput = document.getElementById('setsInput');
             const restInput = document.getElementById('restInput');
@@ -568,12 +476,14 @@
                 return;
             }
             
+            // 更新UI
             document.getElementById('playBtn').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'inline-block';
             repsInput.disabled = true;
             setsInput.disabled = true;
             restInput.disabled = true;
             
+            // 重置狀態
             currentRep = 0;
             currentSet = 0;
             currentTime = 0;
@@ -582,25 +492,23 @@
             hasWarned = false;
             hasSpoken = false;
             
-            setTimeout(() => {
-                playBeep();
-            }, 100);
-            
+            // 開始計時器
             startTimer();
         }
         
+        // 停止訓練
         function stopWorkout() {
             if (intervalId) {
                 clearInterval(intervalId);
                 intervalId = null;
             }
             
+            // 停止任何語音
             if (speechSynthesis) {
                 speechSynthesis.cancel();
             }
             
-            isSpeaking = false;
-            
+            // 恢復UI
             document.getElementById('playBtn').style.display = 'inline-block';
             document.getElementById('stopBtn').style.display = 'none';
             document.getElementById('repsInput').disabled = false;
@@ -609,25 +517,25 @@
             document.getElementById('progress').style.width = '0%';
         }
         
+        // 頁面初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 檢查語音可用性
             checkVoiceAvailability();
             
+            // 設置按鈕事件
             document.getElementById('playBtn').addEventListener('click', startWorkout);
             document.getElementById('stopBtn').addEventListener('click', stopWorkout);
+            document.getElementById('voiceTestBtn').addEventListener('click', testVoice);
             
+            // iOS 語音初始化
             if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
                 setTimeout(() => {
                     const voices = speechSynthesis.getVoices();
                     console.log("iOS 語音列表:", voices.length);
                 }, 500);
             }
-            
-            window.addEventListener('beforeunload', function() {
-                if (intervalId) {
-                    stopWorkout();
-                }
-            });
         });
     </script>
 </body>
 </html>
+
