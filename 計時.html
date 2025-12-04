@@ -177,6 +177,12 @@
             transform: translateY(-3px);
             box-shadow: 0 12px 25px rgba(247, 37, 69, 0.4);
         }
+        .audio-status {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            min-height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -207,6 +213,8 @@
             <button class="play-btn" id="playBtn">開始訓練</button>
             <button class="stop-btn" id="stopBtn" style="display:none;">停止訓練</button>
         </div>
+        
+        <div class="audio-status" id="audioStatus"></div>
     </div>
 
     <script>
@@ -224,28 +232,96 @@
         let preparationTime = 10.0;
         const repDuration = 4.5;
         
-        // 延遲初始化音頻上下文
+        // 音頻相關變數
         let audioContext = null;
         let voiceAvailable = false;
         let voiceActivated = false;
+        let audioResumePromise = null;
         
-        // 初始化音頻上下文
+        // 更新音頻狀態顯示
+        function updateAudioStatus(status) {
+            const statusElement = document.getElementById('audioStatus');
+            if (statusElement) {
+                statusElement.textContent = `音頻狀態: ${status}`;
+                if (status === '正常') {
+                    statusElement.style.color = '#4ade80';
+                } else if (status.includes('異常')) {
+                    statusElement.style.color = '#f87171';
+                } else if (status.includes('暫停')) {
+                    statusElement.style.color = '#fbbf24';
+                } else {
+                    statusElement.style.color = '#888';
+                }
+            }
+        }
+        
+        // 初始化音頻上下文（改進版）
         async function initAudioContext() {
             if (!audioContext) {
                 try {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    updateAudioStatus('初始化中...');
                     
+                    // 監聽音頻上下文狀態變化
+                    audioContext.onstatechange = () => {
+                        console.log('音頻上下文狀態變更:', audioContext.state);
+                        updateAudioStatus(audioContext.state === 'running' ? '正常' : audioContext.state);
+                        
+                        // 如果狀態變為 running，清除 resume 承諾
+                        if (audioContext.state === 'running') {
+                            audioResumePromise = null;
+                        }
+                    };
+                    
+                    // 在 iOS 上，需要等待用戶互動後才能啟動
                     if (audioContext.state === 'suspended') {
-                        await audioContext.resume();
+                        updateAudioStatus('等待用戶互動...');
+                        // 這裡不立即 resume，等用戶點擊按鈕時再處理
                     }
                     
                     return true;
                 } catch (error) {
                     console.error("音頻初始化失敗:", error);
+                    updateAudioStatus('初始化失敗');
                     return false;
                 }
             }
             return true;
+        }
+        
+        // 確保音頻上下文處於運行狀態（核心修復）
+        async function ensureAudioContextRunning() {
+            if (!audioContext) {
+                const initialized = await initAudioContext();
+                if (!initialized) {
+                    return false;
+                }
+            }
+            
+            // 如果音頻上下文處於暫停狀態，嘗試恢復
+            if (audioContext.state === 'suspended') {
+                updateAudioStatus('恢復中...');
+                
+                // 避免重複的 resume 調用
+                if (!audioResumePromise) {
+                    audioResumePromise = (async () => {
+                        try {
+                            await audioContext.resume();
+                            console.log('音頻上下文已恢復');
+                            updateAudioStatus('正常');
+                            return true;
+                        } catch (error) {
+                            console.error('恢復音頻上下文失敗:', error);
+                            updateAudioStatus('恢復失敗');
+                            return false;
+                        }
+                    })();
+                }
+                
+                return await audioResumePromise;
+            }
+            
+            return audioContext.state === 'running';
         }
         
         // 激活語音系統
@@ -281,17 +357,16 @@
             }
         }
         
-        // 播放嗶聲
-        function playBeep() {
-            if (!audioContext) {
+        // 播放嗶聲（改進版）
+        async function playBeep() {
+            // 確保音頻上下文正在運行
+            const isRunning = await ensureAudioContextRunning();
+            if (!isRunning) {
+                console.warn('音頻上下文未運行，無法播放嗶聲');
                 return;
             }
             
             try {
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
@@ -301,11 +376,23 @@
                 oscillator.frequency.value = 800;
                 oscillator.type = 'sine';
                 
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                const now = audioContext.currentTime;
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
                 
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
+                oscillator.start(now);
+                oscillator.stop(now + 0.2);
+                
+                // 清理資源
+                oscillator.onended = () => {
+                    try {
+                        oscillator.disconnect();
+                        gainNode.disconnect();
+                    } catch (e) {
+                        // 忽略清理錯誤
+                    }
+                };
+                
             } catch (error) {
                 console.error("播放嗶聲失敗:", error);
             }
@@ -458,6 +545,7 @@
                     }
                     
                     if (Math.abs(phaseTime - 2.0) < 0.05) {
+                        // 確保嗶聲能夠播放
                         playBeep();
                     }
                 }
@@ -473,10 +561,16 @@
             // 1. 先激活語音系統
             activateVoiceSystem();
             
-            // 2. 初始化音頻
+            // 2. 初始化音頻上下文（重要：在用戶點擊後初始化）
             await initAudioContext();
             
-            // 3. 播放測試嗶聲
+            // 3. 確保音頻上下文正在運行
+            const audioReady = await ensureAudioContextRunning();
+            if (!audioReady) {
+                alert("音頻系統未準備好，可能無法播放提示音。請確保允許瀏覽器播放聲音。");
+            }
+            
+            // 4. 播放測試嗶聲
             playBeep();
             
             // 獲取輸入值
@@ -544,10 +638,54 @@
             document.getElementById('phase').textContent = '';
         }
         
+        // 頁面可見性變化處理（核心修復）
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                // 頁面被隱藏（切換分頁或最小化）
+                console.log('頁面被隱藏，音頻可能被暫停');
+            } else {
+                // 頁面恢復可見
+                console.log('頁面恢復可見，檢查音頻狀態');
+                
+                // 如果計時器正在運行，確保音頻上下文恢復
+                if (intervalId && audioContext && audioContext.state === 'suspended') {
+                    console.log('嘗試恢復音頻上下文');
+                    ensureAudioContextRunning().then(success => {
+                        if (success) {
+                            console.log('音頻上下文已成功恢復');
+                            // 恢復後播放一個測試嗶聲
+                            setTimeout(() => playBeep(), 100);
+                        }
+                    });
+                }
+            }
+        }
+        
         // 頁面初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 綁定事件
             document.getElementById('playBtn').addEventListener('click', startWorkout);
             document.getElementById('stopBtn').addEventListener('click', stopWorkout);
+            
+            // 監聽頁面可見性變化
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // 監聽頁面恢復事件（針對移動設備）
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                    // 頁面從後退/前進緩存中恢復
+                    console.log('頁面從緩存恢復，檢查音頻');
+                    if (intervalId && audioContext) {
+                        ensureAudioContextRunning();
+                    }
+                }
+            });
+            
+            // 初始化音頻狀態顯示
+            updateAudioStatus('未初始化');
+            
+            // 預先初始化音頻上下文（但不啟動）
+            initAudioContext();
         });
     </script>
 </body>
