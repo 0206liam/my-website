@@ -356,7 +356,7 @@
                     if (speechSynthesis.speaking) {
                         speechSynthesis.cancel();
                     }
-                }, 1000);
+                }, 2000);
                 
                 return true;
             } catch (error) {
@@ -421,6 +421,7 @@
                 setTimeout(() => {
                     speechSynthesis.cancel();
                     setTimeout(() => {
+                        
                         doSpeakNumber(number);
                     }, 50);
                 }, 10);
@@ -789,5 +790,6 @@
 </script>
 </body>
 </html>
+
 
 
