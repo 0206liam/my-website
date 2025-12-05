@@ -393,49 +393,46 @@ async function ensureAudioContextRunning() {
         return true;
     }
     
-// 播放嗶聲（修復延遲問題版）
-async function playBeep() {
-    // 確保音頻上下文正在運行
-    const isRunning = await ensureAudioContextRunning();
-    if (!isRunning) {
-        console.warn('音頻上下文未運行，無法播放嗶聲');
-        return;
+    // 播放嗶聲（改進版）
+    async function playBeep() {
+        // 確保音頻上下文正在運行
+        const isRunning = await ensureAudioContextRunning();
+        if (!isRunning) {
+            console.warn('音頻上下文未運行，無法播放嗶聲');
+            return;
+        }
+        
+        try {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            const now = audioContext.currentTime;
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+            
+            // 清理資源
+            oscillator.onended = () => {
+                try {
+                    oscillator.disconnect();
+                    gainNode.disconnect();
+                } catch (e) {
+                    // 忽略清理錯誤
+                }
+            };
+            
+        } catch (error) {
+            console.error("播放嗶聲失敗:", error);
+        }
     }
-    
-    try {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        
-        // ========== 關鍵修改：使用 0 而不是 currentTime ==========
-        // 這會強制立即播放，避開瀏覽器的時鐘bug
-        const startTime = 0; // 立即播放
-        
-        gainNode.gain.setValueAtTime(0.3, startTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
-        
-        oscillator.start(startTime);     // ← 改為 0
-        oscillator.stop(startTime + 0.2); // ← 改為相對時間
-        
-        // 清理資源
-        oscillator.onended = () => {
-            try {
-                oscillator.disconnect();
-                gainNode.disconnect();
-            } catch (e) {
-                // 忽略清理錯誤
-            }
-        };
-        
-    } catch (error) {
-        console.error("播放嗶聲失敗:", error);
-    }
-}
     
     // 語音合成函數（改進版）
     function speakNumber(number) {
@@ -815,7 +812,6 @@ async function playBeep() {
 </script>
 </body>
 </html>
-
 
 
 
