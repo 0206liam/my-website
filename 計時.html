@@ -394,29 +394,26 @@ async function ensureAudioContextRunning() {
     }
     
     // 播放嗶聲（改進版）
-// 播放嗶聲（修正延遲問題）
+// 播放嗶聲（終極方案：使用完全不同的方法）
 async function playBeep() {
-    // 確保音頻上下文正在運行
-    const isRunning = await ensureAudioContextRunning();
-    if (!isRunning) {
-        console.warn('音頻上下文未運行，無法播放嗶聲');
-        return;
-    }
-    
+    // 創建一個全新的、獨立的音頻上下文
+    // 每次播放都創建新的，避免狀態污染
     try {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        // 1. 創建全新的音頻上下文
+        const beepContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 2. 立即播放，不等待任何狀態
+        const oscillator = beepContext.createOscillator();
+        const gainNode = beepContext.createGain();
         
         oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        gainNode.connect(beepContext.destination);
         
         oscillator.frequency.value = 800;
         oscillator.type = 'sine';
         
-        // ========== 關鍵修改：使用 currentTime + 微小延遲 ==========
-        // 這樣即使 currentTime 有偏移，我們也能立即播放
-        const now = audioContext.currentTime;
-        const startTime = now + 0.001; // 1毫秒後播放
+        // 使用絕對時間：從創建上下文開始計算
+        const startTime = beepContext.currentTime + 0.001;
         
         gainNode.gain.setValueAtTime(0.3, startTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
@@ -424,13 +421,17 @@ async function playBeep() {
         oscillator.start(startTime);
         oscillator.stop(startTime + 0.2);
         
-        // 清理資源
+        // 3. 播放完成後立即關閉上下文，釋放資源
         oscillator.onended = () => {
             try {
                 oscillator.disconnect();
                 gainNode.disconnect();
+                // 重要：關閉這個臨時上下文
+                setTimeout(() => {
+                    beepContext.close().catch(() => {});
+                }, 100);
             } catch (e) {
-                // 忽略清理錯誤
+                // 忽略錯誤
             }
         };
         
@@ -817,6 +818,7 @@ async function playBeep() {
 </script>
 </body>
 </html>
+
 
 
 
