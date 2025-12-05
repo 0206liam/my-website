@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>健身節奏計時器</title>
     <style>
+        /* 樣式保持不變 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
@@ -232,11 +233,16 @@
         let preparationTime = 10.0;
         const repDuration = 4.5;
         
-        // 音頻相關變數
+        // ========== 音頻相關變數 ==========
         let audioContext = null;
         let voiceAvailable = false;
         let voiceActivated = false;
         let audioResumePromise = null;
+        
+        // ========== 新增：語音狀態管理 ==========
+        let voiceContextActive = false;
+        let lastVoiceTime = 0;
+        let isVoiceSpeaking = false;
         
         // 更新音頻狀態顯示
         function updateAudioStatus(status) {
@@ -255,28 +261,24 @@
             }
         }
         
-        // 初始化音頻上下文（改進版）
+        // 初始化音頻上下文
         async function initAudioContext() {
             if (!audioContext) {
                 try {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     updateAudioStatus('初始化中...');
                     
-                    // 監聽音頻上下文狀態變化
                     audioContext.onstatechange = () => {
                         console.log('音頻上下文狀態變更:', audioContext.state);
                         updateAudioStatus(audioContext.state === 'running' ? '正常' : audioContext.state);
                         
-                        // 如果狀態變為 running，清除 resume 承諾
                         if (audioContext.state === 'running') {
                             audioResumePromise = null;
                         }
                     };
                     
-                    // 在 iOS 上，需要等待用戶互動後才能啟動
                     if (audioContext.state === 'suspended') {
                         updateAudioStatus('等待用戶互動...');
-                        // 這裡不立即 resume，等用戶點擊按鈕時再處理
                     }
                     
                     return true;
@@ -289,7 +291,7 @@
             return true;
         }
         
-        // 確保音頻上下文處於運行狀態（核心修復）
+        // 確保音頻上下文處於運行狀態
         async function ensureAudioContextRunning() {
             if (!audioContext) {
                 const initialized = await initAudioContext();
@@ -298,11 +300,9 @@
                 }
             }
             
-            // 如果音頻上下文處於暫停狀態，嘗試恢復
             if (audioContext.state === 'suspended') {
                 updateAudioStatus('恢復中...');
                 
-                // 避免重複的 resume 調用
                 if (!audioResumePromise) {
                     audioResumePromise = (async () => {
                         try {
@@ -324,42 +324,74 @@
             return audioContext.state === 'running';
         }
         
-        // 激活語音系統
-        function activateVoiceSystem() {
+        // ========== 修改：激活語音系統（仿照音頻上下文） ==========
+        async function activateVoiceSystem() {
             if (!('speechSynthesis' in window)) {
                 voiceAvailable = false;
                 return false;
             }
             
-            voiceAvailable = true;
-            
-            speechSynthesis.cancel();
-            
-            const activationUtterance = new SpeechSynthesisUtterance("");
-            activationUtterance.text = "準備開始";
-            activationUtterance.volume = 0.5;
-            activationUtterance.rate = 1.0;
-            activationUtterance.pitch = 1.0;
-            activationUtterance.lang = 'zh-TW';
-            
             try {
-                speechSynthesis.speak(activationUtterance);
-                voiceActivated = true;
+                // 先取消所有語音
+                speechSynthesis.cancel();
                 
-                setTimeout(() => {
-                    speechSynthesis.cancel();
-                }, 100);
+                // 使用零音量測試語音激活系統
+                const testUtterance = new SpeechSynthesisUtterance("");
+                testUtterance.volume = 0;
                 
-                return true;
+                return new Promise((resolve) => {
+                    testUtterance.onstart = () => {
+                        console.log('語音系統激活成功');
+                        voiceContextActive = true;
+                        lastVoiceTime = Date.now();
+                        voiceActivated = true;
+                        
+                        // 立即取消測試語音
+                        setTimeout(() => speechSynthesis.cancel(), 10);
+                        resolve(true);
+                    };
+                    
+                    testUtterance.onerror = () => {
+                        console.log('語音激活失敗');
+                        voiceContextActive = false;
+                        voiceActivated = false;
+                        resolve(false);
+                    };
+                    
+                    // 設置超時
+                    setTimeout(() => {
+                        if (!voiceContextActive) {
+                            console.log('語音激活超時');
+                            resolve(false);
+                        }
+                    }, 1000);
+                    
+                    speechSynthesis.speak(testUtterance);
+                });
+                
             } catch (error) {
                 console.error("語音激活失敗:", error);
+                voiceContextActive = false;
+                voiceActivated = false;
                 return false;
             }
         }
         
-        // 播放嗶聲（改進版）
+        // ========== 新增：確保語音系統運行（仿照音頻） ==========
+        async function ensureVoiceRunning() {
+            if (!voiceAvailable) return false;
+            
+            // 如果語音系統未激活或長時間未使用（30秒），重新激活
+            if (!voiceContextActive || (Date.now() - lastVoiceTime > 30000)) {
+                console.log('重新激活語音系統...');
+                return await activateVoiceSystem();
+            }
+            
+            return true;
+        }
+        
+        // 播放嗶聲
         async function playBeep() {
-            // 確保音頻上下文正在運行
             const isRunning = await ensureAudioContextRunning();
             if (!isRunning) {
                 console.warn('音頻上下文未運行，無法播放嗶聲');
@@ -383,7 +415,6 @@
                 oscillator.start(now);
                 oscillator.stop(now + 0.2);
                 
-                // 清理資源
                 oscillator.onended = () => {
                     try {
                         oscillator.disconnect();
@@ -398,14 +429,22 @@
             }
         }
         
-        // 語音合成函數
-        function speakNumber(number) {
-            if (!voiceAvailable || !voiceActivated) {
+        // ========== 修改：語音合成函數 ==========
+        async function speakNumber(number) {
+            // 確保語音系統運行（仿照嗶聲的 ensureAudioContextRunning）
+            const voiceReady = await ensureVoiceRunning();
+            if (!voiceReady || !voiceActivated) {
+                console.log('語音系統未準備好，跳過播報');
                 return;
             }
             
             try {
-                speechSynthesis.cancel();
+                // 如果正在說話，取消前一個（避免重疊）
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                    // 給系統一點時間恢復
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
                 
                 const utterance = new SpeechSynthesisUtterance(number.toString());
                 utterance.lang = 'zh-TW';
@@ -417,21 +456,49 @@
                     utterance.rate = 0.85;
                 }
                 
+                // 更新最後語音時間
+                lastVoiceTime = Date.now();
+                isVoiceSpeaking = true;
+                
+                utterance.onstart = () => {
+                    console.log(`開始播報數字: ${number}`);
+                };
+                
+                utterance.onend = () => {
+                    console.log(`完成播報數字: ${number}`);
+                    isVoiceSpeaking = false;
+                };
+                
+                utterance.onerror = (event) => {
+                    console.error(`語音錯誤:`, event);
+                    isVoiceSpeaking = false;
+                    // 發生錯誤時，重置語音狀態
+                    voiceContextActive = false;
+                };
+                
                 speechSynthesis.speak(utterance);
                 
             } catch (error) {
                 console.error("語音合成失敗:", error);
+                isVoiceSpeaking = false;
+                voiceContextActive = false;
             }
         }
         
-        // 語音合成文字
-        function speakText(text) {
-            if (!voiceAvailable || !voiceActivated) {
+        // ========== 修改：語音合成文字 ==========
+        async function speakText(text) {
+            // 確保語音系統運行
+            const voiceReady = await ensureVoiceRunning();
+            if (!voiceReady || !voiceActivated) {
+                console.log('語音系統未準備好，跳過播報文字');
                 return;
             }
             
             try {
-                speechSynthesis.cancel();
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
                 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
@@ -439,9 +506,29 @@
                 utterance.pitch = 1.0;
                 utterance.volume = 1.0;
                 
+                lastVoiceTime = Date.now();
+                isVoiceSpeaking = true;
+                
+                utterance.onstart = () => {
+                    console.log(`開始播報: ${text}`);
+                };
+                
+                utterance.onend = () => {
+                    console.log(`完成播報: ${text}`);
+                    isVoiceSpeaking = false;
+                };
+                
+                utterance.onerror = (event) => {
+                    console.error(`語音錯誤:`, event);
+                    isVoiceSpeaking = false;
+                    voiceContextActive = false;
+                };
+                
                 speechSynthesis.speak(utterance);
             } catch (error) {
                 console.error("語音合成失敗:", error);
+                isVoiceSpeaking = false;
+                voiceContextActive = false;
             }
         }
         
@@ -490,8 +577,14 @@
         
         // 開始計時器
         function startTimer() {
-            intervalId = setInterval(() => {
+            intervalId = setInterval(async () => {
                 currentTime += 0.1;
+                
+                // ========== 新增：定期維護語音系統（每30秒） ==========
+                if (Math.floor(currentTime) % 30 === 0 && voiceActivated && !isVoiceSpeaking) {
+                    console.log('定期維護語音系統');
+                    await ensureVoiceRunning();
+                }
                 
                 if (isPreparation) {
                     if (currentTime >= preparationTime) {
@@ -545,7 +638,6 @@
                     }
                     
                     if (Math.abs(phaseTime - 2.0) < 0.05) {
-                        // 確保嗶聲能夠播放
                         playBeep();
                     }
                 }
@@ -554,15 +646,18 @@
             }, 100);
         }
         
-        // 開始訓練
+        // ========== 修改：開始訓練 ==========
         async function startWorkout() {
             if (intervalId) return;
             
-            // 1. 先激活語音系統
-            activateVoiceSystem();
-            
-            // 2. 初始化音頻上下文（重要：在用戶點擊後初始化）
+            // 1. 初始化音頻上下文
             await initAudioContext();
+            
+            // 2. 激活語音系統（在用戶點擊後）
+            const voiceActivated = await activateVoiceSystem();
+            if (!voiceActivated) {
+                console.warn('語音系統初始化失敗，將只有嗶聲提示');
+            }
             
             // 3. 確保音頻上下文正在運行
             const audioReady = await ensureAudioContextRunning();
@@ -572,6 +667,11 @@
             
             // 4. 播放測試嗶聲
             playBeep();
+            
+            // 5. 測試語音
+            setTimeout(() => {
+                speakText("開始訓練");
+            }, 300);
             
             // 獲取輸入值
             const repsInput = document.getElementById('repsInput');
@@ -636,27 +736,50 @@
             // 重置顯示
             document.getElementById('counter').textContent = '準備開始';
             document.getElementById('phase').textContent = '';
+            
+            // 重置語音狀態
+            voiceContextActive = false;
+            isVoiceSpeaking = false;
         }
         
-        // 頁面可見性變化處理（核心修復）
+        // ========== 修改：頁面可見性變化處理 ==========
         function handleVisibilityChange() {
             if (document.hidden) {
-                // 頁面被隱藏（切換分頁或最小化）
-                console.log('頁面被隱藏，音頻可能被暫停');
+                // 頁面被隱藏
+                console.log('頁面被隱藏');
+                if (speechSynthesis && speechSynthesis.speaking) {
+                    speechSynthesis.pause();
+                }
             } else {
                 // 頁面恢復可見
-                console.log('頁面恢復可見，檢查音頻狀態');
+                console.log('頁面恢復可見，恢復音頻和語音系統');
                 
-                // 如果計時器正在運行，確保音頻上下文恢復
-                if (intervalId && audioContext && audioContext.state === 'suspended') {
-                    console.log('嘗試恢復音頻上下文');
+                if (intervalId) {
+                    // 1. 恢復音頻上下文（嗶聲）
                     ensureAudioContextRunning().then(success => {
                         if (success) {
-                            console.log('音頻上下文已成功恢復');
-                            // 恢復後播放一個測試嗶聲
+                            console.log('音頻上下文已恢復');
                             setTimeout(() => playBeep(), 100);
                         }
                     });
+                    
+                    // 2. 恢復語音系統（仿照嗶聲）
+                    setTimeout(async () => {
+                        // 如果語音被暫停，恢復它
+                        if (speechSynthesis.paused) {
+                            speechSynthesis.resume();
+                        }
+                        
+                        // 重新激活語音系統
+                        await activateVoiceSystem();
+                        
+                        // 測試語音是否正常
+                        setTimeout(() => {
+                            if (voiceActivated) {
+                                speakText("恢復訓練");
+                            }
+                        }, 300);
+                    }, 200);
                 }
             }
         }
@@ -670,22 +793,19 @@
             // 監聽頁面可見性變化
             document.addEventListener('visibilitychange', handleVisibilityChange);
             
-            // 監聽頁面恢復事件（針對移動設備）
+            // 監聽頁面恢復事件
             window.addEventListener('pageshow', function(event) {
                 if (event.persisted) {
-                    // 頁面從後退/前進緩存中恢復
-                    console.log('頁面從緩存恢復，檢查音頻');
-                    if (intervalId && audioContext) {
+                    console.log('頁面從緩存恢復，檢查音頻和語音');
+                    if (intervalId) {
                         ensureAudioContextRunning();
+                        setTimeout(() => activateVoiceSystem(), 200);
                     }
                 }
             });
             
             // 初始化音頻狀態顯示
             updateAudioStatus('未初始化');
-            
-            // 預先初始化音頻上下文（但不啟動）
-            initAudioContext();
         });
     </script>
 </body>
