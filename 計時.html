@@ -651,70 +651,86 @@ async function ensureAudioContextRunning() {
     }
     
     // 開始訓練
-    async function startWorkout() {
-        if (intervalId) return;
-        
-        // 1. 先激活語音系統
-        activateVoiceSystem();
-        
-        // 2. 初始化音頻上下文（重要：在用戶點擊後初始化）
-        await initAudioContext();
-        
-        // 3. 確保音頻上下文正在運行
-        const audioReady = await ensureAudioContextRunning();
-        if (!audioReady) {
-            alert("音頻系統未準備好，可能無法播放提示音。請確保允許瀏覽器播放聲音。");
+// 開始訓練（修改版：每次開始都重置音頻）
+async function startWorkout() {
+    if (intervalId) return;
+    
+    // ========== 關鍵：完全重置音頻系統 ==========
+    console.log('開始訓練，重置音頻系統...');
+    
+    // 1. 關閉現有的音頻上下文（如果存在）
+    if (audioContext) {
+        try {
+            await audioContext.close();
+            console.log('已關閉舊的音頻上下文');
+        } catch (e) {
+            console.log('關閉音頻上下文時出錯:', e);
         }
-        
-        // 4. 播放測試嗶聲
-        playBeep();
-        
-
-        
-        // 獲取輸入值
-        const repsInput = document.getElementById('repsInput');
-        const setsInput = document.getElementById('setsInput');
-        const restInput = document.getElementById('restInput');
-        
-        totalReps = parseInt(repsInput.value) || 12;
-        totalSets = parseInt(setsInput.value) || 3;
-        restTime = parseInt(restInput.value) || 60;
-        
-        if (totalReps < 1 || totalReps > 50) {
-            alert('請輸入1-50之間的次數');
-            return;
-        }
-        if (totalSets < 1 || totalSets > 10) {
-            alert('請輸入1-10之間的組數');
-            return;
-        }
-        if (restTime < 10 || restTime > 300) {
-            alert('請輸入10-300秒之間的休息時間');
-            return;
-        }
-        
-        // 更新UI
-        document.getElementById('playBtn').style.display = 'none';
-        document.getElementById('stopBtn').style.display = 'block';
-        repsInput.disabled = true;
-        setsInput.disabled = true;
-        restInput.disabled = true;
-        
-        // 重置狀態
-        currentRep = 0;
-        currentSet = 0;
-        currentTime = 0;
-        isPreparation = true;
-        isResting = false;
-        hasWarned = false;
-        hasSpoken = false;
-        
-        // 初始化語音檢查時間
-        lastVoiceCheckTime = Date.now();
-        
-        // 開始計時器
-        startTimer();
     }
+    
+    // 2. 重置所有音頻相關變數
+    audioContext = null;
+    audioResumePromise = null;
+    
+    // 3. 激活語音系統
+    activateVoiceSystem();
+    
+    // 4. 創建全新的音頻上下文
+    await initAudioContext();
+    
+    // 5. 確保音頻上下文正在運行
+    const audioReady = await ensureAudioContextRunning();
+    if (!audioReady) {
+        alert("音頻系統未準備好，可能無法播放提示音。請確保允許瀏覽器播放聲音。");
+    }
+    
+    // 6. 播放測試嗶聲（檢查是否正常）
+    playBeep();
+    
+    // 獲取輸入值
+    const repsInput = document.getElementById('repsInput');
+    const setsInput = document.getElementById('setsInput');
+    const restInput = document.getElementById('restInput');
+    
+    totalReps = parseInt(repsInput.value) || 12;
+    totalSets = parseInt(setsInput.value) || 3;
+    restTime = parseInt(restInput.value) || 60;
+    
+    if (totalReps < 1 || totalReps > 50) {
+        alert('請輸入1-50之間的次數');
+        return;
+    }
+    if (totalSets < 1 || totalSets > 10) {
+        alert('請輸入1-10之間的組數');
+        return;
+    }
+    if (restTime < 10 || restTime > 300) {
+        alert('請輸入10-300秒之間的休息時間');
+        return;
+    }
+    
+    // 更新UI
+    document.getElementById('playBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'block';
+    repsInput.disabled = true;
+    setsInput.disabled = true;
+    restInput.disabled = true;
+    
+    // 重置狀態
+    currentRep = 0;
+    currentSet = 0;
+    currentTime = 0;
+    isPreparation = true;
+    isResting = false;
+    hasWarned = false;
+    hasSpoken = false;
+    
+    // 初始化語音檢查時間
+    lastVoiceCheckTime = Date.now();
+    
+    // 開始計時器
+    startTimer();
+}
     
     // 停止訓練
     function stopWorkout() {
@@ -812,6 +828,7 @@ async function ensureAudioContextRunning() {
 </script>
 </body>
 </html>
+
 
 
 
