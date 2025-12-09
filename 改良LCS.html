@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字差異比對工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: white; /* 改為純白背景 */
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            /* 移除背景色、邊框和陰影 */
+            background: transparent;
+            border-radius: 0; /* 移除圓角 */
+            padding: 10px; /* 減少內邊距 */
+            box-shadow: none; /* 移除陰影 */
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .button-group {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 1000;
+            background: white; /* 改為純白色 */
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); /* 減淡陰影 */
+            border: 1px solid #eee; /* 添加淺色邊框 */
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .compare-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .compare-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .clear-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: #d32f2f;
+        }
+
+        .content-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 100px;
+        }
+
+        .content-box {
+            background: #f9f9f9;
+            border: 1px solid #ddd; /* 減淡邊框顏色 */
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .content-box h3 {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .editor-wrapper {
+            position: relative;
+            background: white;
+            border-radius: 5px;
+            min-height: 60px;
+            overflow: visible;
+        }
+
+        .editor-content {
+            display: flex;
+            min-height: 100%;
+        }
+
+        .line-numbers {
+            width: 50px;
+            background: #f5f5f5;
+            border-right: 1px solid #ddd;
+            padding: 14px 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #999;
+            text-align: right;
+            user-select: none;
+            flex-shrink: 0;
+            min-height: 100%;
+        }
+        
+        .line-number {
+            height: 22px;
+        }
+
+        .text-area {
+            flex: 1;
+            min-width: 0;
+            min-height: 100%;
+            position: relative;
+        }
+
+        .content-display,
+        .content-textarea {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 22px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            width: 100%;
+            min-height: 100%;
+            padding: 10px;
+            border: none;
+            outline: none;
+            resize: none;
+            overflow: hidden;
+        }
+
+        .content-textarea {
+            background: transparent;
+        }
+
+        .content-display {
+            display: none;
+            background: transparent;
+            overflow: visible;
+            overflow-wrap: normal;
+            white-space: pre-wrap;
+            tab-size: 4;
+            -moz-tab-size: 4;
+        }
+
+        .editor-wrapper.view-mode .content-textarea {
+            display: none;
+        }
+
+        .editor-wrapper.view-mode .content-display {
+            display: block;
+        }
+
+/* 原始 - 柔和黃色（改為 highlight0） */
+.highlight0 {
+    background-color: #ffeb3b;      /* 柔和黃色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(255, 235, 59, 0.3);
+}
+
+/* 1 - 淺藍色（清爽） */
+.highlight1 {
+    background-color: #a3d9ff;      /* 淺藍色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(163, 217, 255, 0.3);
+}
+
+/* 2 - 淺粉色（明顯不同） */
+.highlight2 {
+    background-color: #ffb6c1;      /* 淺粉色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(255, 182, 193, 0.3);
+}
+
+/* 3 - 淺綠色（清新） */
+.highlight3 {
+    background-color: #98fb98;      /* 淺綠色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(152, 251, 152, 0.3);
+}
+
+/* 4 - 淺紫色（優雅）換更紫色 */
+.highlight4 {
+    background-color:  #c9a0dc;     /* 紫羅蘭色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(216, 191, 216, 0.3);
+}
+
+/* 5 - 淺橙色（溫暖）移掉 */
+.highlight5 {
+    background-color: #ffb380;       /* 標準橘色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(255, 204, 153, 0.3);
+}
+
+/* 6 - 淺青色（水藍） */
+.highlight6 {
+    background-color: #afeeee;      /* 淺青色 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(175, 238, 238, 0.3);
+}
+
+
+        .info-message {
+            text-align: center;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            color: #1976d2;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .no-diff {
+            text-align: center;
+            padding: 20px;
+            background: #c8e6c9;
+            border-radius: 8px;
+            color: #2e7d32;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 48px;
+            height: 48px;
+            background: rgba(102, 126, 234, 0.9);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            border: none;
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            background: rgba(118, 75, 162, 0.9);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 文字差異比對工具</h1>
+
+        <div class="button-group">
+            <button class="compare-btn" id="compareBtn" onclick="toggleMode()">🔍 比對差異</button>
+            <button class="clear-btn" onclick="clearAll()">🗑️ 清除</button>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="content-section">
+            <div class="content-box">
+                <h3>文件 A</h3>
+                <div class="editor-wrapper" id="wrapperA">
+                    <div class="editor-content">
+                        <div class="line-numbers" id="lineNumbersA"><div class="line-number">1</div></div>
+                        <div class="text-area">
+                            <textarea class="content-textarea" id="textA" 
+                                      placeholder="請輸入文字..." 
+                                      oninput="updateLineNumbers('A'); autoResizeTextarea('A')" 
+                                      onscroll="syncLineNumbers('A')"></textarea>
+                            <div class="content-display" id="displayA" 
+                                 onscroll="syncDisplayScroll('A')"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-box">
+                <h3>文件 B</h3>
+                <div class="editor-wrapper" id="wrapperB">
+                    <div class="editor-content">
+                        <div class="line-numbers" id="lineNumbersB"><div class="line-number">1</div></div>
+                        <div class="text-area">
+                            <textarea class="content-textarea" id="textB" 
+                                      placeholder="請輸入文字..." 
+                                      oninput="updateLineNumbers('B'); autoResizeTextarea('B')" 
+                                      onscroll="syncLineNumbers('B')"></textarea>
+                            <div class="content-display" id="displayB" 
+                                 onscroll="syncDisplayScroll('B')"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()" aria-label="回到頂部">
+        <span>↑</span>
+    </button>
+
+    <script>
+        let isViewMode = false;
+
+        // 核心差異標記函數
+function markDifferences(strA, strB) {
+    const m = strA.length;
+    const n = strB.length;
+    const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+    
+    // LCS DP 建表
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (strA[i - 1] === strB[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    
+    let i = m, j = n;
+    let resultA = "";
+    let resultB = "";
+    
+    let diffA = "";
+    let diffB = "";
+    
+    const flushDiff = () => {
+        if (diffA || diffB) {
+            resultA = `##DIFF_START##${diffA}##DIFF_END##` + resultA;
+            resultB = `##DIFF_START##${diffB}##DIFF_END##` + resultB;
+            diffA = "";
+            diffB = "";
+        }
+    };
+    
+    // 回溯
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && strA[i - 1] === strB[j - 1]) {
+            // flush accumulated diff
+            flushDiff();
+            
+            // add matching char
+            resultA = strA[i - 1] + resultA;
+            resultB = strB[j - 1] + resultB;
+            i--;
+            j--;
+        } else if (i > 0 && (j === 0 || dp[i - 1][j] >= dp[i][j - 1])) {
+            // A 有多的字元
+            diffA = strA[i - 1] + diffA;
+            i--;
+        } else {
+            // B 有多的字元
+            diffB = strB[j - 1] + diffB;
+            j--;
+        }
+    }
+    
+    // flush remaining diffs
+    flushDiff();
+    
+    return [resultA, resultB];
+}
+
+
+
+        function autoResizeTextarea(side) {
+            const textarea = document.getElementById('text' + side);
+            textarea.style.height = 'auto';
+            const contentHeight = textarea.scrollHeight;
+            textarea.style.height = contentHeight + 'px';
+            updateLineNumbers(side);
+        }
+
+        function updateLineNumbers(side) {
+            const textarea = document.getElementById('text' + side);
+            const display = document.getElementById('display' + side);
+            const lineNumbers = document.getElementById('lineNumbers' + side);
+            const contentElement = isViewMode ? display : textarea;
+            if (!contentElement) return;
+
+            const text = contentElement.value ?? contentElement.textContent ?? '';
+
+            const mirror = document.createElement('div');
+            const cs = getComputedStyle(contentElement);
+
+            mirror.style.position = 'absolute';
+            mirror.style.visibility = 'hidden';
+            mirror.style.whiteSpace = 'pre-wrap';
+            mirror.style.wordBreak = 'break-word';
+            mirror.style.boxSizing = cs.boxSizing;
+            mirror.style.font = cs.font;
+            mirror.style.letterSpacing = cs.letterSpacing;
+            mirror.style.padding = cs.padding;
+            mirror.style.border = 'none';
+            mirror.style.margin = '0';
+
+            const width = contentElement.clientWidth;
+            mirror.style.width = width + 'px';
+
+            document.body.appendChild(mirror);
+
+            mirror.textContent = 'A';
+            const lineHeight = mirror.scrollHeight;
+
+            const rawLines = text.split('\n');
+            let totalLines = 0;
+
+            for (const line of rawLines) {
+                if (line === '') {
+                    totalLines += 1;
+                    continue;
+                }
+
+                mirror.textContent = line;
+                const wrapped = Math.max(1, Math.round(mirror.scrollHeight / lineHeight));
+                totalLines += wrapped;
+            }
+
+            mirror.remove();
+
+            let html = '';
+            for (let i = 1; i <= totalLines; i++) {
+                html += `<div class="line-number">${i}</div>`;
+            }
+
+            lineNumbers.innerHTML = html;
+            syncLineNumbers(side);
+        }
+
+        function syncLineNumbers(side) {
+            const textarea = document.getElementById('text' + side);
+            const display = document.getElementById('display' + side);
+            const lineNumbers = document.getElementById('lineNumbers' + side);
+            const scrollElement = isViewMode ? display : textarea;
+            
+            if (scrollElement) {
+                lineNumbers.scrollTop = scrollElement.scrollTop;
+            }
+        }
+
+        function syncDisplayScroll(side) {
+            syncLineNumbers(side);
+        }
+
+        function toggleMode() {
+            const wrapperA = document.getElementById('wrapperA');
+            const wrapperB = document.getElementById('wrapperB');
+            const compareBtn = document.getElementById('compareBtn');
+            const message = document.getElementById('message');
+
+            if (!isViewMode) {
+                const textA = document.getElementById('textA').value;
+                const textB = document.getElementById('textB').value;
+
+                if (!textA || !textB) {
+                    message.innerHTML = '<div class="info-message">請輸入兩個文件的內容</div>';
+                    return;
+                }
+
+                wrapperA.classList.add('view-mode');
+                wrapperB.classList.add('view-mode');
+                compareBtn.textContent = '✏️ 返回編輯';
+                compareBtn.style.background = '#4CAF50';
+                isViewMode = true;
+                
+                autoResizeDisplay('A', textA);
+                autoResizeDisplay('B', textB);
+                updateLineNumbers('A');
+                updateLineNumbers('B');
+                compareTexts();
+            } else {
+                wrapperA.classList.remove('view-mode');
+                wrapperB.classList.remove('view-mode');
+                compareBtn.textContent = '🔍 比對差異';
+                compareBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                isViewMode = false;
+                message.innerHTML = '';
+                
+                updateLineNumbers('A');
+                updateLineNumbers('B');
+                autoResizeTextarea('A');
+                autoResizeTextarea('B');
+            }
+        }
+
+        function autoResizeDisplay(side, text) {
+            const display = document.getElementById('display' + side);
+            display.innerHTML = escapeHtml(text);
+            display.style.height = 'auto';
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = `
+                font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+                font-size: 14px;
+                line-height: 22px;
+                white-space: pre-wrap;
+                word-break: break-word;
+                width: ${display.clientWidth}px;
+                padding: 10px;
+                visibility: hidden;
+                position: absolute;
+            `;
+            tempDiv.textContent = text;
+            document.body.appendChild(tempDiv);
+            
+            const contentHeight = tempDiv.scrollHeight;
+            document.body.removeChild(tempDiv);
+            display.style.height = contentHeight + 'px';
+        }
+
+        function compareTexts() {
+            const textA = document.getElementById('textA').value;
+            const textB = document.getElementById('textB').value;
+            const displayA = document.getElementById('displayA');
+            const displayB = document.getElementById('displayB');
+            const message = document.getElementById('message');
+
+            message.innerHTML = '';
+
+            // 使用新的差異標記算法
+            const [markedA, markedB] = markDifferences(textA, textB);
+
+            // 檢查是否有差異
+            if (markedA.indexOf('##DIFF_START##') === -1) {
+                message.innerHTML = '<div class="no-diff">✅ 兩個文件完全相同！</div>';
+                displayA.innerHTML = escapeHtml(textA);
+                displayB.innerHTML = escapeHtml(textB);
+            } else {
+                // 轉換標記為 HTML 高亮
+                const highlightedA = convertMarksToHTML(markedA);
+                const highlightedB = convertMarksToHTML(markedB);
+
+                displayA.innerHTML = highlightedA;
+                displayB.innerHTML = highlightedB;
+
+                // 計算差異數量
+                const diffCount = (markedA.match(/##DIFF_START##/g) || []).length;
+                message.innerHTML = `<div class="info-message">找到 ${diffCount} 處差異（已用顏色標記）</div>`;
+            }
+        }
+
+function convertMarksToHTML(markedText) {
+    // 先轉義 HTML，但保留我們的標記
+    let result = markedText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
+    // 計算標記數量以決定顏色索引
+    let colorIndex = 0;
+    
+    // 將標記轉換為 HTML 高亮，依序使用不同顏色
+    result = result.replace(/##DIFF_START##(.*?)##DIFF_END##/g, 
+        function(match, diffText) {
+            // 使用 0-6 循環的顏色（共7種）
+            const colorClass = 'highlight' + (colorIndex % 7); // highlight0 ~ highlight6
+            colorIndex++;
+            return `<span class="${colorClass}">${diffText}</span>`;
+        });
+
+    return result;
+}
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '\n');
+        }
+
+        function clearAll() {
+            document.getElementById('textA').value = '';
+            document.getElementById('textB').value = '';
+            document.getElementById('displayA').innerHTML = '';
+            document.getElementById('displayB').innerHTML = '';
+            document.getElementById('message').innerHTML = '';
+            document.getElementById('lineNumbersA').innerHTML = '<div class="line-number">1</div>';
+            document.getElementById('lineNumbersB').innerHTML = '<div class="line-number">1</div>';
+            
+            if (isViewMode) {
+                toggleMode();
+            } else {
+                updateLineNumbers('A');
+                updateLineNumbers('B');
+                autoResizeTextarea('A');
+                autoResizeTextarea('B');
+            }
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        window.addEventListener('scroll', function() {
+            const backToTopBtn = document.getElementById('backToTop');
+            if (window.scrollY > 300) {
+                backToTopBtn.classList.add('show');
+            } else {
+                backToTopBtn.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLineNumbers('A');
+            updateLineNumbers('B');
+            autoResizeTextarea('A');
+            autoResizeTextarea('B');
+            
+            const backToTopBtn = document.getElementById('backToTop');
+            backToTopBtn.style.display = 'flex';
+        });
+    </script>
+</body>
+</html>
