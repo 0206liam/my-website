@@ -477,9 +477,6 @@
         <!-- 返回按鈕 -->
         <button class="back-btn" onclick="goBack()" title="返回清單">←</button>
 
-
-
-
         <!-- 標題區域 -->
         <div id="titleSection" class="title-section">
             <div id="titleDisplay" class="title-display" style="display: none;" onclick="editTitle()"></div>
@@ -506,8 +503,6 @@
     </div>
 
     <script>
-
-
         // 取得網址參數 ?id=清單名稱
         const urlParams = new URLSearchParams(window.location.search);
         let rawListId = urlParams.get("id") || "default";
@@ -538,6 +533,14 @@
         let longPressTimer = null;
         let longPressTriggered = false;
         let dragStartScrollY = 0;
+        
+        // 自動滾動相關變數
+        let autoScrollInterval = null;
+        let lastTouchTime = 0;
+        let scrollSpeed = 0;
+        const AUTO_SCROLL_THRESHOLD = 80; // 距離邊緣多少像素開始滾動
+        const AUTO_SCROLL_SPEED = 10; // 滾動速度
+        const AUTO_SCROLL_INTERVAL = 16; // 滾動間隔 (約60fps)
 
         function isTouchDevice() {
             return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -725,6 +728,7 @@
 
                 if (isDragging) {
                     handleTouchDrag(e);
+                    checkAutoScroll(e);
                 }
             }, { passive: false });
 
@@ -735,6 +739,7 @@
                 }
                 
                 if (isDragging) {
+                    stopAutoScroll();
                     endTouchDrag(e);
                 }
                 
@@ -742,6 +747,13 @@
                     longPressTriggered = false;
                 }, 100);
             }, { passive: false });
+
+            element.addEventListener('touchcancel', (e) => {
+                if (isDragging) {
+                    stopAutoScroll();
+                    endTouchDrag(e);
+                }
+            });
         }
 
         function startTouchDrag(e, element, index) {
@@ -779,6 +791,9 @@
 
             document.body.style.overflow = 'hidden';
             document.documentElement.style.touchAction = 'none';
+            
+            // 初始化自動滾動
+            startAutoScroll();
         }
 
         function handleTouchDrag(e) {
@@ -804,6 +819,68 @@
             if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
                 targetItem.classList.add('drag-over');
             }
+        }
+
+        function checkAutoScroll(e) {
+            if (!isDragging || !e.touches[0]) return;
+            
+            const touch = e.touches[0];
+            const windowHeight = window.innerHeight;
+            const windowWidth = window.innerWidth;
+            const scrollY = window.scrollY || window.pageYOffset;
+            const maxScrollY = document.documentElement.scrollHeight - windowHeight;
+            
+            // 計算距離上下邊緣的距離
+            const distanceToTop = touch.clientY;
+            const distanceToBottom = windowHeight - touch.clientY;
+            
+            // 計算滾動方向與速度
+            let newScrollSpeed = 0;
+            
+            if (distanceToTop < AUTO_SCROLL_THRESHOLD && scrollY > 0) {
+                // 靠近頂部，向上滾動
+                newScrollSpeed = -AUTO_SCROLL_SPEED * (1 - distanceToTop / AUTO_SCROLL_THRESHOLD);
+            } else if (distanceToBottom < AUTO_SCROLL_THRESHOLD && scrollY < maxScrollY) {
+                // 靠近底部，向下滾動
+                newScrollSpeed = AUTO_SCROLL_SPEED * (1 - distanceToBottom / AUTO_SCROLL_THRESHOLD);
+            }
+            
+            scrollSpeed = newScrollSpeed;
+        }
+
+        function startAutoScroll() {
+            if (autoScrollInterval) return;
+            
+            autoScrollInterval = setInterval(() => {
+                if (scrollSpeed !== 0) {
+                    const currentScrollY = window.scrollY || window.pageYOffset;
+                    const newScrollY = currentScrollY + scrollSpeed;
+                    
+                    // 確保滾動範圍在合理範圍內
+                    const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
+                    const clampedScrollY = Math.max(0, Math.min(maxScrollY, newScrollY));
+                    
+                    window.scrollTo({
+                        top: clampedScrollY,
+                        behavior: 'instant'
+                    });
+                    
+                    // 更新拖曳元素的位置
+                    if (draggedElement && isDragging) {
+                        const rect = draggedElement.getBoundingClientRect();
+                        const newTop = rect.top + scrollSpeed;
+                        draggedElement.style.top = newTop + 'px';
+                    }
+                }
+            }, AUTO_SCROLL_INTERVAL);
+        }
+
+        function stopAutoScroll() {
+            if (autoScrollInterval) {
+                clearInterval(autoScrollInterval);
+                autoScrollInterval = null;
+            }
+            scrollSpeed = 0;
         }
 
         function endTouchDrag(e) {
