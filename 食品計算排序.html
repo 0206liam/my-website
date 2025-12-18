@@ -297,30 +297,93 @@
             
             h1 {
                 font-size: 1.8em;
+                margin-bottom: 20px;
+            }
+            
+            .section {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            h2 {
+                font-size: 1.2em;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
             }
             
             .ranking-item {
-                flex-direction: column;
-                text-align: center;
+                padding: 12px;
+                margin-bottom: 10px;
+                flex-direction: row;
+                align-items: flex-start;
             }
             
             .rank-number {
-                margin-right: 0;
-                margin-bottom: 10px;
+                width: 35px;
+                height: 35px;
+                font-size: 1.2em;
+                margin-right: 12px;
+                flex-shrink: 0;
+            }
+            
+            .rank-info {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .rank-name {
+                font-size: 1.1em;
+                margin-bottom: 4px;
+            }
+            
+            .rank-details {
+                font-size: 0.8em;
+                line-height: 1.4;
             }
             
             .rank-score {
-                text-align: center;
-                margin-top: 10px;
+                font-size: 1.3em;
+                text-align: right;
+                margin-left: 8px;
+                flex-shrink: 0;
+            }
+            
+            .score-label {
+                font-size: 0.55em;
             }
 
             .sort-options {
                 grid-template-columns: 1fr;
+                gap: 8px;
+                padding: 12px;
+            }
+            
+            .sort-option {
+                padding: 10px;
             }
 
             .sort-header {
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
+                align-items: flex-start;
+            }
+            
+            .current-sort {
+                font-size: 0.85em;
+            }
+            
+            .food-item {
+                padding: 12px;
+                margin-bottom: 8px;
+            }
+            
+            .food-name {
+                font-size: 1em;
+            }
+            
+            .food-details {
+                font-size: 0.8em;
+                line-height: 1.4;
             }
         }
     </style>
