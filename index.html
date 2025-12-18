@@ -13,16 +13,14 @@ body {
     color: #222;
 }
 
-/* 首頁標題 */
 h1 {
     text-align: center;
     margin: 44px 0 32px;
     font-weight: 650;
-    font-size: 40px;   /* ⬅ 標題明顯放大 */
+    font-size: 40px;
     letter-spacing: 1px;
 }
 
-/* 主容器 */
 #file-list {
     max-width: 1100px;
     margin: auto;
@@ -32,7 +30,6 @@ h1 {
     gap: 18px;
 }
 
-/* 卡片 */
 .item {
     background: #fff;
     border-radius: 14px;
@@ -43,25 +40,22 @@ h1 {
     transition: transform .15s, box-shadow .15s;
 }
 
-/* 卡片標題 */
-.item > div:first-child {
-    font-size: 20px;    /* ⬅ 主要文字放大 */
-    font-weight: 600;
-}
-
-/* 路徑文字 */
-.path {
-    font-size: 15px;    /* ⬅ 輔助文字也加大 */
-    color: #777;
-    margin-top: 8px;
-}
-
 .item:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 22px rgba(0,0,0,.14);
 }
 
-/* 底部 */
+.item-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.path {
+    font-size: 15px;
+    color: #777;
+    margin-top: 8px;
+}
+
 footer {
     text-align: center;
     padding: 24px;
@@ -86,46 +80,82 @@ const owner = "0206liam";
 const repo = "my-website";
 const container = document.getElementById("file-list");
 
-function loadFolder(path = "") {
-    fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
-        .then(res => res.json())
-        .then(items => {
-            items.forEach(item => {
-
-                /* 資料夾 → 直接當一個入口 */
-                if (item.type === "dir") {
-                    const a = document.createElement("a");
-                    a.href = item.path + "/";   // 會開 index.html
-                    a.className = "item";
-                    a.innerHTML = `
-                        <div>📁 ${item.name}</div>
-                        <div class="path">${item.path}/</div>
-                    `;
-                    container.appendChild(a);
-                }
-
-                /* html 檔（排除 index.html） */
-                if (
-                    item.type === "file" &&
-                    item.name.endsWith(".html") &&
-                    item.name !== "index.html"
-                ) {
-                    const a = document.createElement("a");
-                    a.href = item.path;
-                    a.className = "item";
-                    a.innerHTML = `
-                        <div>${item.name.replace(".html","")}</div>
-                        <div class="path">${item.path}</div>
-                    `;
-                    container.appendChild(a);
-                }
-            });
-        });
+/* 建立一個卡片 */
+function createItem(title, href, pathText) {
+    const a = document.createElement("a");
+    a.href = href;
+    a.className = "item";
+    a.innerHTML = `
+        <div class="item-title">${title}</div>
+        <div class="path">${pathText}</div>
+    `;
+    container.appendChild(a);
 }
 
-loadFolder();
+/* 處理資料夾 */
+async function handleFolder(folderPath, folderName) {
+    const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${folderPath}`
+    );
+    const items = await res.json();
+
+    const indexFile = items.find(
+        f => f.type === "file" && f.name === "index.html"
+    );
+
+    if (indexFile) {
+        // 有 index.html → 當資料夾入口
+        createItem(
+            "📁 " + folderName,
+            folderPath + "/",
+            folderPath + "/"
+        );
+    } else {
+        // 沒有 index.html → 列出裡面的 html
+        items.forEach(file => {
+            if (
+                file.type === "file" &&
+                file.name.endsWith(".html")
+            ) {
+                createItem(
+                    file.name.replace(".html", ""),
+                    file.path,
+                    file.path
+                );
+            }
+        });
+    }
+}
+
+/* 讀取根目錄 */
+async function loadRoot() {
+    const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/`
+    );
+    const items = await res.json();
+
+    for (const item of items) {
+
+        if (item.type === "dir") {
+            await handleFolder(item.path, item.name);
+        }
+
+        if (
+            item.type === "file" &&
+            item.name.endsWith(".html") &&
+            item.name !== "index.html"
+        ) {
+            createItem(
+                item.name.replace(".html", ""),
+                item.path,
+                item.path
+            );
+        }
+    }
+}
+
+loadRoot();
 </script>
 
 </body>
 </html>
-
