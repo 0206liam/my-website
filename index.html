@@ -92,23 +92,31 @@ function loadFolder(path = "") {
         .then(items => {
             items.forEach(item => {
 
+                /* 資料夾 → 直接當一個入口 */
                 if (item.type === "dir") {
-                    loadFolder(item.path);
+                    const a = document.createElement("a");
+                    a.href = item.path + "/";   // 會開 index.html
+                    a.className = "item";
+                    a.innerHTML = `
+                        <div>📁 ${item.name}</div>
+                        <div class="path">${item.path}/</div>
+                    `;
+                    container.appendChild(a);
                 }
 
-                if (item.type === "file" &&
+                /* html 檔（排除 index.html） */
+                if (
+                    item.type === "file" &&
                     item.name.endsWith(".html") &&
-                    item.name !== "index.html") {
-
+                    item.name !== "index.html"
+                ) {
                     const a = document.createElement("a");
                     a.href = item.path;
                     a.className = "item";
-
                     a.innerHTML = `
                         <div>${item.name.replace(".html","")}</div>
                         <div class="path">${item.path}</div>
                     `;
-
                     container.appendChild(a);
                 }
             });
@@ -120,3 +128,4 @@ loadFolder();
 
 </body>
 </html>
+
