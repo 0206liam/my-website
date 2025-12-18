@@ -220,6 +220,76 @@
             font-size: 1.1em;
         }
 
+        /* 排序選項樣式 */
+        .sort-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .sort-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #e0e0e0;
+        }
+
+        .sort-option:hover {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+
+        .sort-option.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .sort-option input {
+            margin: 0;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .sort-option label {
+            cursor: pointer;
+            margin-bottom: 0;
+            flex: 1;
+            color: inherit;
+        }
+
+        .sort-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .sort-title {
+            font-size: 1.1em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .current-sort {
+            font-size: 0.9em;
+            color: #666;
+            background: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
         @media (max-width: 600px) {
             .input-group {
                 grid-template-columns: 1fr;
@@ -242,6 +312,15 @@
             .rank-score {
                 text-align: center;
                 margin-top: 10px;
+            }
+
+            .sort-options {
+                grid-template-columns: 1fr;
+            }
+
+            .sort-header {
+                flex-direction: column;
+                gap: 10px;
             }
         }
     </style>
@@ -288,26 +367,98 @@
         </div>
         
         <div class="section">
-            <h2>🏆 營養價值排名</h2>
+            <div class="sort-header">
+                <h2>🏆 營養價值排名</h2>
+                <div class="current-sort" id="currentSort">目前排序：熱量加權 (預設)</div>
+            </div>
+            
+            <!-- 排序選項區域 -->
+            <div class="sort-options">
+                <div class="sort-option selected" onclick="selectSortOption('heatWeighted')">
+                    <input type="radio" id="heatWeighted" name="sortOption" checked>
+                    <label for="heatWeighted">熱量加權</label>
+                </div>
+                <div class="sort-option" onclick="selectSortOption('caloriesDensity')">
+                    <input type="radio" id="caloriesDensity" name="sortOption">
+                    <label for="caloriesDensity">熱量密度</label>
+                </div>
+                <div class="sort-option" onclick="selectSortOption('caloriesPerYuan')">
+                    <input type="radio" id="caloriesPerYuan" name="sortOption">
+                    <label for="caloriesPerYuan">每元熱量</label>
+                </div>
+                <div class="sort-option" onclick="selectSortOption('proteinRatio')">
+                    <input type="radio" id="proteinRatio" name="sortOption">
+                    <label for="proteinRatio">蛋白質比例</label>
+                </div>
+                <div class="sort-option" onclick="selectSortOption('proteinPerYuan')">
+                    <input type="radio" id="proteinPerYuan" name="sortOption">
+                    <label for="proteinPerYuan">每元蛋白質</label>
+                </div>
+            </div>
+            
             <div id="ranking"></div>
         </div>
     </div>
 
     <script>
         let foods = [];
+        let currentSort = 'heatWeighted'; // 預設排序方式
 
-        // 載入儲存的資料
+        // 排序選項名稱對應
+        const sortNames = {
+            'heatWeighted': '熱量加權',
+            'caloriesDensity': '熱量密度',
+            'caloriesPerYuan': '每元熱量',
+            'proteinRatio': '蛋白質比例',
+            'proteinPerYuan': '每元蛋白質'
+        };
+
+        // 載入儲存的資料和排序設定
         function loadData() {
-            const saved = localStorage.getItem('foodData');
-            if (saved) {
-                foods = JSON.parse(saved);
-                updateDisplay();
+            const savedFoods = localStorage.getItem('foodData');
+            const savedSort = localStorage.getItem('sortOption');
+            
+            if (savedFoods) {
+                foods = JSON.parse(savedFoods);
             }
+            
+            if (savedSort) {
+                currentSort = savedSort;
+                updateSortUI();
+            }
+            
+            updateDisplay();
         }
 
         // 儲存資料
         function saveData() {
             localStorage.setItem('foodData', JSON.stringify(foods));
+            localStorage.setItem('sortOption', currentSort);
+        }
+
+        // 選擇排序選項
+        function selectSortOption(sortType) {
+            currentSort = sortType;
+            updateSortUI();
+            saveData();
+            updateDisplay();
+        }
+
+        // 更新排序選項UI
+        function updateSortUI() {
+            // 更新選中狀態
+            document.querySelectorAll('.sort-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            const selectedOption = document.getElementById(currentSort);
+            if (selectedOption) {
+                selectedOption.parentElement.classList.add('selected');
+                selectedOption.checked = true;
+            }
+            
+            // 更新目前排序顯示
+            document.getElementById('currentSort').textContent = `目前排序：${sortNames[currentSort]}${currentSort === 'heatWeighted' ? ' (預設)' : ''}`;
         }
 
         function addFood() {
@@ -365,6 +516,7 @@
 
             foods.push(food);
             
+            // 清空輸入欄位
             document.getElementById('foodName').value = '';
             document.getElementById('protein').value = '';
             document.getElementById('calories').value = '';
@@ -383,24 +535,66 @@
             updateDisplay();
         }
 
-        function calculateScore(food) {
-            let adjustedPrice;
+        // 計算每份價格
+        function calculatePricePerServing(food) {
+            let pricePerServing;
             
-            // 優先使用 食品份量 和 一份份量
             if (food.totalWeight !== null && food.servingSize !== null) {
-                // 有 食品份量 和 一份份量
-                adjustedPrice = food.price * food.servingSize / food.totalWeight;
+                pricePerServing = food.price * food.servingSize / food.totalWeight;
             } else if (food.totalWeight !== null && food.servings !== null) {
-                // 有 食品份量 和 含有份數
-                adjustedPrice = food.price / food.servings;
+                pricePerServing = food.price / food.servings;
             } else if (food.servingSize !== null && food.servings !== null) {
-                // 有 一份份量 和 含有份數
-                // 從含有份數計算出食品份量
-                const calculatedTotalWeight = food.servingSize * food.servings;
-                adjustedPrice = food.price * food.servingSize / calculatedTotalWeight;
+                pricePerServing = food.price / food.servings;
             }
             
-            return (4 * food.protein + food.calories) / adjustedPrice;
+            return pricePerServing;
+        }
+
+        // 計算所有指標
+        function calculateAllMetrics(food) {
+            const pricePerServing = calculatePricePerServing(food);
+            
+            // 熱量密度 = 熱量/一份份量
+            const caloriesDensity = food.servingSize !== null ? (food.calories / food.servingSize) : null;
+            
+            // 每元熱量 = 熱量/每份價格
+            const caloriesPerYuan = food.calories / pricePerServing;
+            
+            // 蛋白質比例 = (蛋白質*4/熱量)*100%
+            const proteinRatio = (food.protein * 4 / food.calories) * 100;
+            
+            // 每元蛋白質 = 蛋白質/每份價格
+            const proteinPerYuan = food.protein / pricePerServing;
+            
+            // 熱量加權分數 = (4 * 蛋白質 + 熱量) / 每份價格
+            const heatWeighted = (4 * food.protein + food.calories) / pricePerServing;
+            
+            return {
+                caloriesDensity,
+                caloriesPerYuan,
+                proteinRatio,
+                proteinPerYuan,
+                heatWeighted
+            };
+        }
+
+        // 根據當前排序方式排序食物
+        function sortFoods(foodsList) {
+            const sortedFoods = [...foodsList];
+            
+            sortedFoods.sort((a, b) => {
+                const metricsA = calculateAllMetrics(a);
+                const metricsB = calculateAllMetrics(b);
+                
+                // 取得對應的指標值
+                const valueA = metricsA[currentSort];
+                const valueB = metricsB[currentSort];
+                
+                // 降序排序（數值大的在前）
+                return valueB - valueA;
+            });
+            
+            return sortedFoods;
         }
 
         function updateDisplay() {
@@ -413,9 +607,11 @@
                 return;
             }
 
+            // 顯示已新增的食品
             foodList.innerHTML = '<h3 style="margin-top: 20px; color: #667eea;">已新增的食品：</h3>';
             foods.forEach(food => {
-                const score = calculateScore(food).toFixed(2);
+                const metrics = calculateAllMetrics(food);
+                const score = metrics[currentSort];
                 
                 let servingInfo = [];
                 if (food.totalWeight !== null) servingInfo.push(`食品份量: ${food.totalWeight}g/ml`);
@@ -428,7 +624,7 @@
                             <div class="food-name">${food.name}</div>
                             <div class="food-details">
                                 蛋白質: ${food.protein}g | 熱量: ${food.calories}kcal | 價格: ${food.price}元<br>
-                                ${servingInfo.join(' | ')} | 分數: ${score}
+                                ${servingInfo.join(' | ')} | ${sortNames[currentSort]}: ${score.toFixed(2)}
                             </div>
                         </div>
                         <button class="btn-delete" onclick="deleteFood(${food.id})">刪除</button>
@@ -436,40 +632,13 @@
                 `;
             });
 
-            const sortedFoods = [...foods].sort((a, b) => calculateScore(b) - calculateScore(a));
+            // 排序並顯示排名
+            const sortedFoods = sortFoods(foods);
 
             ranking.innerHTML = '';
             sortedFoods.forEach((food, index) => {
-                const score = calculateScore(food).toFixed(2);
-                
-                // 計算各項指標
-                let caloriesDensity, caloriesPrice, proteinRatio, proteinPrice;
-                
-                // 計算每份價格
-                let pricePerServing;
-                if (food.totalWeight !== null && food.servingSize !== null) {
-                    pricePerServing = food.price * food.servingSize / food.totalWeight;
-                } else if (food.totalWeight !== null && food.servings !== null) {
-                    pricePerServing = food.price / food.servings;
-                } else if (food.servingSize !== null && food.servings !== null) {
-                    pricePerServing = food.price / food.servings;
-                }
-                
-                // 熱量密度 = 熱量/一份份量
-                if (food.servingSize !== null) {
-                    caloriesDensity = (food.calories / food.servingSize).toFixed(2);
-                } else {
-                    caloriesDensity = 'N/A';
-                }
-                
-                // 熱量價格 = 熱量/(價格/含有份數)
-                caloriesPrice = (food.calories / pricePerServing).toFixed(2);
-                
-                // 蛋白質比例 = 蛋白質*4/熱量
-                proteinRatio = ((food.protein * 4 / food.calories) * 100).toFixed(1);
-                
-                // 蛋白質價格 = 蛋白質/(價格/含有份數)
-                proteinPrice = (food.protein / pricePerServing).toFixed(2);
+                const metrics = calculateAllMetrics(food);
+                const currentScore = metrics[currentSort];
                 
                 ranking.innerHTML += `
                     <div class="ranking-item">
@@ -477,19 +646,22 @@
                         <div class="rank-info">
                             <div class="rank-name">${food.name}</div>
                             <div class="rank-details">
-                                熱量密度: ${caloriesDensity} kcal/g | 熱量價格: ${caloriesPrice} kcal/元<br>
-                                蛋白質比例: ${proteinRatio}% | 蛋白質價格: ${proteinPrice} g/元
+                                熱量密度: ${metrics.caloriesDensity ? metrics.caloriesDensity.toFixed(2) + ' kcal/g' : 'N/A'} | 
+                                每元熱量: ${metrics.caloriesPerYuan.toFixed(2)} kcal/元 | 
+                                蛋白質比例: ${metrics.proteinRatio.toFixed(1)}% | 
+                                每元蛋白質: ${metrics.proteinPerYuan.toFixed(2)} g/元
                             </div>
                         </div>
                         <div class="rank-score">
-                            ${score}
-                            <span class="score-label">分數</span>
+                            ${currentScore.toFixed(2)}
+                            <span class="score-label">${sortNames[currentSort]}</span>
                         </div>
                     </div>
                 `;
             });
         }
 
+        // 按Enter鍵新增食品
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 addFood();
