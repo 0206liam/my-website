@@ -3,60 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>課程進度追蹤首頁</title>
+    <title>我的網站總覽</title>
 
     <style>
         body {
-            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont;
-            background: #f5f7fa;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont;
+            background: #f4f6f8;
             margin: 0;
             padding: 0;
         }
 
-        h1 {
+        header {
             text-align: center;
-            padding: 30px 10px 10px;
-            color: #333;
+            padding: 40px 20px 20px;
         }
 
-        p {
-            text-align: center;
+        header h1 {
+            margin: 0;
+            color: #222;
+        }
+
+        header p {
+            margin-top: 8px;
             color: #666;
-            margin-bottom: 30px;
+            font-size: 15px;
         }
 
         #file-list {
-            max-width: 800px;
+            max-width: 900px;
             margin: auto;
+            padding: 20px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 16px;
-            padding: 0 20px 40px;
         }
 
         .btn {
             display: block;
-            padding: 16px;
-            background: white;
-            border-radius: 12px;
+            padding: 18px 14px;
+            background: #ffffff;
+            border-radius: 14px;
             text-align: center;
             text-decoration: none;
             color: #333;
             font-weight: 600;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            transition: transform .2s, box-shadow .2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+            transition: transform .2s, box-shadow .2s, color .2s;
         }
 
         .btn:hover {
             transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-            color: #4CAF50;
+            box-shadow: 0 10px 22px rgba(0,0,0,.15);
+            color: #1976d2;
         }
 
         footer {
             text-align: center;
             padding: 20px;
-            font-size: 14px;
+            font-size: 13px;
             color: #aaa;
         }
     </style>
@@ -64,13 +68,15 @@
 
 <body>
 
-<h1>📘 課程進度追蹤</h1>
-<p>點選下方頁面進入各項課程內容</p>
+<header>
+    <h1>🌐 我的網站總覽</h1>
+    <p>這裡是我所有網頁的集中入口</p>
+</header>
 
 <div id="file-list"></div>
 
 <footer>
-    © 2025 0206liam | GitHub Pages
+    © 2025 0206liam · GitHub Pages
 </footer>
 
 <script>
