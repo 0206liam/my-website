@@ -207,12 +207,6 @@
             text-align: right;
         }
         
-        .score-label {
-            font-size: 0.6em;
-            color: #999;
-            display: block;
-        }
-        
         .empty-message {
             text-align: center;
             color: #999;
@@ -282,14 +276,6 @@
             font-weight: bold;
         }
 
-        .current-sort {
-            font-size: 0.9em;
-            color: #666;
-            background: #e9ecef;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-
         @media (max-width: 600px) {
             .input-group {
                 grid-template-columns: 1fr;
@@ -347,10 +333,6 @@
                 margin-left: 8px;
                 flex-shrink: 0;
             }
-            
-            .score-label {
-                font-size: 0.55em;
-            }
 
             .sort-options {
                 grid-template-columns: 1fr;
@@ -366,10 +348,6 @@
                 flex-direction: column;
                 gap: 8px;
                 align-items: flex-start;
-            }
-            
-            .current-sort {
-                font-size: 0.85em;
             }
             
             .food-item {
@@ -432,30 +410,29 @@
         <div class="section">
             <div class="sort-header">
                 <h2>🏆 營養價值排名</h2>
-                <div class="current-sort" id="currentSort">目前排序：熱量加權 (預設)</div>
             </div>
             
             <!-- 排序選項區域 -->
             <div class="sort-options">
                 <div class="sort-option selected" onclick="selectSortOption('heatWeighted')">
                     <input type="radio" id="heatWeighted" name="sortOption" checked>
-                    <label for="heatWeighted">熱量加權</label>
+                    <label for="heatWeighted">熱量加權 (kcal/元)</label>
                 </div>
                 <div class="sort-option" onclick="selectSortOption('caloriesDensity')">
                     <input type="radio" id="caloriesDensity" name="sortOption">
-                    <label for="caloriesDensity">熱量密度</label>
+                    <label for="caloriesDensity">熱量密度 (kcal/g)</label>
                 </div>
                 <div class="sort-option" onclick="selectSortOption('caloriesPerYuan')">
                     <input type="radio" id="caloriesPerYuan" name="sortOption">
-                    <label for="caloriesPerYuan">每元熱量</label>
+                    <label for="caloriesPerYuan">每元熱量 (kcal/元)</label>
                 </div>
                 <div class="sort-option" onclick="selectSortOption('proteinRatio')">
                     <input type="radio" id="proteinRatio" name="sortOption">
-                    <label for="proteinRatio">蛋白質比例</label>
+                    <label for="proteinRatio">蛋白質比例 (%)</label>
                 </div>
                 <div class="sort-option" onclick="selectSortOption('proteinPerYuan')">
                     <input type="radio" id="proteinPerYuan" name="sortOption">
-                    <label for="proteinPerYuan">每元蛋白質</label>
+                    <label for="proteinPerYuan">每元蛋白質 (g/元)</label>
                 </div>
             </div>
             
@@ -469,11 +446,11 @@
 
         // 排序選項名稱對應
         const sortNames = {
-            'heatWeighted': '熱量加權',
-            'caloriesDensity': '熱量密度',
-            'caloriesPerYuan': '每元熱量',
-            'proteinRatio': '蛋白質比例',
-            'proteinPerYuan': '每元蛋白質'
+            'heatWeighted': '熱量加權 (kcal/元)',
+            'caloriesDensity': '熱量密度 (kcal/g)',
+            'caloriesPerYuan': '每元熱量 (kcal/元)',
+            'proteinRatio': '蛋白質比例 (%)',
+            'proteinPerYuan': '每元蛋白質 (g/元)'
         };
 
         // 載入儲存的資料和排序設定
@@ -519,9 +496,6 @@
                 selectedOption.parentElement.classList.add('selected');
                 selectedOption.checked = true;
             }
-            
-            // 更新目前排序顯示
-            document.getElementById('currentSort').textContent = `目前排序：${sortNames[currentSort]}${currentSort === 'heatWeighted' ? ' (預設)' : ''}`;
         }
 
         function addFood() {
@@ -709,15 +683,15 @@
                         <div class="rank-info">
                             <div class="rank-name">${food.name}</div>
                             <div class="rank-details">
-                                熱量密度: ${metrics.caloriesDensity ? metrics.caloriesDensity.toFixed(2) + ' kcal/g' : 'N/A'} | 
-                                每元熱量: ${metrics.caloriesPerYuan.toFixed(2)} kcal/元 | 
-                                蛋白質比例: ${metrics.proteinRatio.toFixed(1)}% | 
-                                每元蛋白質: ${metrics.proteinPerYuan.toFixed(2)} g/元
+                                熱量加權: ${metrics.heatWeighted.toFixed(2)} | 
+                                每元熱量: ${metrics.caloriesPerYuan.toFixed(2)} | 
+                                熱量密度: ${metrics.caloriesDensity ? metrics.caloriesDensity.toFixed(2) : 'N/A'} | 
+                                每元蛋白質: ${metrics.proteinPerYuan.toFixed(2)} | 
+                                蛋白質比例: ${metrics.proteinRatio.toFixed(1)}%
                             </div>
                         </div>
                         <div class="rank-score">
                             ${currentScore.toFixed(2)}
-                            <span class="score-label">${sortNames[currentSort]}</span>
                         </div>
                     </div>
                 `;
