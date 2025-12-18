@@ -4,42 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>課程進度追蹤首頁</title>
+
     <style>
+        body {
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 30px 10px 10px;
+            color: #333;
+        }
+
+        p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        #file-list {
+            max-width: 800px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            padding: 0 20px 40px;
+        }
+
         .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 6px 0;
-            background-color: #4CAF50;
-            color: white;
+            display: block;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+            text-align: center;
             text-decoration: none;
-            border-radius: 5px;
+            color: #333;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            color: #4CAF50;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+            color: #aaa;
         }
     </style>
 </head>
+
 <body>
 
-<h1>網站列表</h1>
+<h1>📘 課程進度追蹤</h1>
+<p>點選下方頁面進入各項課程內容</p>
 
-<!-- 原本的固定按鈕 -->
-<a href="課程進度追蹤.html" class="btn">進入課程進度追蹤網站</a>
-
-<hr>
-
-<!-- 新增的自動產生按鈕區 -->
 <div id="file-list"></div>
+
+<footer>
+    © 2025 0206liam | GitHub Pages
+</footer>
 
 <script>
 const owner = "0206liam";
 const repo = "my-website";
-const path = ""; // 根目錄
 
-fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
+fetch(`https://api.github.com/repos/${owner}/${repo}/contents/`)
     .then(res => res.json())
     .then(files => {
         const container = document.getElementById("file-list");
 
         files.forEach(file => {
-            // 只抓 html 檔，排除 index.html
             if (file.name.endsWith(".html") && file.name !== "index.html") {
                 const a = document.createElement("a");
                 a.href = file.name;
@@ -48,9 +91,6 @@ fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
                 container.appendChild(a);
             }
         });
-    })
-    .catch(err => {
-        console.error("讀取 GitHub 檔案失敗", err);
     });
 </script>
 
