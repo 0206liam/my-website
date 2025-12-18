@@ -13,40 +13,60 @@ body {
     color: #222;
 }
 
+/* 首頁標題 */
 h1 {
     text-align: center;
-    margin: 32px 0 24px;
-    font-weight: 600;
+    margin: 44px 0 32px;
+    font-weight: 650;
+    font-size: 40px;   /* ⬅ 標題明顯放大 */
+    letter-spacing: 1px;
 }
 
+/* 主容器 */
 #file-list {
-    max-width: 1000px;
+    max-width: 1100px;
     margin: auto;
-    padding: 0 20px 40px;
+    padding: 0 24px 48px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
 }
 
+/* 卡片 */
 .item {
     background: #fff;
-    border-radius: 10px;
-    padding: 14px;
+    border-radius: 14px;
+    padding: 20px;
     text-decoration: none;
     color: #222;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
     transition: transform .15s, box-shadow .15s;
 }
 
-.item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0,0,0,.12);
+/* 卡片標題 */
+.item > div:first-child {
+    font-size: 20px;    /* ⬅ 主要文字放大 */
+    font-weight: 600;
 }
 
+/* 路徑文字 */
 .path {
-    font-size: 13px;
+    font-size: 15px;    /* ⬅ 輔助文字也加大 */
     color: #777;
-    margin-top: 6px;
+    margin-top: 8px;
+}
+
+.item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 22px rgba(0,0,0,.14);
+}
+
+/* 底部 */
+footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 14px;
+    color: #aaa;
 }
 </style>
 </head>
@@ -56,6 +76,10 @@ h1 {
 <h1>🌐 網站總覽</h1>
 
 <div id="file-list"></div>
+
+<footer>
+    © 2025 0206liam · GitHub Pages
+</footer>
 
 <script>
 const owner = "0206liam";
