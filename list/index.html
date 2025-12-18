@@ -1,122 +1,335 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>網站總覽</title>
-
-<style>
-body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont;
-    background: #f2f3f5;
-    color: #222;
-}
-
-/* 首頁標題 */
-h1 {
-    text-align: center;
-    margin: 44px 0 32px;
-    font-weight: 650;
-    font-size: 40px;   /* ⬅ 標題明顯放大 */
-    letter-spacing: 1px;
-}
-
-/* 主容器 */
-#file-list {
-    max-width: 1100px;
-    margin: auto;
-    padding: 0 24px 48px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 18px;
-}
-
-/* 卡片 */
-.item {
-    background: #fff;
-    border-radius: 14px;
-    padding: 20px;
-    text-decoration: none;
-    color: #222;
-    box-shadow: 0 4px 12px rgba(0,0,0,.08);
-    transition: transform .15s, box-shadow .15s;
-}
-
-/* 卡片標題 */
-.item > div:first-child {
-    font-size: 20px;    /* ⬅ 主要文字放大 */
-    font-weight: 600;
-}
-
-/* 路徑文字 */
-.path {
-    font-size: 15px;    /* ⬅ 輔助文字也加大 */
-    color: #777;
-    margin-top: 8px;
-}
-
-.item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 22px rgba(0,0,0,.14);
-}
-
-/* 底部 */
-footer {
-    text-align: center;
-    padding: 24px;
-    font-size: 14px;
-    color: #aaa;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>清單總管</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f3460;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { margin-bottom: 20px; }
+    ul { list-style: none; padding: 0; }
+    li {
+      background: #16213e;
+      margin: 10px auto;
+      padding: 10px 20px;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    a { color: #4a9eff; text-decoration: none; font-weight: bold; }
+    button {
+      background: #ff4757;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background: #e84118; }
+    #addBtn {
+      margin-top: 20px;
+      background: linear-gradient(45deg, #4a9eff, #ff6b9d);
+    }
+    .error-message {
+      background: #ff4757;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px auto;
+      max-width: 400px;
+    }
+  </style>
 </head>
-
 <body>
+  <h1>📂 我的清單</h1>
+  <div id="errorContainer"></div>
+  <ul id="listContainer"></ul>
+  <button id="addBtn">➕ 新增清單</button>
 
-<h1>🌐 網站總覽</h1>
+  <script>
+    const container = document.getElementById("listContainer");
+    const errorContainer = document.getElementById("errorContainer");
+    
+    // 改善的 ID 生成函數
+    function generateId() {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substr(2, 9);
+      return `list_${timestamp}_${random}`;
+    }
+    
+    // HTML 轉義函數，防止 XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // 錯誤處理函數
+    function showError(message) {
+      errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+      setTimeout(() => {
+        errorContainer.innerHTML = '';
+      }, 5000);
+    }
+    
+    // localStorage 安全操作包裝
+    function safeGetItem(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        showError('讀取資料時發生錯誤');
+        return null;
+      }
+    }
+    
+    function safeSetItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (e) {
+        showError('儲存資料時發生錯誤，可能是儲存空間不足');
+        return false;
+      }
+    }
+    
+    function safeRemoveItem(key) {
+      try {
+        localStorage.removeItem(key);
+        return true;
+      } catch (e) {
+        showError('刪除資料時發生錯誤');
+        return false;
+      }
+    }
+    
+    // 改善的清單讀取函數
+    function getAllLists() {
+      const lists = [];
+      const processedIds = new Set();
 
-<div id="file-list"></div>
-
-<footer>
-    © 2025 0206liam · GitHub Pages
-</footer>
-
-<script>
-const owner = "0206liam";
-const repo = "my-website";
-const container = document.getElementById("file-list");
-
-function loadFolder(path = "") {
-    fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
-        .then(res => res.json())
-        .then(items => {
-            items.forEach(item => {
-
-                if (item.type === "dir") {
-                    loadFolder(item.path);
-                }
-
-                if (item.type === "file" &&
-                    item.name.endsWith(".html") &&
-                    item.name !== "index.html") {
-
-                    const a = document.createElement("a");
-                    a.href = item.path;
-                    a.className = "item";
-
-                    a.innerHTML = `
-                        <div>${item.name.replace(".html","")}</div>
-                        <div class="path">${item.path}</div>
-                    `;
-
-                    container.appendChild(a);
-                }
-            });
+      try {
+        // 遍歷 localStorage keys，找出所有清單的基礎 ID
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          
+          if (!key || !key.startsWith("list_")) continue;
+          
+          let baseId = null;
+          
+          // 解析基礎 ID - 修正邏輯，確保正確解析
+          if (key.endsWith("_title")) {
+            baseId = key.slice(0, -6); // 移除 "_title"
+          } else if (key.endsWith("_items")) {
+            baseId = key.slice(0, -6); // 移除 "_items"
+          }
+          
+          // 避免重複處理同一個清單
+          if (baseId && !processedIds.has(baseId)) {
+            processedIds.add(baseId);
+          }
+        }
+        
+        // 為每個找到的基礎 ID 讀取資料
+        processedIds.forEach(baseId => {
+          const titleKey = baseId + "_title";
+          const itemsKey = baseId + "_items";
+          
+          const title = safeGetItem(titleKey);
+          const items = safeGetItem(itemsKey);
+          
+          // 確保至少有一個 key 存在且有效
+          if (title !== null || items !== null) {
+            // 檢查是否有有效的項目資料
+            let hasValidData = false;
+            
+            if (items !== null) {
+              try {
+                const itemsArray = JSON.parse(items);
+                hasValidData = Array.isArray(itemsArray);
+              } catch (e) {
+                hasValidData = false;
+              }
+            }
+            
+            // 只有當標題存在或項目資料有效時才顯示
+            if (title !== null || hasValidData) {
+              const listTitle = (title && title.trim() !== "") ? title.trim() : "未命名清單";
+              lists.push({ id: baseId, title: listTitle });
+            }
+          }
         });
-}
+      } catch (e) {
+        showError('載入清單時發生錯誤');
+        console.error('getAllLists error:', e);
+      }
+      
+      // 按創建時間排序（從 ID 中提取時間戳）
+      return lists.sort((a, b) => {
+        const timeA = extractTimestamp(a.id);
+        const timeB = extractTimestamp(b.id);
+        return timeB - timeA; // 新的在前
+      });
+    }
+    
+    // 從 ID 中提取時間戳的輔助函數
+    function extractTimestamp(id) {
+      const parts = id.split('_');
+      if (parts.length >= 2) {
+        const timestamp = parseInt(parts[1]);
+        return isNaN(timestamp) ? 0 : timestamp;
+      }
+      return 0;
+    }
+    
+    // 改善的渲染函數
+    function render() {
+      const allLists = getAllLists();
+      container.innerHTML = "";
+      
+      if (allLists.length === 0) {
+        container.innerHTML = '<li style="justify-content: center; background: #16213e;">目前沒有任何清單。</li>';
+        return;
+      }
+      
+      allLists.forEach(list => {
+        const li = document.createElement("li");
+        
+        // 創建連結元素
+        const link = document.createElement("a");
+        link.href = `list.html?id=${encodeURIComponent(list.id)}`;
+        link.textContent = list.title; // 使用 textContent 防止 XSS
+        
+        // 創建刪除按鈕
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "刪除";
+        deleteBtn.addEventListener("click", () => deleteList(list.id));
+        
+        li.appendChild(link);
+        li.appendChild(deleteBtn);
+        container.appendChild(li);
+      });
+    }
 
-loadFolder();
-</script>
-
+    // 改善的新增清單函數
+    function addList() {
+      const id = generateId();
+      const defaultTitle = "新清單";
+      
+      // 檢查 ID 是否已存在（雖然機率很低）
+      const titleKey = id + "_title";
+      const itemsKey = id + "_items";
+      
+      if (safeGetItem(titleKey) !== null || safeGetItem(itemsKey) !== null) {
+        showError('產生唯一 ID 失敗，請重試');
+        return;
+      }
+      
+      // 關鍵修正：確保資料儲存的一致性
+      console.log('Creating new list with ID:', id);
+      console.log('Title key:', titleKey);
+      console.log('Items key:', itemsKey);
+      
+      // 儲存資料
+      const titleSaved = safeSetItem(titleKey, defaultTitle);
+      const itemsSaved = safeSetItem(itemsKey, JSON.stringify(['']));
+      
+      if (titleSaved && itemsSaved) {
+        console.log('Successfully saved:', {
+          title: safeGetItem(titleKey),
+          items: safeGetItem(itemsKey)
+        });
+        
+        // 先更新母清單顯示，再導航
+        render();
+        
+        // 延遲導航，確保渲染完成
+        setTimeout(() => {
+          window.location.href = `list.html?id=${encodeURIComponent(id)}`;
+        }, 100);
+      } else {
+        showError('建立清單失敗，請重試');
+      }
+    }
+    
+    // 改善的刪除清單函數
+    function deleteList(id) {
+      if (!confirm("確定要刪除這個清單嗎？這將同時移除清單標題和內容。")) {
+        return;
+      }
+      
+      // 刪除相關的所有 keys
+      const titleRemoved = safeRemoveItem(id + "_title");
+      const itemsRemoved = safeRemoveItem(id + "_items");
+      
+      if (titleRemoved && itemsRemoved) {
+        render(); // 重新渲染
+      }
+    }
+    
+    // 事件監聽器
+    document.getElementById("addBtn").addEventListener("click", addList);
+    
+    // 頁面載入時檢查 localStorage 是否可用
+    function checkLocalStorageAvailability() {
+      try {
+        const testKey = '__test_key__';
+        localStorage.setItem(testKey, 'test');
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (e) {
+        showError('瀏覽器不支援本地儲存功能，應用可能無法正常運作');
+        return false;
+      }
+    }
+    
+    // 初始化
+    if (checkLocalStorageAvailability()) {
+      render();
+      
+      // 監聽 localStorage 變化（當從子清單返回時重新渲染）
+      window.addEventListener('storage', function(e) {
+        if (e.key && e.key.includes('_title')) {
+          console.log('Title updated for:', e.key, 'New value:', e.newValue);
+          render();
+        }
+      });
+      
+      // 監聽頁面焦點變化（當從子頁面返回時重新渲染）
+      window.addEventListener('focus', function() {
+        console.log('Page focused, re-rendering...');
+        render();
+      });
+      
+      // 監聽頁面顯示事件（瀏覽器前進後退）
+      window.addEventListener('pageshow', function() {
+        console.log('Page shown, re-rendering...');
+        render();
+      });
+    }
+    
+    // 調試：顯示當前所有 localStorage 內容
+    function debugLocalStorage() {
+      console.log('=== Current localStorage content ===');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('list_')) {
+          console.log(key, ':', localStorage.getItem(key));
+        }
+      }
+      console.log('=====================================');
+    }
+    
+    // 在開發時可以調用此函數查看 localStorage 狀態
+    window.debugLocalStorage = debugLocalStorage;
+  </script>
 </body>
 </html>
