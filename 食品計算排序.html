@@ -276,21 +276,37 @@
             font-weight: bold;
         }
 
-        @media (max-width: 600px) {
+@media (max-width: 600px) {
             .input-group {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            .input-field {
+                grid-column: span 1;
+                min-width: 0;
+            }
+            
+            /* 讓食品名稱佔滿整行 */
+            .input-field:first-child {
+                grid-column: span 2;
+            }
+            
+            input {
+                width: 100%;
+                padding: 10px;
+                font-size: 0.95em;
+                min-width: 0;
+            }
+            
+            label {
+                font-size: 0.85em;
             }
             
             h1 {
                 font-size: 1.8em;
                 margin-bottom: 20px;
             }
-            
-            .section {
-                padding: 15px;
-                margin-bottom: 15px;
-            }
-            
             h2 {
                 font-size: 1.2em;
                 margin-bottom: 12px;
