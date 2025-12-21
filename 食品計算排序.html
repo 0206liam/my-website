@@ -372,18 +372,10 @@
         
         <div class="section">
             <h2>📝 輸入食品資料</h2>
-            <div class="input-group">
+	     <div class="input-group">
                 <div class="input-field">
                     <label for="foodName">食品名稱</label>
                     <input type="text" id="foodName" placeholder="例：雞胸肉">
-                </div>
-                <div class="input-field">
-                    <label for="protein">蛋白質 (g)</label>
-                    <input type="number" id="protein" placeholder="例：30" step="0.1">
-                </div>
-                <div class="input-field">
-                    <label for="calories">熱量 (kcal)</label>
-                    <input type="number" id="calories" placeholder="例：165" step="0.1">
                 </div>
                 <div class="input-field">
                     <label for="price">價格 (元)</label>
@@ -400,6 +392,14 @@
                 <div class="input-field">
                     <label for="servings">含有份數 (份)</label>
                     <input type="number" id="servings" placeholder="例：2" step="0.1">
+                </div>
+                <div class="input-field">
+                    <label for="calories">熱量 (kcal)</label>
+                    <input type="number" id="calories" placeholder="例：165" step="0.1">
+                </div>
+                <div class="input-field">
+                    <label for="protein">蛋白質 (g)</label>
+                    <input type="number" id="protein" placeholder="例：30" step="0.1">
                 </div>
             </div>
             <button class="btn btn-add" onclick="addFood()">➕ 新增食品</button>
@@ -660,8 +660,7 @@
                         <div class="food-info">
                             <div class="food-name">${food.name}</div>
                             <div class="food-details">
-                                蛋白質: ${food.protein}g | 熱量: ${food.calories}kcal | 價格: ${food.price}元<br>
-                                ${servingInfo.join(' | ')} | ${sortNames[currentSort]}: ${score.toFixed(2)}
+                                價格: ${food.price}元 | ${servingInfo.join(' | ')} | 熱量: ${food.calories}kcal | 蛋白質: ${food.protein}g | ${sortNames[currentSort]}: ${score.toFixed(2)}
                             </div>
                         </div>
                         <button class="btn-delete" onclick="deleteFood(${food.id})">刪除</button>
