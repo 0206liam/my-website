@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>網站總覽</title>
-
 <style>
 body {
     margin: 0;
@@ -12,13 +11,126 @@ body {
     background: #f2f3f5;
     color: #222;
 }
-
 h1 {
     text-align: center;
     margin: 44px 0 32px;
     font-weight: 650;
     font-size: 40px;
     letter-spacing: 1px;
+}
+
+/* 備份按鈕區域 */
+#backup-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.backup-btn {
+    background: #007aff;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,122,255,.3);
+    transition: all .2s;
+}
+.backup-btn:hover {
+    background: #0051d5;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,122,255,.4);
+}
+.backup-btn:active {
+    transform: translateY(0);
+}
+
+/* 彈窗樣式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+.modal.show {
+    display: flex;
+}
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.modal-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.modal-input {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+.modal-input:focus {
+    outline: none;
+    border-color: #007aff;
+}
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+}
+.modal-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+.modal-btn-primary {
+    background: #007aff;
+    color: white;
+}
+.modal-btn-primary:hover {
+    background: #0051d5;
+}
+.modal-btn-secondary {
+    background: #f0f0f0;
+    color: #666;
+}
+.modal-btn-secondary:hover {
+    background: #e0e0e0;
+}
+.modal-message {
+    text-align: center;
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+.modal-success {
+    color: #34c759;
+}
+.modal-error {
+    color: #ff3b30;
 }
 
 #file-list {
@@ -29,7 +141,6 @@ h1 {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 18px;
 }
-
 .item {
     background: #fff;
     border-radius: 14px;
@@ -39,46 +150,100 @@ h1 {
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
     transition: transform .15s, box-shadow .15s;
 }
-
 .item:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 22px rgba(0,0,0,.14);
 }
-
 .item-title {
     font-size: 20px;
     font-weight: 600;
 }
-
 .path {
     font-size: 15px;
     color: #777;
     margin-top: 8px;
 }
-
 footer {
     text-align: center;
     padding: 24px;
     font-size: 14px;
     color: #aaa;
 }
+
+@media (max-width: 600px) {
+    #backup-controls {
+        top: 10px;
+        right: 10px;
+        flex-direction: column;
+    }
+    .backup-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+}
 </style>
 </head>
-
 <body>
 
+<!-- 備份按鈕 -->
+<div id="backup-controls">
+    <button class="backup-btn" onclick="showBackupModal()">📤 備份</button>
+    <button class="backup-btn" onclick="showRestoreModal()">📥 還原</button>
+</div>
+
+<!-- 備份彈窗 -->
+<div id="backup-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title">備份到雲端</div>
+        <div class="modal-message">請輸入備份碼以上傳資料</div>
+        <input type="password" class="modal-input" id="backup-password" placeholder="請輸入備份碼">
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-secondary" onclick="closeModal('backup-modal')">取消</button>
+            <button class="modal-btn modal-btn-primary" onclick="doBackup()">上傳</button>
+        </div>
+    </div>
+</div>
+
+<!-- 還原彈窗 -->
+<div id="restore-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title">從雲端還原</div>
+        <div class="modal-message">⚠️ 這會覆蓋目前的本地資料<br>請輸入備份碼以下載資料</div>
+        <input type="password" class="modal-input" id="restore-password" placeholder="請輸入備份碼">
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-secondary" onclick="closeModal('restore-modal')">取消</button>
+            <button class="modal-btn modal-btn-primary" onclick="doRestore()">下載</button>
+        </div>
+    </div>
+</div>
+
+<!-- 結果彈窗 -->
+<div id="result-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title" id="result-title">結果</div>
+        <div class="modal-message" id="result-message"></div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-primary" onclick="closeModal('result-modal')" style="width:100%">確定</button>
+        </div>
+    </div>
+</div>
+
 <h1>🌐 網站總覽</h1>
-
 <div id="file-list"></div>
-
 <footer>
     © 2025 0206liam · GitHub Pages
 </footer>
 
 <script>
+// GitHub 設定
 const owner = "0206liam";
 const repo = "my-website";
 const container = document.getElementById("file-list");
+
+// 備份設定
+const BACKUP_PASSWORD = "0206";
+const GIST_ID = "d2822cb27c9b0f9ae576bb1adaebfff1";
+const GITHUB_TOKEN = "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";
 
 /* 建立一個卡片 */
 function createItem(title, href, pathText) {
@@ -98,20 +263,16 @@ async function handleFolder(folderPath, folderName) {
         `https://api.github.com/repos/${owner}/${repo}/contents/${folderPath}`
     );
     const items = await res.json();
-
     const indexFile = items.find(
         f => f.type === "file" && f.name === "index.html"
     );
-
     if (indexFile) {
-        // 有 index.html → 當資料夾入口
         createItem(
             "📁 " + folderName,
             folderPath + "/",
             folderPath + "/"
         );
     } else {
-        // 沒有 index.html → 列出裡面的 html
         items.forEach(file => {
             if (
                 file.type === "file" &&
@@ -133,13 +294,10 @@ async function loadRoot() {
         `https://api.github.com/repos/${owner}/${repo}/contents/`
     );
     const items = await res.json();
-
     for (const item of items) {
-
         if (item.type === "dir") {
             await handleFolder(item.path, item.name);
         }
-
         if (
             item.type === "file" &&
             item.name.endsWith(".html") &&
@@ -154,8 +312,135 @@ async function loadRoot() {
     }
 }
 
+// ========== 備份/還原功能 ==========
+
+function showBackupModal() {
+    document.getElementById('backup-modal').classList.add('show');
+    document.getElementById('backup-password').value = '';
+    document.getElementById('backup-password').focus();
+}
+
+function showRestoreModal() {
+    document.getElementById('restore-modal').classList.add('show');
+    document.getElementById('restore-password').value = '';
+    document.getElementById('restore-password').focus();
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+function showResult(title, message, isSuccess) {
+    document.getElementById('result-title').textContent = title;
+    const msgEl = document.getElementById('result-message');
+    msgEl.textContent = message;
+    msgEl.className = 'modal-message ' + (isSuccess ? 'modal-success' : 'modal-error');
+    document.getElementById('result-modal').classList.add('show');
+}
+
+async function doBackup() {
+    const password = document.getElementById('backup-password').value;
+    
+    if (password !== BACKUP_PASSWORD) {
+        showResult('❌ 備份失敗', '備份碼錯誤', false);
+        closeModal('backup-modal');
+        return;
+    }
+    
+    try {
+        // 收集所有 localStorage 資料
+        const data = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            data[key] = localStorage.getItem(key);
+        }
+        
+        // 上傳到 Gist
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: {
+                    'backup.json': {
+                        content: JSON.stringify(data, null, 2)
+                    }
+                }
+            })
+        });
+        
+        if (response.ok) {
+            showResult('✅ 備份成功', '資料已上傳到雲端！', true);
+        } else {
+            showResult('❌ 備份失敗', '上傳時發生錯誤', false);
+        }
+    } catch (error) {
+        showResult('❌ 備份失敗', '網路錯誤：' + error.message, false);
+    }
+    
+    closeModal('backup-modal');
+}
+
+async function doRestore() {
+    const password = document.getElementById('restore-password').value;
+    
+    if (password !== BACKUP_PASSWORD) {
+        showResult('❌ 還原失敗', '備份碼錯誤', false);
+        closeModal('restore-modal');
+        return;
+    }
+    
+    try {
+        // 從 Gist 下載資料
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`
+            }
+        });
+        
+        if (!response.ok) {
+            showResult('❌ 還原失敗', '下載時發生錯誤', false);
+            closeModal('restore-modal');
+            return;
+        }
+        
+        const gist = await response.json();
+        const content = gist.files['backup.json'].content;
+        const data = JSON.parse(content);
+        
+        // 清空現有 localStorage
+        localStorage.clear();
+        
+        // 載入雲端資料
+        for (const key in data) {
+            localStorage.setItem(key, data[key]);
+        }
+        
+        showResult('✅ 還原成功', '資料已從雲端下載！\n頁面將在 2 秒後重新整理', true);
+        
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+        
+    } catch (error) {
+        showResult('❌ 還原失敗', '網路錯誤：' + error.message, false);
+    }
+    
+    closeModal('restore-modal');
+}
+
+// Enter 鍵快捷鍵
+document.getElementById('backup-password').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') doBackup();
+});
+document.getElementById('restore-password').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') doRestore();
+});
+
+// 載入網站列表
 loadRoot();
 </script>
-
 </body>
 </html>
