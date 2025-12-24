@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>器官買賣倫理探討簡報 - 專業優化版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: #1a1a1a;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        .slide-container {
+            width: 1600px;
+            height: 900px;
+            position: relative;
+            background: white;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+            transform-origin: center center;
+        }
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 50px 100px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            opacity: 0;
+            z-index: 1;
+        }
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+            z-index: 10;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- 還原首尾頁配色 --- */
+        .title-slide, .end-slide {
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 0;
+        }
+        .title-slide { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .title-slide h1 { font-size: 6em; font-weight: 900; margin-bottom: 20px; letter-spacing: 12px; }
+        .title-slide .subtitle { font-size: 2.8em; margin-bottom: 60px; opacity: 0.9; border-top: 2px solid rgba(255,255,255,0.3); padding-top: 20px; }
+        .title-slide .team { font-size: 1.8em; line-height: 2; opacity: 0.95; }
+
+        .end-slide { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); }
+        .end-slide h1 { font-size: 8em; font-weight: 900; letter-spacing: 15px; }
+
+        /* --- 目錄頁優化 (可點擊) --- */
+        .toc-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 25px; 
+            margin-top: 40px; 
+            width: 100%; 
+        }
+        .toc-item { 
+            background: white;
+            border-left: 10px solid #667eea;
+            padding: 35px;
+            border-radius: 10px;
+            font-size: 2.2em;
+            color: #444;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+        }
+        .toc-item:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.02);
+        }
+        .toc-item span { color: #667eea; font-weight: bold; margin-right: 20px; font-size: 1.2em; }
+        .toc-item:hover span { color: white; }
+
+        /* --- 內文強化與減少空白 --- */
+        .slide h2 { font-size: 4.2em; font-weight: 900; color: #667eea; margin-bottom: 35px; border-bottom: 8px solid #667eea; padding-bottom: 10px; width: fit-content; }
+        
+        .content-box { 
+            background: white; 
+            padding: 35px 50px; 
+            border-radius: 15px; 
+            margin-bottom: 25px; 
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15); 
+            border-left: 12px solid #667eea;
+            width: 100%; 
+        }
+        .content-box h3 { font-size: 2.4em; color: #764ba2; margin-bottom: 15px; }
+        .content-box p, .content-box li { font-size: 2.1em; line-height: 1.4; color: #2c3e50; font-weight: 500; }
+        
+        .highlight { color: #e74c3c; font-weight: 900; background: rgba(231, 76, 60, 0.05); }
+
+        .grid-2, .grid-3 { display: grid; gap: 30px; margin-top: 20px; width: 100%; flex: 1; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        
+        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: center; }
+        .card h3 { font-size: 2.3em; margin-bottom: 20px; color: #667eea; }
+        .card p { font-size: 1.8em; line-height: 1.4; color: #34495e; }
+        .icon { font-size: 3.5em; margin-bottom: 15px; }
+
+        /* --- 頁數樣式 (點擊回目錄) --- */
+        .page-number {
+            position: absolute;
+            bottom: 30px;
+            right: 50px;
+            font-size: 1.5em;
+            color: #ccc;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 30px;
+            transition: all 0.2s;
+            z-index: 100;
+        }
+        .page-number:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="slide title-slide active">
+            <h1>器官買賣</h1>
+            <div class="subtitle">當「救命」遇上「身體商品化」</div>
+            <div class="team">
+                組員：11226117 薛曜翊、11226140 林威廷<br>
+                11226141 蘇加樂、11226143 楊庭安
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>簡報大綱</h2>
+            <div class="toc-grid">
+                <div class="toc-item" onclick="jumpTo(2, event)"><span>01</span> 全球短缺現況</div>
+                <div class="toc-item" onclick="jumpTo(3, event)"><span>02</span> 器官交易類型</div>
+                <div class="toc-item" onclick="jumpTo(4, event)"><span>03</span> 支持與折衷觀點</div>
+                <div class="toc-item" onclick="jumpTo(5, event)"><span>04</span> 義務論與反對架構</div>
+                <div class="toc-item" onclick="jumpTo(9, event)"><span>05</span> 法律與國際政策</div>
+                <div class="toc-item" onclick="jumpTo(10, event)"><span>06</span> 科技替代方案</div>
+                <div class="toc-item" onclick="jumpTo(11, event)"><span>07</span> 制度優化與反思</div>
+                <div class="toc-item" onclick="jumpTo(12, event)"><span>08</span> 最終結論</div>
+            </div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 02</div>
+        </div>
+
+        <div class="slide">
+            <h2>全球器官短缺現況</h2>
+            <div class="content-box"><h3>📊 供需失衡</h3><p>全球每年移植手術僅能滿足約 <span class="highlight">10%</span> 的需求。</p></div>
+            <div class="content-box"><h3>⏰ 死亡計時</h3><p>美國平均每天有 <span class="highlight">17-20 人</span>等待中死亡；台灣洗腎患者平均需等待 <span class="highlight">10 年以上</span>。</p></div>
+            <div class="content-box"><p>「無償捐贈制」供給量遠不及需求。病患被迫轉向「灰色地帶」。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 03</div>
+        </div>
+
+        <div class="slide">
+            <h2>器官交易的現狀與類型</h2>
+            <div class="grid-3">
+                <div class="card"><div class="icon">🚫</div><h3>地下黑市</h3><p>犯罪集團操控，捐贈者被嚴重剝削。環境惡劣且缺乏醫療。</p></div>
+                <div class="card"><div class="icon">✈️</div><h3>器官旅遊</h3><p>富裕病患前往法規鬆散國家購買。加劇全球不平等。</p></div>
+                <div class="card"><div class="icon">📋</div><h3>受管制市場</h3><p>如「伊朗模式」，政府介入定價，將交易透明化。</p></div>
+            </div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 04</div>
+        </div>
+
+        <div class="slide">
+            <h2>支持與折衷觀點</h2>
+            <div class="grid-2">
+                <div class="card"><h3>A. 功利主義</h3><p>挽救性命是最高道德。雙贏論：病患重獲健康，捐贈者獲補償。</p></div>
+                <div class="card"><h3>B. 身體自主權</h3><p>人應有權處置自己器官，如同選擇高風險職業。</p></div>
+                <div class="card"><h3>C. 不對等的利他</h3><p>唯獨捐贈者被要求必須完全無私，這並不公平。</p></div>
+                <div class="card"><h3>D. 以合法取代非法</h3><p>合法化能杜絕黑市暴力與詐騙。</p></div>
+            </div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 05</div>
+        </div>
+
+        <div class="slide">
+            <h2>反對者的觀點架構</h2>
+            <div class="grid-3">
+                <div class="card"><div class="icon">🚨</div><h3>人權觀點</h3><p>身體具有不可交易性。</p></div>
+                <div class="card"><div class="icon">💰</div><h3>剝削貧窮</h3><p>買賣常發生在富人與窮人之間。</p></div>
+                <div class="card"><div class="icon">⚖️</div><h3>義務論</h3><p>違反「人永遠應被視為目的」原則。</p></div>
+            </div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 06</div>
+        </div>
+
+        <div class="slide">
+            <h2>義務論的絕對堅持</h2>
+            <div class="content-box"><h3>🛡️ 拒絕物化</h3><p>人具有內在尊嚴，器官不是商品，人體不是零件庫。</p></div>
+            <div class="content-box"><h3>🎯 目的論</h3><p>人本身就是目的，不能被當作他人存活的工具。</p></div>
+            <div class="content-box"><h3>💎 價值不可量化</h3><p>一旦標價，生命的高貴性將因金額而崩解。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 07</div>
+        </div>
+
+        <div class="slide">
+            <h2>守護弱勢的最後尊嚴</h2>
+            <div class="content-box"><h3>⚠️ 反對階級掠奪</h3><p>合法買賣會形成「窮人供貨、富人續命」的社會。</p></div>
+            <div class="content-box"><h3>🔓 戳破自由假象</h3><p>極度貧窮下的「自願」本質上是結構性脅迫。</p></div>
+            <div class="content-box"><h3>🚑 防止二次傷害</h3><p>貧困者賣器官後往往缺乏術後保險，陷入困境。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 08</div>
+        </div>
+
+        <div class="slide">
+            <h2>防止系統性崩潰</h2>
+            <div class="content-box"><h3>💔 排擠利他精神</h3><p>當器官可買賣，神聖的「無償捐贈」精神會枯竭。</p></div>
+            <div class="content-box"><h3>⚕️ 醫療專業腐化</h3><p>醫師應治病而非擔任商業仲介。買賣將摧毀醫病信任。</p></div>
+            <div class="content-box"><h3>🔴 誘發犯罪</h3><p>合法市場可能成為黑市洗白通道，導致暴力犯罪。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 09</div>
+        </div>
+
+        <div class="slide">
+            <h2>法律與國際政策現況</h2>
+            <div class="content-box"><h3>📜 《伊斯坦堡宣言》</h3><p>嚴禁器官移植商業化與旅遊，成為各國倫理指引。</p></div>
+            <div class="content-box"><h3>🌍 世界衛生組織(WHO)</h3><p>鼓勵各國合作，統一器官獲取與移植的全球標準。</p></div>
+            <div class="content-box"><h3>🇹🇼 台灣人體器官移植條例</h3><p>嚴禁買賣，處新臺幣九萬元以上四十五萬元以下罰鍰。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 10</div>
+        </div>
+
+        <div class="slide">
+            <h2>科技是否能解決器官短缺?</h2>
+            <div class="grid-3">
+                <div class="card"><div class="icon">🖨️</div><h3>生物3D列印</h3><p>利用自身細胞列印，解決排斥反應與來源問題。</p></div>
+                <div class="card"><div class="icon">🐖</div><h3>異種移植</h3><p>基因編輯豬隻移植的可能性與倫理爭議。</p></div>
+                <div class="card"><div class="icon">🤖</div><h3>人造器官</h3><p>全人工心臟、穿戴式人工腎臟的最新發展。</p></div>
+            </div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 11</div>
+        </div>
+
+        <div class="slide">
+            <h2>替代方案:政策與制度優化</h2>
+            <div class="content-box"><h3>✅ 默認同意制度(Opt-out)</h3><p>如西班牙模式，法律預設捐贈立場提高供給。</p></div>
+            <div class="content-box"><h3>🎁 非金錢補償型捐贈</h3><p>提供長期醫療保險、稅收減免或喪葬補助。</p></div>
+            <div class="content-box"><h3>🔄 交叉捐贈</h3><p>透過演算法媒合不匹配家庭，形成捐贈鏈。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 12</div>
+        </div>
+
+        <div class="slide">
+            <h2>結論與反思</h2>
+            <div class="content-box"><h3>⚖️ 價值觀權衡</h3><p>在「生存權」與「人的尊嚴」之間尋求平衡。</p></div>
+            <div class="content-box"><h3>🛡️ 社會安全網責任</h3><p>反思買賣需求，是否反映了社會救助體系的失靈？</p></div>
+            <div class="content-box"><h3>🎯 最終共識</h3><p>維護「身體不可交易」是保護弱勢族群最後的防線。</p></div>
+            <div class="page-number" onclick="jumpTo(1, event)">PAGE 13</div>
+        </div>
+
+        <div class="slide end-slide">
+            <h1>THANK YOU</h1>
+        </div>
+    </div>
+
+    <script>
+        let curr = 0;
+        const slides = document.querySelectorAll('.slide');
+        const container = document.querySelector('.slide-container');
+        
+        function autoScale() {
+            const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+            container.style.transform = `scale(${scale * 0.98})`;
+        }
+        window.addEventListener('resize', autoScale);
+        autoScale();
+
+        function show(n) {
+            if (n < 0 || n >= slides.length) return;
+            slides[curr].classList.remove('active');
+            curr = n;
+            slides[curr].classList.add('active');
+        }
+
+        // 跳轉功能 (目錄用 & 頁碼用)
+        function jumpTo(pageIndex, event) {
+            event.stopPropagation(); // 阻止點擊事件穿透到背景
+            show(pageIndex);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') show(curr + 1);
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') show(curr - 1);
+        });
+
+        document.addEventListener('click', e => {
+            // 避免點擊 UI 物件時也切換頁面
+            if (e.target.closest('.toc-item') || e.target.closest('.page-number')) return;
+            
+            if (e.clientX > window.innerWidth / 2) show(curr + 1);
+            else show(curr - 1);
+        });
+    </script>
+</body>
+</html>
