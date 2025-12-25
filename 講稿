@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>講稿閱讀器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      background: #1a1a1a;
+      color: #fff;
+      touch-action: none;
+    }
+    
+    #container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      transition: transform 0.3s ease;
+    }
+    
+    .page {
+      min-width: 100vw;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 60px 30px 30px;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .page-content {
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .page-number {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.2);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 100;
+    }
+    
+    .controls {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    
+    button {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: background 0.2s;
+    }
+    
+    button:active {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .edit-btn {
+      background: rgba(52, 152, 219, 0.3);
+    }
+    
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: inherit;
+      font-family: inherit;
+      line-height: 1.8;
+      resize: vertical;
+    }
+    
+    .edit-controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .edit-controls button {
+      flex: 1;
+      padding: 12px;
+    }
+    
+    .save-btn {
+      background: rgba(46, 204, 113, 0.4);
+    }
+    
+    .cancel-btn {
+      background: rgba(231, 76, 60, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <button id="decreaseFont">小</button>
+    <button id="increaseFont">大</button>
+    <button class="edit-btn" id="editBtn">✏️</button>
+  </div>
+  
+  <div id="container"></div>
+  <div class="page-number" id="pageNumber">1 / 1</div>
+
+  <script>
+    let fontSize = 18;
+    let currentPage = 0;
+    let pages = [];
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+    let isEditMode = false;
+    
+    const defaultContent = `第一頁講稿
+
+歡迎使用手機講稿閱讀器！
+
+這是一個專為演講設計的工具：
+• 從下往上滑動可以滾動頁面
+• 從右往左滑動可以翻到下一頁
+• 從左往右滑動可以回到上一頁
+• 點擊"編輯"按鈕可以修改內容
+
+您可以開始編輯您的講稿內容了！
+
+---分頁---
+
+第二頁講稿
+
+這是第二頁的內容。
+
+您可以添加更多頁面，只需在內容中使用：
+---分頁---
+
+這樣就能創建新的頁面。
+
+每一頁都可以獨立滾動查看。
+
+---分頁---
+
+第三頁講稿
+
+• 重點一
+• 重點二
+• 重點三
+
+記得定期保存您的內容！
+內容會自動保存在瀏覽器中。`;
+
+    function loadContent() {
+      const saved = localStorage.getItem('speechContent');
+      return saved || defaultContent;
+    }
+    
+    function saveContent(content) {
+      localStorage.setItem('speechContent', content);
+    }
+    
+    function loadFontSize() {
+      const saved = localStorage.getItem('fontSize');
+      return saved ? parseInt(saved) : 18;
+    }
+    
+    function saveFontSize(size) {
+      localStorage.setItem('fontSize', size);
+    }
+    
+    function loadCurrentPage() {
+      const saved = localStorage.getItem('currentPage');
+      return saved ? parseInt(saved) : 0;
+    }
+    
+    function saveCurrentPage(page) {
+      localStorage.setItem('currentPage', page);
+    }
+    
+    function renderPages() {
+      const content = loadContent();
+      pages = content.split('---分頁---').map(p => p.trim());
+      
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+      
+      pages.forEach((pageContent, index) => {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+        pageDiv.innerHTML = `<div class="page-content" style="font-size: ${fontSize}px">${pageContent}</div>`;
+        container.appendChild(pageDiv);
+      });
+      
+      currentPage = Math.min(loadCurrentPage(), pages.length - 1);
+      updatePageDisplay();
+    }
+    
+    function updatePageDisplay() {
+      const container = document.getElementById('container');
+      container.style.transform = `translateX(-${currentPage * 100}vw)`;
+      document.getElementById('pageNumber').textContent = `${currentPage + 1} / ${pages.length}`;
+      saveCurrentPage(currentPage);
+    }
+    
+    function changePage(delta) {
+      const newPage = currentPage + delta;
+      if (newPage >= 0 && newPage < pages.length) {
+        currentPage = newPage;
+        updatePageDisplay();
+      }
+    }
+    
+    function updateFontSize() {
+      document.querySelectorAll('.page-content').forEach(el => {
+        el.style.fontSize = fontSize + 'px';
+      });
+      saveFontSize(fontSize);
+    }
+    
+    function enterEditMode() {
+      isEditMode = true;
+      const content = loadContent();
+      const container = document.getElementById('container');
+      
+      container.innerHTML = `
+        <div class="page">
+          <textarea id="editArea">${content}</textarea>
+          <div class="edit-controls">
+            <button class="save-btn" id="saveBtn">保存</button>
+            <button class="cancel-btn" id="cancelBtn">取消</button>
+          </div>
+        </div>
+      `;
+      
+      container.style.transform = 'translateX(0)';
+      
+      document.getElementById('saveBtn').addEventListener('click', saveEdit);
+      document.getElementById('cancelBtn').addEventListener('click', cancelEdit);
+    }
+    
+    function saveEdit() {
+      const content = document.getElementById('editArea').value;
+      saveContent(content);
+      isEditMode = false;
+      renderPages();
+    }
+    
+    function cancelEdit() {
+      isEditMode = false;
+      renderPages();
+    }
+    
+    document.getElementById('increaseFont').addEventListener('click', () => {
+      if (fontSize < 32) {
+        fontSize += 2;
+        updateFontSize();
+      }
+    });
+    
+    document.getElementById('decreaseFont').addEventListener('click', () => {
+      if (fontSize > 12) {
+        fontSize -= 2;
+        updateFontSize();
+      }
+    });
+    
+    document.getElementById('editBtn').addEventListener('click', enterEditMode);
+    
+    document.body.addEventListener('touchstart', (e) => {
+      if (isEditMode) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isDragging = true;
+    });
+    
+    document.body.addEventListener('touchmove', (e) => {
+      if (!isDragging || isEditMode) return;
+      
+      const deltaX = e.touches[0].clientX - startX;
+      const deltaY = e.touches[0].clientY - startY;
+      
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    document.body.addEventListener('touchend', (e) => {
+      if (!isDragging || isEditMode) return;
+      
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 80) {
+        if (deltaX > 0) {
+          changePage(-1);
+        } else {
+          changePage(1);
+        }
+      }
+      
+      isDragging = false;
+    });
+    
+    fontSize = loadFontSize();
+    renderPages();
+  </script>
+</body>
+</html>
