@@ -21,11 +21,46 @@
       touch-action: none;
     }
     
+    .controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 10px 15px;
+      background: #1a1a1a;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      z-index: 100;
+    }
+    
+    button {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      min-width: 36px;
+    }
+    
+    button:active {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .edit-btn {
+      background: rgba(52, 152, 219, 0.3);
+    }
+    
     #container {
       width: 100%;
       height: 100%;
       display: flex;
       transition: transform 0.3s ease;
+      padding-top: 50px;
     }
     
     .page {
@@ -33,7 +68,7 @@
       height: 100vh;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 60px 30px 30px;
+      padding: 70px 30px 30px;
       -webkit-overflow-scrolling: touch;
     }
     
@@ -41,6 +76,26 @@
       line-height: 1.8;
       white-space: pre-wrap;
       word-wrap: break-word;
+    }
+    
+    .edit-area {
+      width: 100%;
+      min-height: calc(100vh - 100px);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: inherit;
+      font-family: inherit;
+      line-height: 1.8;
+      resize: none;
+      outline: none;
+    }
+    
+    .edit-area:focus {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(52, 152, 219, 0.5);
     }
     
     .page-number {
@@ -53,68 +108,6 @@
       border-radius: 20px;
       font-size: 14px;
       z-index: 100;
-    }
-    
-    .controls {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      display: flex;
-      gap: 10px;
-      z-index: 100;
-    }
-    
-    button {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      transition: background 0.2s;
-    }
-    
-    button:active {
-      background: rgba(255,255,255,0.3);
-    }
-    
-    .edit-btn {
-      background: rgba(52, 152, 219, 0.3);
-    }
-    
-    textarea {
-      width: 100%;
-      min-height: 200px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.3);
-      color: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      font-size: inherit;
-      font-family: inherit;
-      line-height: 1.8;
-      resize: vertical;
-    }
-    
-    .edit-controls {
-      margin-top: 15px;
-      display: flex;
-      gap: 10px;
-    }
-    
-    .edit-controls button {
-      flex: 1;
-      padding: 12px;
-    }
-    
-    .save-btn {
-      background: rgba(46, 204, 113, 0.4);
-    }
-    
-    .cancel-btn {
-      background: rgba(231, 76, 60, 0.4);
     }
   </style>
 </head>
@@ -137,49 +130,48 @@
     let isDragging = false;
     let isEditMode = false;
     
-    const defaultContent = `第一頁講稿
+    const defaultPages = [
+      '第一頁講稿\n\n歡迎使用手機講稿閱讀器！\n\n這是一個專為演講設計的工具：\n• 從下往上滑動可以滾動頁面\n• 從右往左滑動可以翻到下一頁\n• 從左往右滑動可以回到上一頁\n• 點擊"編輯"按鈕可以修改內容\n\n您可以開始編輯您的講稿內容了！',
+      ''
+    ];
 
-歡迎使用手機講稿閱讀器！
-
-這是一個專為演講設計的工具：
-• 從下往上滑動可以滾動頁面
-• 從右往左滑動可以翻到下一頁
-• 從左往右滑動可以回到上一頁
-• 點擊"編輯"按鈕可以修改內容
-
-您可以開始編輯您的講稿內容了！
-
----分頁---
-
-第二頁講稿
-
-這是第二頁的內容。
-
-您可以添加更多頁面，只需在內容中使用：
----分頁---
-
-這樣就能創建新的頁面。
-
-每一頁都可以獨立滾動查看。
-
----分頁---
-
-第三頁講稿
-
-• 重點一
-• 重點二
-• 重點三
-
-記得定期保存您的內容！
-內容會自動保存在瀏覽器中。`;
-
-    function loadContent() {
-      const saved = localStorage.getItem('speechContent');
-      return saved || defaultContent;
+    function loadPages() {
+      const saved = localStorage.getItem('speechPages');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length === 0 || parsed[parsed.length - 1].trim() !== '') {
+          parsed.push('');
+        }
+        return parsed;
+      }
+      return [...defaultPages];
     }
     
-    function saveContent(content) {
-      localStorage.setItem('speechContent', content);
+    function savePages() {
+      const filtered = [];
+      for (let i = 0; i < pages.length; i++) {
+        if (i === pages.length - 1) {
+          if (pages[i].trim() === '') {
+            filtered.push('');
+          } else {
+            filtered.push(pages[i]);
+            filtered.push('');
+          }
+        } else if (pages[i].trim() !== '') {
+          filtered.push(pages[i]);
+        }
+      }
+      
+      if (filtered.length === 0) {
+        filtered.push('');
+      }
+      
+      pages = filtered;
+      localStorage.setItem('speechPages', JSON.stringify(pages));
+      
+      if (currentPage >= pages.length) {
+        currentPage = pages.length - 1;
+      }
     }
     
     function loadFontSize() {
@@ -201,16 +193,44 @@
     }
     
     function renderPages() {
-      const content = loadContent();
-      pages = content.split('---分頁---').map(p => p.trim());
-      
       const container = document.getElementById('container');
       container.innerHTML = '';
       
       pages.forEach((pageContent, index) => {
         const pageDiv = document.createElement('div');
         pageDiv.className = 'page';
-        pageDiv.innerHTML = `<div class="page-content" style="font-size: ${fontSize}px">${pageContent}</div>`;
+        
+        if (isEditMode) {
+          const textarea = document.createElement('textarea');
+          textarea.className = 'edit-area';
+          textarea.style.fontSize = fontSize + 'px';
+          textarea.value = pageContent;
+          textarea.dataset.index = index;
+          
+          textarea.addEventListener('input', (e) => {
+            pages[index] = e.target.value;
+            savePages();
+            if (index === pages.length - 1 && e.target.value.trim() !== '') {
+              const scrollTop = e.target.scrollTop;
+              renderPages();
+              setTimeout(() => {
+                const newTextarea = document.querySelector(`textarea[data-index="${index}"]`);
+                if (newTextarea) {
+                  newTextarea.scrollTop = scrollTop;
+                }
+              }, 0);
+            }
+          });
+          
+          pageDiv.appendChild(textarea);
+        } else {
+          const contentDiv = document.createElement('div');
+          contentDiv.className = 'page-content';
+          contentDiv.style.fontSize = fontSize + 'px';
+          contentDiv.textContent = pageContent || (index === pages.length - 1 ? '(空白頁 - 點擊編輯開始輸入)' : '');
+          pageDiv.appendChild(contentDiv);
+        }
+        
         container.appendChild(pageDiv);
       });
       
@@ -234,42 +254,23 @@
     }
     
     function updateFontSize() {
-      document.querySelectorAll('.page-content').forEach(el => {
-        el.style.fontSize = fontSize + 'px';
-      });
+      if (isEditMode) {
+        document.querySelectorAll('.edit-area').forEach(el => {
+          el.style.fontSize = fontSize + 'px';
+        });
+      } else {
+        document.querySelectorAll('.page-content').forEach(el => {
+          el.style.fontSize = fontSize + 'px';
+        });
+      }
       saveFontSize(fontSize);
     }
     
-    function enterEditMode() {
-      isEditMode = true;
-      const content = loadContent();
-      const container = document.getElementById('container');
-      
-      container.innerHTML = `
-        <div class="page">
-          <textarea id="editArea">${content}</textarea>
-          <div class="edit-controls">
-            <button class="save-btn" id="saveBtn">保存</button>
-            <button class="cancel-btn" id="cancelBtn">取消</button>
-          </div>
-        </div>
-      `;
-      
-      container.style.transform = 'translateX(0)';
-      
-      document.getElementById('saveBtn').addEventListener('click', saveEdit);
-      document.getElementById('cancelBtn').addEventListener('click', cancelEdit);
-    }
-    
-    function saveEdit() {
-      const content = document.getElementById('editArea').value;
-      saveContent(content);
-      isEditMode = false;
-      renderPages();
-    }
-    
-    function cancelEdit() {
-      isEditMode = false;
+    function toggleEditMode() {
+      isEditMode = !isEditMode;
+      const editBtn = document.getElementById('editBtn');
+      editBtn.textContent = isEditMode ? '✓' : '✏️';
+      editBtn.style.background = isEditMode ? 'rgba(46, 204, 113, 0.4)' : 'rgba(52, 152, 219, 0.3)';
       renderPages();
     }
     
@@ -287,7 +288,7 @@
       }
     });
     
-    document.getElementById('editBtn').addEventListener('click', enterEditMode);
+    document.getElementById('editBtn').addEventListener('click', toggleEditMode);
     
     document.body.addEventListener('touchstart', (e) => {
       if (isEditMode) return;
@@ -327,6 +328,7 @@
     });
     
     fontSize = loadFontSize();
+    pages = loadPages();
     renderPages();
   </script>
 </body>
