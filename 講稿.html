@@ -2,274 +2,234 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-  <title>講稿閱讀器 - 穩定縮放版</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>講稿閱讀器 - 穩定版</title>
   <style>
+    :root {
+      --ui-scale: 1;
+    }
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
     body {
-      font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
-      overflow: hidden;
-      /* 使用 dvh 確保在手機網址列出現時高度依然正確 */
-      width: 100vw;
-      height: 100dvh;
+      font-family: sans-serif;
       background: #1a1a1a;
       color: #fff;
-      touch-action: manipulation; /* 允許縮放但優化點擊 */
-      -webkit-text-size-adjust: none;
+      overflow: hidden; /* 防止整體 body 滾動 */
+      width: 100vw;
+      height: 100dvh;
     }
     
-    #container {
+    /* 核心佈局：確保容器始終填滿視覺畫面 */
+    #viewport-fixer {
+      position: relative;
       width: 100%;
       height: 100%;
-      display: flex;
-      transition: transform 0.3s ease;
+      overflow: hidden;
     }
-    
+
+    #container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
     .page {
       min-width: 100vw;
       height: 100dvh;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 80px 30px 60px;
+      overflow-y: auto; /* 允許垂直滾動 */
+      overflow-x: auto; /* 允許在放大時水平滾動看文字 */
+      padding: 70px 20px 80px;
       -webkit-overflow-scrolling: touch;
     }
-    
+
+    /* UI 元件：使用 fixed 但透過 JS 動態修正位移 */
+    .controls {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      z-index: 9999;
+      display: flex;
+      gap: 8px;
+      transform-origin: top right;
+    }
+
+    .page-number {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 14px;
+      backdrop-filter: blur(5px);
+      transform-origin: bottom center;
+    }
+
+    button {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .edit-area {
+      width: 100%;
+      min-height: 60dvh;
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 15px;
+      border-radius: 8px;
+      line-height: 1.6;
+      resize: none;
+    }
+
     .page-content {
       line-height: 1.8;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
-    
-    .edit-area {
-      width: 100%;
-      min-height: 70dvh;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      font-size: inherit;
-      font-family: inherit;
-      line-height: 1.8;
-      resize: none;
-      outline: none;
-    }
-
-    /* 固定定位的 UI 元件 */
-    .floating-ui {
-      position: fixed;
-      z-index: 1000;
-      /* 確保縮放時變形起點在正確位置 */
-      transform-origin: top right; 
-    }
-
-    .controls {
-      top: 15px;
-      right: 15px;
-      display: flex;
-      gap: 10px;
-    }
-    
-    .page-number {
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.2);
-      padding: 5px 15px;
-      border-radius: 20px;
-      font-size: 14px;
-      transform-origin: center bottom;
-      white-space: nowrap;
-    }
-    
-    button {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    
-    .edit-btn {
-      background: rgba(52, 152, 219, 0.5);
-    }
   </style>
 </head>
 <body>
-  <div class="controls floating-ui" id="controls">
-    <button id="decreaseFont">小</button>
-    <button id="increaseFont">大</button>
-    <button class="edit-btn" id="editBtn">✏️</button>
+
+<div id="viewport-fixer">
+  <div class="controls" id="ui-controls">
+    <button onclick="changeFontSize(-2)">小</button>
+    <button onclick="changeFontSize(2)">大</button>
+    <button id="editBtn" onclick="toggleEdit()" style="background: #3498db;">✏️</button>
   </div>
-  
+
   <div id="container"></div>
-  <div class="page-number floating-ui" id="pageNumber">1 / 1</div>
+  
+  <div class="page-number" id="ui-pagenum">1 / 1</div>
+</div>
 
-  <script>
-    let fontSize = 18;
-    let currentPage = 0;
-    let pages = [];
-    let startX = 0;
-    let startY = 0;
-    let isDragging = false;
-    let isEditMode = false;
+<script>
+  let pages = JSON.parse(localStorage.getItem('speechPages')) || ['歡迎使用！請點擊編輯按鈕開始。', ''];
+  let currentPage = 0;
+  let fontSize = parseInt(localStorage.getItem('fontSize')) || 20;
+  let isEditMode = false;
+
+  // --- 解決縮放「跑掉」的核心 JS ---
+  function syncUI() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const controls = document.getElementById('ui-controls');
+    const pagenum = document.getElementById('ui-pagenum');
     
-    // --- 縮放修正邏輯 ---
-    function adjustFloatingUI() {
-      if (!window.visualViewport) return;
-      
-      const vv = window.visualViewport;
-      const controls = document.getElementById('controls');
-      const pageNum = document.getElementById('pageNumber');
-      
-      // 計算縮放比例
-      const scale = 1 / vv.scale;
-      
-      // 修正控制按鈕位置與大小
-      controls.style.transform = `scale(${scale})`;
-      controls.style.top = `${vv.offsetTop + (15 * scale)}px`;
-      controls.style.left = `${vv.offsetLeft + vv.width - (controls.offsetWidth * scale) - (15 * scale)}px`;
-      
-      // 修正頁碼位置與大小
-      pageNum.style.transform = `translateX(-50%) scale(${scale})`;
-      pageNum.style.left = `${vv.offsetLeft + (vv.width / 2)}px`;
-      pageNum.style.top = `${vv.offsetTop + vv.height - (pageNum.offsetHeight * scale) - (20 * scale)}px`;
-    }
+    // 抵消縮放倍率，讓按鈕看起來大小不變
+    const scale = 1 / vv.scale;
+    
+    // 計算相對於可見視窗的位置
+    const top = vv.offsetTop + (15 * scale);
+    const right = (window.innerWidth - (vv.offsetLeft + vv.width)) + (15 * scale);
+    const bottom = (window.innerHeight - (vv.offsetTop + vv.height)) + (20 * scale);
+    const centerX = vv.offsetLeft + (vv.width / 2);
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', adjustFloatingUI);
-      window.visualViewport.addEventListener('scroll', adjustFloatingUI);
-    }
-    // ------------------
+    controls.style.transform = `scale(${scale})`;
+    controls.style.top = `${top}px`;
+    controls.style.right = `${right}px`;
 
-    const defaultPages = [
-      '第一頁講稿\n\n歡迎使用手機講稿閱讀器！\n\n現在即使您用雙指放大畫面，按鈕也會保持在正確的位置了。\n\n• 從右往左滑動翻頁\n• 點擊"編輯"修改內容',
-      ''
-    ];
+    pagenum.style.transform = `translateX(-50%) scale(${scale})`;
+    pagenum.style.left = `${centerX}px`;
+    pagenum.style.bottom = `${bottom}px`;
+  }
 
-    function loadPages() {
-      const saved = localStorage.getItem('speechPages');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.length === 0 || parsed[parsed.length - 1].trim() !== '') {
-          parsed.push('');
-        }
-        return parsed;
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncUI);
+    window.visualViewport.addEventListener('scroll', syncUI);
+  }
+
+  // --- 基本功能 ---
+  function render() {
+    const container = document.getElementById('container');
+    container.innerHTML = '';
+    
+    pages.forEach((content, i) => {
+      const div = document.createElement('div');
+      div.className = 'page';
+      
+      if (isEditMode) {
+        const txt = document.createElement('textarea');
+        txt.className = 'edit-area';
+        txt.style.fontSize = fontSize + 'px';
+        txt.value = content;
+        txt.oninput = (e) => {
+          pages[i] = e.target.value;
+          if (i === pages.length - 1 && pages[i].trim() !== '') {
+            pages.push('');
+            render(); // 增加新頁面
+          }
+          localStorage.setItem('speechPages', JSON.stringify(pages));
+        };
+        div.appendChild(txt);
+      } else {
+        const p = document.createElement('div');
+        p.className = 'page-content';
+        p.style.fontSize = fontSize + 'px';
+        p.textContent = content || (i === pages.length -1 ? '（結束）' : '（空白頁）');
+        div.appendChild(p);
       }
-      return [...defaultPages];
-    }
-    
-    function savePages() {
-      const filtered = pages.filter((p, i) => p.trim() !== '' || i === pages.length - 1);
-      if (filtered.length === 0 || filtered[filtered.length-1] !== '') filtered.push('');
-      pages = filtered;
-      localStorage.setItem('speechPages', JSON.stringify(pages));
-    }
-    
-    function renderPages() {
-      const container = document.getElementById('container');
-      container.innerHTML = '';
-      
-      pages.forEach((pageContent, index) => {
-        const pageDiv = document.createElement('div');
-        pageDiv.className = 'page';
-        
-        if (isEditMode) {
-          const textarea = document.createElement('textarea');
-          textarea.className = 'edit-area';
-          textarea.style.fontSize = fontSize + 'px';
-          textarea.value = pageContent;
-          textarea.dataset.index = index;
-          
-          textarea.addEventListener('input', (e) => {
-            pages[index] = e.target.value;
-            savePages();
-            if (index === pages.length - 1 && e.target.value.trim() !== '') {
-              renderPages();
-              setTimeout(() => {
-                const news = document.querySelector(`textarea[data-index="${index}"]`);
-                if (news) { news.focus(); news.selectionStart = news.value.length; }
-              }, 0);
-            }
-          });
-          pageDiv.appendChild(textarea);
-        } else {
-          const contentDiv = document.createElement('div');
-          contentDiv.className = 'page-content';
-          contentDiv.style.fontSize = fontSize + 'px';
-          contentDiv.textContent = pageContent || (index === pages.length - 1 ? '(空白頁)' : '');
-          pageDiv.appendChild(contentDiv);
-        }
-        container.appendChild(pageDiv);
-      });
-      
-      updatePageDisplay();
-    }
-    
-    function updatePageDisplay() {
-      const container = document.getElementById('container');
-      container.style.transform = `translateX(-${currentPage * 100}vw)`;
-      document.getElementById('pageNumber').textContent = `${currentPage + 1} / ${pages.length}`;
-      localStorage.setItem('currentPage', currentPage);
-      adjustFloatingUI(); // 切換頁面時重新校正 UI
-    }
-    
-    function changePage(delta) {
-      const newPage = currentPage + delta;
-      if (newPage >= 0 && newPage < pages.length) {
-        currentPage = newPage;
-        updatePageDisplay();
-      }
-    }
+      container.appendChild(div);
+    });
+    updatePos();
+  }
 
-    document.getElementById('increaseFont').addEventListener('click', () => {
-      if (fontSize < 50) { fontSize += 2; renderPages(); }
-    });
-    
-    document.getElementById('decreaseFont').addEventListener('click', () => {
-      if (fontSize > 12) { fontSize -= 2; renderPages(); }
-    });
-    
-    document.getElementById('editBtn').addEventListener('click', () => {
-      isEditMode = !isEditMode;
-      document.getElementById('editBtn').textContent = isEditMode ? '✓' : '✏️';
-      renderPages();
-    });
+  function updatePos() {
+    const container = document.getElementById('container');
+    container.style.transform = `translateX(-${currentPage * 100}vw)`;
+    document.getElementById('ui-pagenum').textContent = `${currentPage + 1} / ${pages.length}`;
+    syncUI();
+  }
 
-    // 觸控翻頁邏輯
-    document.body.addEventListener('touchstart', (e) => {
-      if (isEditMode || (window.visualViewport && window.visualViewport.scale > 1)) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      isDragging = true;
-    });
-    
-    document.body.addEventListener('touchend', (e) => {
-      if (!isDragging) return;
-      const deltaX = e.changedTouches[0].clientX - startX;
-      const deltaY = e.changedTouches[0].clientY - startY;
-      
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 80) {
-        changePage(deltaX > 0 ? -1 : 1);
-      }
-      isDragging = false;
-    });
+  function changeFontSize(delta) {
+    fontSize = Math.max(12, Math.min(60, fontSize + delta));
+    localStorage.setItem('fontSize', fontSize);
+    render();
+  }
 
-    // 初始化
-    fontSize = parseInt(localStorage.getItem('fontSize')) || 18;
-    currentPage = parseInt(localStorage.getItem('currentPage')) || 0;
-    pages = loadPages();
-    renderPages();
-    window.onload = adjustFloatingUI;
-  </script>
+  function toggleEdit() {
+    isEditMode = !isEditMode;
+    document.getElementById('editBtn').textContent = isEditMode ? '✓' : '✏️';
+    render();
+  }
+
+  // --- 翻頁邏輯 (修正縮放衝突) ---
+  let tsX = 0;
+  document.addEventListener('touchstart', e => {
+    // 如果正在放大（scale > 1.05），禁用翻頁手勢，讓用戶可以自由移動看文字
+    if (window.visualViewport && window.visualViewport.scale > 1.05) return;
+    tsX = e.touches[0].clientX;
+  }, {passive: true});
+
+  document.addEventListener('touchend', e => {
+    if (isEditMode) return;
+    if (window.visualViewport && window.visualViewport.scale > 1.05) return;
+    
+    const teX = e.changedTouches[0].clientX;
+    const delta = tsX - teX;
+
+    if (Math.abs(delta) > 80) {
+      if (delta > 0 && currentPage < pages.length - 1) currentPage++;
+      else if (delta < 0 && currentPage > 0) currentPage--;
+      updatePos();
+    }
+  });
+
+  render();
+  setTimeout(syncUI, 100);
+</script>
+
 </body>
 </html>
