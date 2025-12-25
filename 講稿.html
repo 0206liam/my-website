@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>講稿閱讀器 - 專業穩定版</title>
+  <title>講稿閱讀器 - 統一設計版</title>
   <style>
     :root { --ui-scale: 1; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,32 +30,21 @@
       height: 100dvh;
       overflow-y: auto;
       overflow-x: auto;
-      /* 左右間距縮小到 8px，最大化顯示空間 */
       padding: 70px 8px 80px;
       -webkit-overflow-scrolling: touch;
     }
 
-    /* UI 元件：右上控制區 */
-    .controls {
+    /* 統一 UI 控制區樣式 */
+    .controls-group {
       position: fixed;
       top: 15px;
-      right: 15px;
       z-index: 9999;
       display: flex;
       gap: 8px;
-      transform-origin: top right;
     }
 
-    /* UI 元件：左上控制區 (新增與刪除) */
-    .controls-left {
-      position: fixed;
-      top: 15px;
-      left: 15px;
-      z-index: 9999;
-      display: flex;
-      gap: 8px;
-      transform-origin: top left;
-    }
+    #ui-left { left: 15px; transform-origin: top left; }
+    #ui-right { right: 15px; transform-origin: top right; }
 
     .page-number {
       position: fixed;
@@ -68,9 +57,11 @@
       border-radius: 15px;
       font-size: 14px;
       backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
       transform-origin: bottom center;
     }
 
+    /* 統一按鈕樣式 */
     button {
       background: rgba(255,255,255,0.15);
       border: 1px solid rgba(255,255,255,0.3);
@@ -79,10 +70,20 @@
       border-radius: 8px;
       font-size: 16px;
       backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      cursor: pointer;
+      min-width: 44px; /* 確保點擊範圍 */
     }
 
-    .btn-danger { background: rgba(231, 76, 60, 0.5); }
-    .btn-success { background: rgba(46, 204, 113, 0.5); }
+    button:active {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* 編輯模式啟動時，✏️ 按鈕稍微加亮作為提醒 */
+    #editBtn.active {
+      background: rgba(255,255,255,0.4);
+      border-color: rgba(255,255,255,0.8);
+    }
 
     .edit-area {
       width: 100%;
@@ -94,6 +95,7 @@
       border-radius: 8px;
       line-height: 1.6;
       resize: none;
+      outline: none;
     }
 
     .page-content {
@@ -107,15 +109,15 @@
 <body>
 
 <div id="viewport-fixer">
-  <div class="controls-left" id="ui-left">
-    <button class="btn-success" onclick="addPageBefore()">＋</button>
-    <button class="btn-danger" onclick="deleteCurrentPage()">🗑️</button>
+  <div class="controls-group" id="ui-left">
+    <button onclick="addPageBefore()">＋</button>
+    <button onclick="deleteCurrentPage()">🗑️</button>
   </div>
 
-  <div class="controls" id="ui-controls">
+  <div class="controls-group" id="ui-right">
     <button onclick="changeFontSize(-2)">小</button>
     <button onclick="changeFontSize(2)">大</button>
-    <button id="editBtn" onclick="toggleEdit()" style="background: #3498db;">✏️</button>
+    <button id="editBtn" onclick="toggleEdit()">✏️</button>
   </div>
 
   <div id="container"></div>
@@ -123,36 +125,34 @@
 </div>
 
 <script>
-  let pages = JSON.parse(localStorage.getItem('speechPages')) || ['歡迎使用！請點擊編輯按鍵。', ''];
+  let pages = JSON.parse(localStorage.getItem('speechPages')) || ['歡迎使用！請點擊 ✏️ 按鈕開始編輯。', ''];
   let currentPage = parseInt(localStorage.getItem('currentPage')) || 0;
   let fontSize = parseInt(localStorage.getItem('fontSize')) || 20;
   let isEditMode = false;
 
-  // --- 解決縮放核心邏輯 (包含左側 UI 同步) ---
   function syncUI() {
     const vv = window.visualViewport;
     if (!vv) return;
 
-    const controls = document.getElementById('ui-controls');
-    const leftControls = document.getElementById('ui-left');
+    const left = document.getElementById('ui-left');
+    const right = document.getElementById('ui-right');
     const pagenum = document.getElementById('ui-pagenum');
     
     const scale = 1 / vv.scale;
-    
-    // 右側按鈕同步
-    controls.style.transform = `scale(${scale})`;
-    controls.style.top = `${vv.offsetTop + (15 * scale)}px`;
-    controls.style.right = `${(window.innerWidth - (vv.offsetLeft + vv.width)) + (15 * scale)}px`;
+    const offsetT = vv.offsetTop;
+    const offsetL = vv.offsetLeft;
 
-    // 左側按鈕同步 (＋ 與 🗑️)
-    leftControls.style.transform = `scale(${scale})`;
-    leftControls.style.top = `${vv.offsetTop + (15 * scale)}px`;
-    leftControls.style.left = `${vv.offsetLeft + (15 * scale)}px`;
+    left.style.transform = `scale(${scale})`;
+    left.style.top = `${offsetT + (15 * scale)}px`;
+    left.style.left = `${offsetL + (15 * scale)}px`;
 
-    // 頁碼同步
+    right.style.transform = `scale(${scale})`;
+    right.style.top = `${offsetT + (15 * scale)}px`;
+    right.style.right = `${(window.innerWidth - (offsetL + vv.width)) + (15 * scale)}px`;
+
     pagenum.style.transform = `translateX(-50%) scale(${scale})`;
-    pagenum.style.left = `${vv.offsetLeft + (vv.width / 2)}px`;
-    pagenum.style.bottom = `${(window.innerHeight - (vv.offsetTop + vv.height)) + (20 * scale)}px`;
+    pagenum.style.left = `${offsetL + (vv.width / 2)}px`;
+    pagenum.style.bottom = `${(window.innerHeight - (offsetT + vv.height)) + (20 * scale)}px`;
   }
 
   if (window.visualViewport) {
@@ -160,7 +160,6 @@
     window.visualViewport.addEventListener('scroll', syncUI);
   }
 
-  // --- 新增的功能：前插頁面與刪除 ---
   function addPageBefore() {
     pages.splice(currentPage, 0, "");
     saveAndRender();
@@ -170,9 +169,9 @@
     if (pages.length <= 1) {
       pages = [""]; 
     } else {
-      if (confirm("確定要刪除當前頁面嗎？")) {
+      if (confirm("確定要刪除這一頁嗎？")) {
         pages.splice(currentPage, 1);
-        if (currentPage >= pages.length) currentPage = pages.length - 1;
+        if (currentPage >= pages.length) currentPage = Math.max(0, pages.length - 1);
       } else { return; }
     }
     saveAndRender();
@@ -183,7 +182,6 @@
     render();
   }
 
-  // --- 原有功能整合 ---
   function render() {
     const container = document.getElementById('container');
     container.innerHTML = '';
@@ -230,7 +228,10 @@
 
   function toggleEdit() {
     isEditMode = !isEditMode;
-    document.getElementById('editBtn').textContent = isEditMode ? '✓' : '✏️';
+    const btn = document.getElementById('editBtn');
+    btn.textContent = isEditMode ? '✓' : '✏️';
+    if (isEditMode) btn.classList.add('active');
+    else btn.classList.remove('active');
     render();
   }
 
