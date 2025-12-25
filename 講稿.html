@@ -21,46 +21,11 @@
       touch-action: none;
     }
     
-    .controls {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 10px 15px;
-      background: #1a1a1a;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      z-index: 100;
-    }
-    
-    button {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
-      min-width: 36px;
-    }
-    
-    button:active {
-      background: rgba(255,255,255,0.3);
-    }
-    
-    .edit-btn {
-      background: rgba(52, 152, 219, 0.3);
-    }
-    
     #container {
       width: 100%;
       height: 100%;
       display: flex;
       transition: transform 0.3s ease;
-      padding-top: 50px;
     }
     
     .page {
@@ -68,7 +33,7 @@
       height: 100vh;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 70px 30px 30px;
+      padding: 80px 30px 30px;
       -webkit-overflow-scrolling: touch;
     }
     
@@ -80,7 +45,7 @@
     
     .edit-area {
       width: 100%;
-      min-height: calc(100vh - 100px);
+      min-height: calc(100vh - 120px);
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.2);
       color: #fff;
@@ -108,6 +73,35 @@
       border-radius: 20px;
       font-size: 14px;
       z-index: 100;
+    }
+    
+    .controls {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    
+    button {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: background 0.2s;
+    }
+    
+    button:active {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .edit-btn {
+      background: rgba(52, 152, 219, 0.3);
     }
   </style>
 </head>
@@ -217,6 +211,7 @@
                 const newTextarea = document.querySelector(`textarea[data-index="${index}"]`);
                 if (newTextarea) {
                   newTextarea.scrollTop = scrollTop;
+                  newTextarea.focus();
                 }
               }, 0);
             }
