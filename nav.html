@@ -19,39 +19,33 @@ h1 {
     letter-spacing: 1px;
 }
 
-/* 備份按鈕區域 */
+/* 雲端按鈕區域 */
 #backup-controls {
     position: fixed;
     top: 20px;
     right: 20px;
-    display: flex;
-    gap: 10px;
     z-index: 1000;
 }
-.backup-btn {
-    background: #007aff;
+.cloud-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 15px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,122,255,.3);
-    transition: all .2s;
+    box-shadow: 0 6px 20px rgba(102,126,234,.4);
+    transition: all .3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-.backup-btn:hover {
-    background: #0051d5;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,122,255,.4);
+.cloud-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102,126,234,.5);
 }
-.backup-btn.settings {
-    background: #8e8e93;
-}
-.backup-btn.settings:hover {
-    background: #636366;
-}
-.backup-btn:active {
+.cloud-btn:active {
     transform: translateY(0);
 }
 
@@ -75,7 +69,7 @@ h1 {
     background: white;
     border-radius: 16px;
     padding: 30px;
-    max-width: 450px;
+    max-width: 500px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
@@ -178,6 +172,112 @@ h1 {
     background: #fff3cd;
     color: #856404;
 }
+.backup-info {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+}
+.backup-info-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.backup-info-item:last-child {
+    margin-bottom: 0;
+}
+.backup-info-label {
+    font-weight: 600;
+    color: #333;
+}
+.action-section {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+.action-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.action-btn {
+    padding: 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+}
+.action-btn:hover {
+    border-color: #007aff;
+    background: #f8f9ff;
+    transform: translateY(-2px);
+}
+.action-btn-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+.action-btn-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+.action-btn-desc {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+}
+.settings-section {
+    margin-top: 20px;
+}
+.settings-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 15px;
+}
+.settings-toggle:hover {
+    background: #e9ecef;
+}
+.settings-toggle-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+.settings-toggle-icon {
+    color: #888;
+    transition: transform .2s;
+}
+.settings-toggle-icon.open {
+    transform: rotate(180deg);
+}
+.settings-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease-out;
+}
+.settings-content.open {
+    max-height: 500px;
+}
 
 #file-list {
     max-width: 1100px;
@@ -217,14 +317,12 @@ footer {
 }
 
 @media (max-width: 600px) {
-    #backup-controls {
-        top: 10px;
-        right: 10px;
-        flex-direction: column;
+    .cloud-btn {
+        padding: 12px 18px;
+        font-size: 15px;
     }
-    .backup-btn {
-        padding: 10px 16px;
-        font-size: 14px;
+    .action-buttons {
+        grid-template-columns: 1fr;
     }
 }
 </style>
@@ -232,58 +330,73 @@ footer {
 <body>
 
 <div id="backup-controls">
-    <button class="backup-btn settings" onclick="showSettingsModal()">⚙️ 設定</button>
-    <button class="backup-btn" onclick="showBackupModal()">📤 備份</button>
-    <button class="backup-btn" onclick="showRestoreModal()">📥 還原</button>
+    <button class="cloud-btn" onclick="showCloudModal()">
+        <span>☁️</span>
+        <span>雲端</span>
+    </button>
 </div>
 
-<div id="settings-modal" class="modal">
+<div id="cloud-modal" class="modal">
     <div class="modal-content">
-        <div class="modal-title">⚙️ 備份設定</div>
+        <div class="modal-title">☁️ 雲端備份管理</div>
+        
         <div class="modal-message">
             <span id="token-status" class="status-badge status-notset">⚠️ 尚未設定</span>
         </div>
         
-        <label class="modal-label">GitHub Personal Access Token</label>
-        <div class="modal-help">
-            需要有 <strong>gist</strong> 權限的 Token。
-            <a href="https://github.com/settings/tokens/new" target="_blank">點此產生 →</a>
+        <div class="backup-info" id="backup-time-info" style="display:none;">
+            <div class="backup-info-item">
+                <span class="backup-info-label">📅 本地備份:</span>
+                <span id="last-backup-time">從未</span>
+            </div>
+            <div class="backup-info-item">
+                <span class="backup-info-label">☁️ 雲端備份:</span>
+                <span id="cloud-backup-time">--</span>
+            </div>
         </div>
-        <input type="password" class="modal-input" id="token-input" placeholder="ghp_xxxxxxxxxxxxxx">
         
-        <label class="modal-label">Gist ID</label>
-        <div class="modal-help">
-            建立一個 secret gist，檔名為 backup.json，內容為 {}
+        <div class="action-section">
+            <div class="action-title">📦 快速操作</div>
+            <div class="action-buttons">
+                <div class="action-btn" onclick="doBackup()">
+                    <div class="action-btn-icon">📤</div>
+                    <div class="action-btn-text">備份</div>
+                    <div class="action-btn-desc">上傳到雲端</div>
+                </div>
+                <div class="action-btn" onclick="confirmRestore()">
+                    <div class="action-btn-icon">📥</div>
+                    <div class="action-btn-text">還原</div>
+                    <div class="action-btn-desc">從雲端下載</div>
+                </div>
+            </div>
         </div>
-        <input type="text" class="modal-input" id="gist-input" placeholder="d2822cb27c9b0f9ae576bb1adaebfff1" value="d2822cb27c9b0f9ae576bb1adaebfff1">
         
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-secondary" onclick="closeModal('settings-modal')">取消</button>
-            <button class="modal-btn modal-btn-primary" onclick="saveSettings()">儲存</button>
+        <div class="settings-section">
+            <div class="settings-toggle" onclick="toggleSettings()">
+                <span class="settings-toggle-text">⚙️ 進階設定</span>
+                <span class="settings-toggle-icon" id="settings-toggle-icon">▼</span>
+            </div>
+            
+            <div class="settings-content" id="settings-content">
+                <label class="modal-label">GitHub Personal Access Token</label>
+                <div class="modal-help">
+                    需要有 <strong>gist</strong> 權限的 Token。
+                    <a href="https://github.com/settings/tokens/new" target="_blank">點此產生 →</a>
+                </div>
+                <input type="password" class="modal-input" id="token-input" placeholder="ghp_xxxxxxxxxxxxxx">
+                
+                <label class="modal-label">Gist ID</label>
+                <div class="modal-help">
+                    建立一個 secret gist，檔名為 backup.json，內容為 {}
+                </div>
+                <input type="text" class="modal-input" id="gist-input" placeholder="d2822cb27c9b0f9ae576bb1adaebfff1" value="d2822cb27c9b0f9ae576bb1adaebfff1">
+                
+                <button class="modal-btn modal-btn-primary" onclick="saveSettings()" style="width:100%; margin-top:10px;">💾 儲存設定</button>
+            </div>
         </div>
-    </div>
-</div>
-
-<div id="backup-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-title">📤 備份到雲端</div>
-        <div class="modal-message">請輸入備份碼以上傳資料</div>
-        <input type="password" class="modal-input" id="backup-password" placeholder="請輸入備份碼">
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-secondary" onclick="closeModal('backup-modal')">取消</button>
-            <button class="modal-btn modal-btn-primary" onclick="doBackup()">上傳</button>
-        </div>
-    </div>
-</div>
-
-<div id="restore-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-title">📥 從雲端還原</div>
-        <div class="modal-message">⚠️ 這會覆蓋目前的本地資料<br>請輸入備份碼以下載資料</div>
-        <input type="password" class="modal-input" id="restore-password" placeholder="請輸入備份碼">
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-secondary" onclick="closeModal('restore-modal')">取消</button>
-            <button class="modal-btn modal-btn-primary" onclick="doRestore()">下載</button>
+        
+        <div class="modal-buttons" style="margin-top:25px;">
+            <button class="modal-btn modal-btn-secondary" onclick="closeModal('cloud-modal')" style="width:100%;">關閉</button>
         </div>
     </div>
 </div>
@@ -294,6 +407,20 @@ footer {
         <div class="modal-message" id="result-message"></div>
         <div class="modal-buttons">
             <button class="modal-btn modal-btn-primary" onclick="closeModal('result-modal')" style="width:100%">確定</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirm-restore-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title">⚠️ 確認還原</div>
+        <div class="modal-message" style="color:#ff3b30; font-weight:600;">
+            這將會覆蓋目前的本地資料！<br>
+            是否確定要從雲端還原？
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-secondary" onclick="closeModal('confirm-restore-modal')">取消</button>
+            <button class="modal-btn modal-btn-primary" onclick="doRestore()">確認還原</button>
         </div>
     </div>
 </div>
@@ -311,14 +438,13 @@ const repo = "my-website";
 const container = document.getElementById("file-list");
 
 // 備份設定
-const BACKUP_PASSWORD = "0206";
 const TOKEN_KEY = "github_backup_token";
 const GIST_KEY = "github_backup_gist";
+const LAST_BACKUP_TIME_KEY = "last_backup_time";
 
-/* 建立一個卡片 - 已修正為絕對路徑 */
+/* 建立一個卡片 */
 function createItem(title, href, pathText) {
     const a = document.createElement("a");
-    // 確保連結始終從根目錄開始，例如 /my-website/folder/index.html
     a.href = window.location.origin + "/" + repo + "/" + href;
     a.className = "item";
     a.innerHTML = `
@@ -359,7 +485,7 @@ async function handleFolder(folderPath, folderName) {
     }
 }
 
-/* 讀取根目錄 - 已增加排除機制避免顯示 nav.html 自己 */
+/* 讀取根目錄 */
 async function loadRoot() {
     const res = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/contents/`
@@ -373,7 +499,7 @@ async function loadRoot() {
             item.type === "file" &&
             item.name.endsWith(".html") &&
             item.name !== "index.html" &&
-            item.name !== "nav.html" // 排除掉管理頁面本身
+            item.name !== "nav.html"
         ) {
             createItem(
                 item.name.replace(".html", ""),
@@ -384,7 +510,7 @@ async function loadRoot() {
     }
 }
 
-// ========== 備份/還原功能 (邏輯與 Domain 綁定，維持不變) ==========
+// ========== 備份/還原功能 ==========
 
 function getStoredToken() {
     return localStorage.getItem(TOKEN_KEY);
@@ -394,26 +520,100 @@ function getStoredGistId() {
     return localStorage.getItem(GIST_KEY) || "d2822cb27c9b0f9ae576bb1adaebfff1";
 }
 
+function getLastBackupTime() {
+    return localStorage.getItem(LAST_BACKUP_TIME_KEY);
+}
+
+function setLastBackupTime(timestamp) {
+    localStorage.setItem(LAST_BACKUP_TIME_KEY, timestamp);
+}
+
+function formatDateTime(timestamp) {
+    if (!timestamp) return "從未";
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+}
+
 function updateTokenStatus() {
     const token = getStoredToken();
     const statusEl = document.getElementById('token-status');
+    const backupTimeInfo = document.getElementById('backup-time-info');
+    const lastBackupTimeEl = document.getElementById('last-backup-time');
+    
     if (token) {
         statusEl.className = 'status-badge status-ready';
         statusEl.textContent = '✅ 已設定';
+        
+        const lastBackupTime = getLastBackupTime();
+        lastBackupTimeEl.textContent = formatDateTime(lastBackupTime);
+        backupTimeInfo.style.display = 'block';
     } else {
         statusEl.className = 'status-badge status-notset';
         statusEl.textContent = '⚠️ 尚未設定';
+        backupTimeInfo.style.display = 'none';
     }
 }
 
-function showSettingsModal() {
+function toggleSettings() {
+    const content = document.getElementById('settings-content');
+    const icon = document.getElementById('settings-toggle-icon');
+    
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        icon.classList.remove('open');
+    } else {
+        content.classList.add('open');
+        icon.classList.add('open');
+    }
+}
+
+async function showCloudModal() {
     const token = getStoredToken();
     const gistId = getStoredGistId();
     
     document.getElementById('token-input').value = token || '';
     document.getElementById('gist-input').value = gistId;
     updateTokenStatus();
-    document.getElementById('settings-modal').classList.add('show');
+    
+    // 如果已設定 Token，載入雲端備份時間
+    if (token) {
+        const cloudTimeEl = document.getElementById('cloud-backup-time');
+        cloudTimeEl.textContent = '載入中...';
+        
+        try {
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: {
+                    'Authorization': `token ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const gist = await response.json();
+                const content = gist.files['backup.json'].content;
+                const data = JSON.parse(content);
+                
+                if (data._backup_timestamp) {
+                    cloudTimeEl.textContent = formatDateTime(data._backup_timestamp);
+                } else {
+                    cloudTimeEl.textContent = '未知';
+                }
+            } else {
+                cloudTimeEl.textContent = '無法取得';
+            }
+        } catch (error) {
+            cloudTimeEl.textContent = '讀取失敗';
+        }
+    }
+    
+    document.getElementById('cloud-modal').classList.add('show');
 }
 
 function saveSettings() {
@@ -433,28 +633,24 @@ function saveSettings() {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(GIST_KEY, gistId);
     
-    closeModal('settings-modal');
-    showResult('✅ 設定成功', 'Token 和 Gist ID 已儲存！', true);
+    updateTokenStatus();
+    showResult('✅ 設定成功', 'Token 和 Gist ID 已儲存!', true);
+    
+    // 重新載入雲端備份時間
+    setTimeout(() => {
+        closeModal('result-modal');
+        showCloudModal();
+    }, 1500);
 }
 
-function showBackupModal() {
+function confirmRestore() {
     if (!getStoredToken()) {
-        showResult('⚠️ 尚未設定', '請先點擊「⚙️ 設定」配置 GitHub Token', false);
+        showResult('⚠️ 尚未設定', '請先在進階設定中配置 GitHub Token', false);
         return;
     }
-    document.getElementById('backup-modal').classList.add('show');
-    document.getElementById('backup-password').value = '';
-    document.getElementById('backup-password').focus();
-}
-
-function showRestoreModal() {
-    if (!getStoredToken()) {
-        showResult('⚠️ 尚未設定', '請先點擊「⚙️ 設定」配置 GitHub Token', false);
-        return;
-    }
-    document.getElementById('restore-modal').classList.add('show');
-    document.getElementById('restore-password').value = '';
-    document.getElementById('restore-password').focus();
+    
+    closeModal('cloud-modal');
+    document.getElementById('confirm-restore-modal').classList.add('show');
 }
 
 function closeModal(id) {
@@ -470,11 +666,8 @@ function showResult(title, message, isSuccess) {
 }
 
 async function doBackup() {
-    const password = document.getElementById('backup-password').value;
-    
-    if (password !== BACKUP_PASSWORD) {
-        showResult('❌ 備份失敗', '備份碼錯誤', false);
-        closeModal('backup-modal');
+    if (!getStoredToken()) {
+        showResult('⚠️ 尚未設定', '請先在進階設定中配置 GitHub Token', false);
         return;
     }
     
@@ -489,6 +682,10 @@ async function doBackup() {
                 data[key] = localStorage.getItem(key);
             }
         }
+        
+        // 加入備份時間戳記
+        const timestamp = new Date().toISOString();
+        data._backup_timestamp = timestamp;
         
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
             method: 'PATCH',
@@ -506,29 +703,30 @@ async function doBackup() {
         });
         
         if (response.ok) {
-            showResult('✅ 備份成功', '資料已上傳到雲端！', true);
+            setLastBackupTime(timestamp);
+            showResult('✅ 備份成功', `資料已上傳到雲端!\n備份時間: ${formatDateTime(timestamp)}`, true);
+            // 更新雲端時間顯示
+            if (document.getElementById('cloud-modal').classList.contains('show')) {
+                setTimeout(() => {
+                    closeModal('result-modal');
+                    showCloudModal();
+                }, 1500);
+            }
         } else {
             const error = await response.json();
             showResult('❌ 備份失敗', error.message || '上傳時發生錯誤', false);
         }
     } catch (error) {
-        showResult('❌ 備份失敗', '網路錯誤：' + error.message, false);
+        showResult('❌ 備份失敗', '網路錯誤: ' + error.message, false);
     }
-    
-    closeModal('backup-modal');
 }
 
 async function doRestore() {
-    const password = document.getElementById('restore-password').value;
-    
-    if (password !== BACKUP_PASSWORD) {
-        showResult('❌ 還原失敗', '備份碼錯誤', false);
-        closeModal('restore-modal');
-        return;
-    }
-    
     const token = getStoredToken();
     const gistId = getStoredGistId();
+    
+    // 關閉確認視窗
+    closeModal('confirm-restore-modal');
     
     try {
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -540,7 +738,6 @@ async function doRestore() {
         if (!response.ok) {
             const error = await response.json();
             showResult('❌ 還原失敗', error.message || '下載時發生錯誤', false);
-            closeModal('restore-modal');
             return;
         }
         
@@ -550,35 +747,32 @@ async function doRestore() {
         
         const currentToken = getStoredToken();
         const currentGistId = getStoredGistId();
+        const backupTimestamp = data._backup_timestamp;
         
         localStorage.clear();
         localStorage.setItem(TOKEN_KEY, currentToken);
         localStorage.setItem(GIST_KEY, currentGistId);
         
         for (const key in data) {
-            localStorage.setItem(key, data[key]);
+            if (key !== '_backup_timestamp') {
+                localStorage.setItem(key, data[key]);
+            }
         }
         
-        showResult('✅ 還原成功', '資料已從雲端下載！\n頁面將在 2 秒後重新整理', true);
+        if (backupTimestamp) {
+            setLastBackupTime(backupTimestamp);
+        }
+        
+        showResult('✅ 還原成功', `資料已從雲端下載!\n備份時間: ${formatDateTime(backupTimestamp)}\n\n頁面將在 2 秒後重新整理`, true);
         
         setTimeout(() => {
             location.reload();
         }, 2000);
         
     } catch (error) {
-        showResult('❌ 還原失敗', '網路錯誤：' + error.message, false);
+        showResult('❌ 還原失敗', '網路錯誤: ' + error.message, false);
     }
-    
-    closeModal('restore-modal');
 }
-
-// Enter 鍵快捷鍵
-document.getElementById('backup-password').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') doBackup();
-});
-document.getElementById('restore-password').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') doRestore();
-});
 
 // 載入網站列表
 loadRoot();
