@@ -353,6 +353,10 @@ footer {
                 <span class="backup-info-label">☁️ 雲端備份:</span>
                 <span id="cloud-backup-time">--</span>
             </div>
+            <div class="backup-info-item">
+                <span class="backup-info-label">🔄 狀態:</span>
+                <span id="sync-status" style="font-weight:600;">--</span>
+            </div>
         </div>
         
         <div class="action-section">
@@ -542,6 +546,27 @@ function formatDateTime(timestamp) {
     });
 }
 
+function updateSyncStatus(localTime, cloudTime) {
+    const syncStatusEl = document.getElementById('sync-status');
+    
+    if (!localTime || !cloudTime) {
+        syncStatusEl.textContent = '--';
+        syncStatusEl.style.color = '#666';
+        return;
+    }
+    
+    const localTimestamp = new Date(localTime).getTime();
+    const cloudTimestamp = new Date(cloudTime).getTime();
+    
+    if (localTimestamp >= cloudTimestamp) {
+        syncStatusEl.textContent = '⬆️ 尚未上傳';
+        syncStatusEl.style.color = '#ff9500';
+    } else {
+        syncStatusEl.textContent = '⬇️ 尚未下載';
+        syncStatusEl.style.color = '#007aff';
+    }
+}
+
 function updateTokenStatus() {
     const token = getStoredToken();
     const statusEl = document.getElementById('token-status');
@@ -586,7 +611,9 @@ async function showCloudModal() {
     // 如果已設定 Token，載入雲端備份時間
     if (token) {
         const cloudTimeEl = document.getElementById('cloud-backup-time');
+        const syncStatusEl = document.getElementById('sync-status');
         cloudTimeEl.textContent = '載入中...';
+        syncStatusEl.textContent = '--';
         
         try {
             const response = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -601,15 +628,23 @@ async function showCloudModal() {
                 const data = JSON.parse(content);
                 
                 if (data._backup_timestamp) {
-                    cloudTimeEl.textContent = formatDateTime(data._backup_timestamp);
+                    const cloudTime = data._backup_timestamp;
+                    cloudTimeEl.textContent = formatDateTime(cloudTime);
+                    
+                    // 比較本地和雲端時間
+                    const localTime = getLastBackupTime();
+                    updateSyncStatus(localTime, cloudTime);
                 } else {
                     cloudTimeEl.textContent = '未知';
+                    syncStatusEl.textContent = '--';
                 }
             } else {
                 cloudTimeEl.textContent = '無法取得';
+                syncStatusEl.textContent = '--';
             }
         } catch (error) {
             cloudTimeEl.textContent = '讀取失敗';
+            syncStatusEl.textContent = '--';
         }
     }
     
@@ -779,4 +814,3 @@ loadRoot();
 </script>
 </body>
 </html>
-
