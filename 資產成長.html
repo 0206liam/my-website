@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>折線圖</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-luxon/1.3.1/chartjs-adapter-luxon.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 24px; }
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 24px; color: #7dd3fc; letter-spacing: 2px; }
+  .container { max-width: 960px; margin: 0 auto; }
+  .card { background: #1e293b; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+  label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 6px; }
+  textarea {
+    width: 100%; height: 180px; background: #0f172a; border: 1px solid #475569;
+    color: #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.88rem;
+    font-family: monospace; resize: vertical; outline: none; line-height: 1.6;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: #7dd3fc; }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+  .btn-parse { background: #0ea5e9; color: #fff; }
+  .btn-parse:hover { background: #38bdf8; }
+  .btn-clear { background: #475569; color: #e2e8f0; }
+  .btn-clear:hover { background: #64748b; }
+  .btn-toggle { background: #334155; color: #e2e8f0; border: 1px solid #475569; }
+  .btn-toggle.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+  .msg { font-size: 0.82rem; margin-top: 10px; padding: 8px 12px; border-radius: 6px; }
+  .msg.ok { background: #14532d55; color: #4ade80; border: 1px solid #166534; }
+  .msg.err { background: #7f1d1d55; color: #f87171; border: 1px solid #991b1b; }
+  .chart-wrap { position: relative; height: 420px; }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+  .stat-box { background: #0f172a; border-radius: 10px; padding: 12px 18px; flex: 1; min-width: 150px; border: 1px solid #334155; }
+  .stat-box .s-label { font-size: 0.75rem; color: #64748b; margin-bottom: 4px; }
+  .stat-box .s-val { font-size: 1.1rem; font-weight: 700; color: #7dd3fc; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { color: #7dd3fc; text-align: left; padding: 8px 12px; border-bottom: 1px solid #334155; }
+  td { padding: 7px 12px; border-bottom: 1px solid #1e293b40; }
+  tr:hover td { background: #0f172a55; }
+  .btn-del { background: #ef4444; color: #fff; padding: 4px 10px; font-size: 0.76rem; border-radius: 5px; border: none; cursor: pointer; }
+  .btn-del:hover { background: #f87171; }
+  .empty { text-align: center; color: #475569; padding: 20px 0; }
+  .table-scroll { max-height: 280px; overflow-y: auto; }
+  .hint { font-size: 0.78rem; color: #64748b; margin-top: 6px; }
+  .extend-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .extend-row input[type=number] {
+    width: 90px; background: #0f172a; border: 1px solid #475569; color: #e2e8f0;
+    padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none;
+  }
+  .extend-row input:focus { border-color: #7dd3fc; }
+  .extend-row label { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📈 總資產折線圖</h1>
+
+  <div class="card">
+    <label>貼上原始資料</label>
+    <textarea id="rawInput" placeholder="2023/11/27&#10;總資產 124854&#10;12/11&#10;總資產 127055"></textarea>
+    <p class="hint">支援 YYYY/M/D 或 M/D（自動延續年份）、總資產 數字 或 總資產=數字</p>
+    <div class="extend-row">
+      <label>回歸線延伸預測</label>
+      <input type="number" id="extendMonths" value="12" min="0" max="120">
+      <label>個月</label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-parse" onclick="parseInput()">解析並繪圖</button>
+      <button class="btn btn-clear" onclick="clearAll()">清除全部</button>
+      <button class="btn btn-toggle" id="logBtn" onclick="toggleLog()">對數座標軸</button>
+    </div>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>日期</th><th>數值</th><th></th></tr></thead>
+        <tbody id="tableBody"><tr><td colspan="3" class="empty">尚無資料</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let data = [];
+let useLog = false;
+
+const ctx = document.getElementById('chart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    datasets: [
+      {
+        label: '總資產',
+        data: [],
+        borderColor: '#38bdf8',
+        backgroundColor: 'rgba(56,189,248,0.10)',
+        pointBackgroundColor: '#7dd3fc',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        tension: 0.3,
+        fill: true,
+        borderWidth: 2.5,
+        order: 1,
+      },
+      {
+        label: '線性回歸',
+        data: [],
+        borderColor: '#f87171',
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+        borderWidth: 2,
+        borderDash: [6, 4],
+        tension: 0,
+        fill: false,
+        order: 2,
+      },
+      {
+        label: '指數回歸',
+        data: [],
+        borderColor: '#a78bfa',
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+        borderWidth: 2,
+        borderDash: [3, 3],
+        tension: 0,
+        fill: false,
+        order: 3,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#94a3b8' } },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#7dd3fc',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ' ' + Math.round(ctx.parsed.y).toLocaleString()
+        }
+      }
+    },
+    scales: {
+      x: {
+        type: 'time',
+        time: { unit: 'month', tooltipFormat: 'yyyy/MM/dd', displayFormats: { month: 'yyyy/MM' } },
+        ticks: { color: '#94a3b8', maxRotation: 45, autoSkip: true, maxTicksLimit: 16 },
+        grid: { color: '#1e293b' },
+      },
+      y: {
+        type: 'linear',
+        ticks: { color: '#94a3b8', callback: v => v.toLocaleString() },
+        grid: { color: '#334155' },
+      }
+    }
+  }
+});
+
+function toggleLog() {
+  useLog = !useLog;
+  const btn = document.getElementById('logBtn');
+  btn.classList.toggle('active', useLog);
+  btn.textContent = useLog ? '✓ 對數座標軸' : '對數座標軸';
+  chart.options.scales.y.type = useLog ? 'logarithmic' : 'linear';
+  // 對數模式下 y ticks 格式化
+  chart.options.scales.y.ticks.callback = useLog
+    ? v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v
+    : v => v.toLocaleString();
+  render();
+}
+
+function toISODate(y, m, d) {
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+// 線性回歸（用於線性座標軸）
+function linReg(pts) {
+  const n = pts.length;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const p of pts) { sx += p.x; sy += p.y; sxx += p.x**2; sxy += p.x*p.y; }
+  const slope = (n*sxy - sx*sy) / (n*sxx - sx**2);
+  const intercept = (sy - slope*sx) / n;
+  const yMean = sy / n;
+  let ssTot = 0, ssRes = 0;
+  for (const p of pts) { ssTot += (p.y-yMean)**2; ssRes += (p.y-(slope*p.x+intercept))**2; }
+  return { slope, intercept, r2: 1 - ssRes/ssTot };
+}
+
+// 指數回歸：對 ln(y) 做線性回歸，y = e^(intercept) * e^(slope*x)
+function expReg(pts) {
+  const logPts = pts.map(p => ({ x: p.x, y: Math.log(p.y) }));
+  const { slope, intercept, r2 } = linReg(logPts);
+  return { slope, intercept, r2 };
+}
+
+function parseInput() {
+  const raw = document.getElementById('rawInput').value.trim();
+  if (!raw) return showMsg('請先貼上資料', 'err');
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const parsed = [];
+  let curYear = null, curDate = null;
+  for (let line of lines) {
+    let m = line.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (m) { curYear = parseInt(m[1]); curDate = toISODate(m[1], m[2], m[3]); continue; }
+    m = line.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+    if (m) { if (curYear) curDate = toISODate(curYear, m[1], m[2]); continue; }
+    m = line.match(/總資產\s*[=＝：:]\s*([\d,]+)/) || line.match(/總資產\s+([\d,]+)/);
+    if (m && curDate) parsed.push({ date: curDate, val: parseInt(m[1].replace(/,/g,'')) });
+  }
+  if (!parsed.length) return showMsg('未解析到任何資料', 'err');
+  parsed.sort((a, b) => a.date.localeCompare(b.date));
+  data = parsed;
+  render();
+  showMsg(`成功解析 ${data.length} 筆資料`, 'ok');
+}
+
+function deletePoint(i) { data.splice(i, 1); render(); }
+
+function clearAll() {
+  data = [];
+  document.getElementById('rawInput').value = '';
+  document.getElementById('msg').innerHTML = '';
+  document.getElementById('stats').innerHTML = '';
+  render();
+}
+
+function showMsg(txt, type) {
+  document.getElementById('msg').innerHTML = `<div class="msg ${type}">${txt}</div>`;
+}
+
+function render() {
+  chart.data.datasets[0].data = data.map(p => ({ x: p.date, y: p.val }));
+
+  let statsHTML = '';
+  if (data.length >= 2) {
+    const msDay = 86400000;
+    const pts = data.map(p => ({ x: new Date(p.date).getTime(), y: p.val }));
+    const extMonths = parseInt(document.getElementById('extendMonths').value) || 0;
+    const x0 = pts[0].x;
+    const xEnd = pts[pts.length-1].x + extMonths * 30.44 * msDay;
+    const STEPS = 60;
+    const xStep = (xEnd - x0) / STEPS;
+    const xs = Array.from({ length: STEPS + 1 }, (_, i) => x0 + i * xStep);
+
+    // 線性回歸
+    const lin = linReg(pts);
+    const linData = useLog
+      ? xs.map(x => ({ x: new Date(x).toISOString().slice(0,10), y: lin.slope*x+lin.intercept }))
+      : [
+          { x: new Date(x0).toISOString().slice(0,10), y: lin.slope*x0+lin.intercept },
+          { x: new Date(xEnd).toISOString().slice(0,10), y: lin.slope*xEnd+lin.intercept },
+        ];
+
+    // 指數回歸
+    const exp_ = expReg(pts);
+    const expData = xs.map(x => ({
+      x: new Date(x).toISOString().slice(0,10),
+      y: Math.exp(exp_.intercept + exp_.slope * x)
+    }));
+
+    chart.data.datasets[1].data = linData;
+    chart.data.datasets[2].data = expData;
+
+    const perMonth = lin.slope * msDay * 30.44;
+    const perYear  = lin.slope * msDay * 365.25;
+    const linPred  = lin.slope * xEnd + lin.intercept;
+    const expMonthlyRate = (Math.exp(exp_.slope * msDay * 30.44) - 1) * 100;
+    const expYearlyRate  = (Math.exp(exp_.slope * msDay * 365.25) - 1) * 100;
+    const expPred  = Math.exp(exp_.intercept + exp_.slope * xEnd);
+
+    statsHTML = `
+      <div class="stat-box"><div class="s-label">線性 R²</div><div class="s-val">${lin.r2.toFixed(4)}</div></div>
+      <div class="stat-box"><div class="s-label">每月增長（線性）</div><div class="s-val">+${Math.round(perMonth).toLocaleString()}</div></div>
+      <div class="stat-box"><div class="s-label">每年增長（線性）</div><div class="s-val">+${Math.round(perYear).toLocaleString()}</div></div>
+      ${extMonths > 0 ? `<div class="stat-box"><div class="s-label">${extMonths}月後預測（線性）</div><div class="s-val">${Math.round(linPred).toLocaleString()}</div></div>` : ''}
+      <div class="stat-box"><div class="s-label">指數 R²</div><div class="s-val">${exp_.r2.toFixed(4)}</div></div>
+      <div class="stat-box"><div class="s-label">每月增長率（指數）</div><div class="s-val">+${expMonthlyRate.toFixed(2)}%</div></div>
+      <div class="stat-box"><div class="s-label">每年增長率（指數）</div><div class="s-val">+${expYearlyRate.toFixed(1)}%</div></div>
+      ${extMonths > 0 ? `<div class="stat-box"><div class="s-label">${extMonths}月後預測（指數）</div><div class="s-val">${Math.round(expPred).toLocaleString()}</div></div>` : ''}
+    `;
+  } else {
+    chart.data.datasets[1].data = [];
+    chart.data.datasets[2].data = [];
+  }
+  chart.update();
+  document.getElementById('stats').innerHTML = statsHTML;
+
+  const tb = document.getElementById('tableBody');
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">尚無資料</td></tr>'; return; }
+  tb.innerHTML = data.map((p, i) => `
+    <tr>
+      <td>${p.date}</td>
+      <td>${p.val.toLocaleString()}</td>
+      <td><button class="btn-del" onclick="deletePoint(${i})">刪除</button></td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('rawInput').value = `2023/11/27
+總資產 124854
+12/11 
+總資產 127055
+2024/1/16
+總資產 126182
+2/22
+總資產 137000
+3/16
+總資產 140120
+5/9
+總資產 144892
+6/2
+總資產 146764
+6/29
+總資產 152622
+7/30
+總資產 159527
+9/13
+總資產 161084
+10/11
+總資產 168158
+11/11
+總資產 172478
+12/5
+總資產 173779
+2025/1/12
+總資產 170339
+2/3
+總資產 174610
+2/21
+總資產 200115
+3/9
+總資產=199374
+3/17
+總資產=198031
+4/18
+總資產=195839
+5/10
+總資產=190794
+5/30
+總資產=190463
+6/11
+總資產=190463
+6/25
+總資產=196639
+7/14
+總資產=192358
+7/29
+總資產 203756
+8/29
+總資產=205029
+9/14
+總資產=207779
+9/26
+現金=43653
+10/6
+總資產=207503
+10/10
+總資產=207549
+10/26
+總資產=207549
+11/22
+總資產=207549
+12/7
+總資產=227123
+2026/1/17
+總資產=227059
+2/11
+總資產=241580
+3/7
+總資產=248745`;
+parseInput();
+</script>
+</body>
+</html>
