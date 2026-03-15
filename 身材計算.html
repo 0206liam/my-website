@@ -127,26 +127,29 @@ var ctx=thecanvas.getContext('2d');
 
 function resetDots(){dots=DOTS.map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});}
 
+function getRenderedSize(){
+  var tagW=theimg.offsetWidth, tagH=theimg.offsetHeight;
+  var natW=theimg.naturalWidth, natH=theimg.naturalHeight;
+  var scale=Math.min(tagW/natW, tagH/natH);
+  return {w:Math.round(natW*scale), h:Math.round(natH*scale)};
+}
+
 function syncCanvas(){
-  var w=theimg.offsetWidth;
-  var h=theimg.offsetHeight;
-  thecanvas.width=w;
-  thecanvas.height=h;
-  thecanvas.style.width=w+'px';
-  thecanvas.style.height=h+'px';
-  // keep imgwrap height in sync so canvas overlaps correctly
-  document.getElementById('imgwrap').style.height=h+'px';
+  var s=getRenderedSize();
+  thecanvas.width=s.w;
+  thecanvas.height=s.h;
+  thecanvas.style.width=s.w+'px';
+  thecanvas.style.height=s.h+'px';
+  document.getElementById('imgwrap').style.height=s.h+'px';
 }
 
 function i2c(ix,iy){
-  var sx=theimg.offsetWidth/theimg.naturalWidth;
-  var sy=theimg.offsetHeight/theimg.naturalHeight;
-  return {x:ix*sx, y:iy*sy};
+  var s=getRenderedSize();
+  return {x:ix*(s.w/theimg.naturalWidth), y:iy*(s.h/theimg.naturalHeight)};
 }
 function c2i(cx,cy){
-  var sx=theimg.naturalWidth/theimg.offsetWidth;
-  var sy=theimg.naturalHeight/theimg.offsetHeight;
-  return {x:cx*sx, y:cy*sy};
+  var s=getRenderedSize();
+  return {x:cx*(theimg.naturalWidth/s.w), y:cy*(theimg.naturalHeight/s.h)};
 }
 
 function draw(){
