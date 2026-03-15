@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#f0f0f0;color:#222;min-height:400px}
+#app{padding:1rem}
+h1{font-size:17px;font-weight:500;margin-bottom:1rem}
+
+#upload-section{background:#fff;border-radius:10px;border:2px dashed #ccc;padding:2.5rem 1rem;text-align:center}
+#upload-section p{color:#888;font-size:13px;margin-top:6px}
+.ubtn{margin-top:10px;padding:7px 18px;border:1px solid #bbb;border-radius:7px;font-size:13px;cursor:pointer;background:#fff}
+
+#editor-section{display:none;gap:12px}
+#editor-section.show{display:flex}
+.left{flex:1;min-width:0;overflow:hidden}
+.right{width:220px;flex-shrink:0;background:#fff;border-radius:10px;border:1px solid #ddd;padding:12px;overflow-y:auto;max-height:90vh}
+
+#imgwrap{
+  position:relative;
+  display:block;
+  line-height:0;
+  border-radius:8px;
+  overflow:hidden;
+  width:100%;
+}
+#theimg{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:calc(100vh - 80px);
+  object-fit:contain;
+  border-radius:8px;
+}
+#thecanvas{position:absolute;top:0;left:0;pointer-events:all;cursor:crosshair;width:100%;height:100%}
+
+.rh{font-size:11px;font-weight:500;color:#aaa;letter-spacing:.5px;margin:8px 0 4px;text-transform:uppercase}
+.di{display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:1px}
+.di:hover{background:#f5f5f5}
+.di.act{background:#EEEDFE}
+.dc{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.ck{margin-left:auto;color:#3B6D11;font-size:11px}
+
+.divider{height:1px;background:#eee;margin:10px 0}
+.mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+.mrow:last-child{border:none}
+.ml{color:#777}
+.mv{font-weight:500}
+.bg{background:#EAF3DE;color:#3B6D11;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
+.bw{background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
+.pend{color:#bbb;font-size:12px;text-align:center;padding:10px 0}
+.hint{font-size:11px;color:#bbb;margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="app">
+<h1>身材比例計算器</h1>
+
+<div id="upload-section">
+  <svg width="36" height="36" viewBox="0 0 36 36" style="display:block;margin:0 auto 8px"><rect width="36" height="36" rx="8" fill="#EEEDFE"/><path d="M18 10v12M12 16l6-6 6 6" stroke="#7F77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="24" width="16" height="2" rx="1" fill="#7F77DD"/></svg>
+  <p>上傳全身正面照片</p>
+  <button class="ubtn" id="ubtn">選擇圖片</button>
+  <input type="file" id="fileInput" accept="image/*" style="display:none">
+</div>
+
+<div id="editor-section">
+  <div class="left">
+    <div id="imgwrap">
+      <img id="theimg">
+      <canvas id="thecanvas"></canvas>
+    </div>
+  </div>
+  <div class="right">
+    <div id="dotlist"></div>
+    <p class="hint">選取點位 → 點擊圖片放置，可拖曳調整</p>
+    <div class="divider"></div>
+    <div class="rh" style="margin-top:0">比例結果</div>
+    <div id="metrics"><div class="pend">完成所有點位後顯示</div></div>
+  </div>
+</div>
+</div>
+
+<script>
+var DOTS=[
+  {id:'headTop',    label:'頭頂', color:'#7F77DD', group:'head'},
+  {id:'headBottom', label:'下巴', color:'#534AB7', group:'head'},
+  {id:'headLeft',   label:'頭左', color:'#AFA9EC', group:'head'},
+  {id:'headRight',  label:'頭右', color:'#AFA9EC', group:'head'},
+  {id:'shoulderL',  label:'左肩', color:'#1D9E75', group:'shoulder'},
+  {id:'shoulderR',  label:'右肩', color:'#0F6E56', group:'shoulder'},
+  {id:'waistL',     label:'左腰', color:'#EF9F27', group:'waist'},
+  {id:'waistR',     label:'右腰', color:'#BA7517', group:'waist'},
+  {id:'navel',      label:'肚臍', color:'#D85A30', group:'navel'},
+  {id:'foot',       label:'腳底', color:'#E24B4A', group:'foot'},
+];
+var GROUPS=[
+  {key:'head',label:'頭部（4點）'},
+  {key:'shoulder',label:'肩寬（2點）'},
+  {key:'waist',label:'腰寬（2點）'},
+  {key:'navel',label:'肚臍（1點）'},
+  {key:'foot',label:'腳底（1點）'},
+];
+
+var dots=[];
+var activeDot='headTop';
+var dragging=null;
+var dragOff={x:0,y:0};
+
+var theimg=document.getElementById('theimg');
+var thecanvas=document.getElementById('thecanvas');
+var ctx=thecanvas.getContext('2d');
+
+function resetDots(){dots=DOTS.map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});}
+
+function syncCanvas(){
+  var w=theimg.offsetWidth;
+  var h=theimg.offsetHeight;
+  thecanvas.width=w;
+  thecanvas.height=h;
+  thecanvas.style.width=w+'px';
+  thecanvas.style.height=h+'px';
+  // keep imgwrap height in sync so canvas overlaps correctly
+  document.getElementById('imgwrap').style.height=h+'px';
+}
+
+function i2c(ix,iy){
+  var sx=theimg.offsetWidth/theimg.naturalWidth;
+  var sy=theimg.offsetHeight/theimg.naturalHeight;
+  return {x:ix*sx, y:iy*sy};
+}
+function c2i(cx,cy){
+  var sx=theimg.naturalWidth/theimg.offsetWidth;
+  var sy=theimg.naturalHeight/theimg.offsetHeight;
+  return {x:cx*sx, y:cy*sy};
+}
+
+function draw(){
+  ctx.clearRect(0,0,thecanvas.width,thecanvas.height);
+  var pairs=[['headTop','headBottom'],['headLeft','headRight'],['shoulderL','shoulderR'],['waistL','waistR']];
+  pairs.forEach(function(p){
+    var a=getDot(p[0]),b=getDot(p[1]);
+    if(!a||a.x===null||b.x===null)return;
+    var pa=i2c(a.x,a.y),pb=i2c(b.x,b.y);
+    ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
+    ctx.strokeStyle=a.color+'77';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+  });
+  dots.forEach(function(d){
+    if(d.x===null)return;
+    var p=i2c(d.x,d.y);
+    var act=activeDot===d.id;
+    ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);
+    ctx.fillStyle=act?d.color:d.color+'cc';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=act?2.5:1.5;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(d.label[0],p.x,p.y);
+  });
+  calcMetrics();
+}
+
+function getDot(id){for(var i=0;i<dots.length;i++){if(dots[i].id===id)return dots[i];}return null;}
+
+function getPos(e){
+  var r=thecanvas.getBoundingClientRect();
+  var src=e.touches?e.touches[0]:e;
+  return {x:src.clientX-r.left, y:src.clientY-r.top};
+}
+
+function nearDot(cx,cy){
+  for(var i=dots.length-1;i>=0;i--){
+    var d=dots[i];if(d.x===null)continue;
+    var p=i2c(d.x,d.y);
+    if(Math.hypot(p.x-cx,p.y-cy)<14)return d.id;
+  }
+  return null;
+}
+
+thecanvas.addEventListener('mousedown',function(e){
+  e.preventDefault();
+  var pos=getPos(e);
+  var hit=nearDot(pos.x,pos.y);
+  if(hit){
+    dragging=hit;
+    var d=getDot(hit);var p=i2c(d.x,d.y);
+    dragOff={x:p.x-pos.x,y:p.y-pos.y};
+    activeDot=hit;
+  } else {
+    var d2=getDot(activeDot);
+    if(!d2)return;
+    var ip=c2i(pos.x,pos.y);
+    d2.x=ip.x;d2.y=ip.y;
+    var idx=dots.findIndex(function(dd){return dd.id===activeDot;});
+    for(var i=idx+1;i<dots.length;i++){if(dots[i].x===null){activeDot=dots[i].id;break;}}
+  }
+  renderList();draw();
+});
+
+thecanvas.addEventListener('mousemove',function(e){
+  if(!dragging)return;
+  var pos=getPos(e);
+  var d=getDot(dragging);
+  var ip=c2i(pos.x+dragOff.x,pos.y+dragOff.y);
+  d.x=ip.x;d.y=ip.y;
+  draw();renderList();
+});
+thecanvas.addEventListener('mouseup',function(){dragging=null;});
+thecanvas.addEventListener('mouseleave',function(){dragging=null;});
+
+thecanvas.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0];thecanvas.dispatchEvent(new MouseEvent('mousedown',{clientX:t.clientX,clientY:t.clientY}));},{passive:false});
+thecanvas.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];thecanvas.dispatchEvent(new MouseEvent('mousemove',{clientX:t.clientX,clientY:t.clientY}));},{passive:false});
+thecanvas.addEventListener('touchend',function(){thecanvas.dispatchEvent(new MouseEvent('mouseup'));});
+
+function renderList(){
+  var el=document.getElementById('dotlist');
+  el.innerHTML='';
+  GROUPS.forEach(function(g){
+    var lbl=document.createElement('div');lbl.className='rh';lbl.textContent=g.label;el.appendChild(lbl);
+    dots.filter(function(d){return d.group===g.key;}).forEach(function(d){
+      var row=document.createElement('div');
+      row.className='di'+(activeDot===d.id?' act':'');
+      row.innerHTML='<span class="dc" style="background:'+d.color+'"></span><span>'+d.label+'</span>'+(d.x!==null?'<span class="ck">✓</span>':'');
+      row.addEventListener('click',function(){activeDot=d.id;renderList();draw();});
+      el.appendChild(row);
+    });
+  });
+}
+
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+
+function calcMetrics(){
+  var el=document.getElementById('metrics');
+  if(dots.some(function(d){return d.x===null;})){
+    el.innerHTML='<div class="pend">完成所有點位後顯示</div>';return;
+  }
+  var hT=getDot('headTop'),hB=getDot('headBottom'),hL=getDot('headLeft'),hR=getDot('headRight');
+  var sL=getDot('shoulderL'),sR=getDot('shoulderR'),wL=getDot('waistL'),wR=getDot('waistR');
+  var nav=getDot('navel'),ft=getDot('foot');
+  var headH=dist(hT,hB),headW=dist(hL,hR);
+  var shouldW=dist(sL,sR),waistW=dist(wL,wR);
+  var totalH=dist(hT,ft);
+  var navelH=Math.abs(ft.y-nav.y),totalHpx=Math.abs(ft.y-hT.y);
+  var navelR=navelH/totalHpx;
+  var rows=[
+    {label:'頭身比',val:(totalH/headH).toFixed(2)+' 頭',good:(totalH/headH)>=7,tip:(totalH/headH)>=7?'勻稱':'偏短'},
+    {label:'頭肩比',val:(shouldW/headW).toFixed(2),good:(shouldW/headW)>=1.5&&(shouldW/headW)<=2,tip:(shouldW/headW)>=1.5&&(shouldW/headW)<=2?'標準':'注意'},
+    {label:'腰肩比',val:(waistW/shouldW).toFixed(2),good:(waistW/shouldW)<=0.75,tip:(waistW/shouldW)<=0.75?'標準':'偏寬'},
+    {label:'肚臍高度比',val:(navelR*100).toFixed(1)+'%',good:navelR>=0.618,tip:navelR>=0.618?'黃金比例':'偏低'},
+  ];
+  el.innerHTML=rows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+(r.good?'bg':'bw')+'">'+r.tip+'</span></span></div>';}).join('');
+}
+
+function loadImage(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    theimg.onload=function(){
+      resetDots();
+      activeDot='headTop';
+      document.getElementById('upload-section').style.display='none';
+      var es=document.getElementById('editor-section');
+      es.style.display='flex';
+      setTimeout(function(){
+        syncCanvas();
+        renderList();
+        draw();
+      },100);
+    };
+    theimg.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('ubtn').addEventListener('click',function(){document.getElementById('fileInput').click();});
+document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadImage(e.target.files[0]);});
+var uz=document.getElementById('upload-section');
+uz.addEventListener('dragover',function(e){e.preventDefault();uz.style.borderColor='#7F77DD';});
+uz.addEventListener('dragleave',function(){uz.style.borderColor='#ccc';});
+uz.addEventListener('drop',function(e){e.preventDefault();uz.style.borderColor='#ccc';if(e.dataTransfer.files[0])loadImage(e.dataTransfer.files[0]);});
+window.addEventListener('resize',function(){if(theimg.src&&theimg.naturalWidth>0){syncCanvas();draw();}});
+</script>
+</body>
+</html>
