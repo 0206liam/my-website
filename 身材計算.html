@@ -14,33 +14,43 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 
 #editor-section{display:none;gap:12px}
 #editor-section.show{display:flex}
-.left{flex:1;min-width:0;overflow:hidden}
+.left{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .right{width:220px;flex-shrink:0;background:#fff;border-radius:10px;border:1px solid #ddd;padding:12px;overflow-y:auto;max-height:90vh}
 
-#imgwrap{
+/* viewport: clips the image, handles wheel/drag */
+#viewport{
   position:relative;
-  line-height:0;
+  width:100%;
   border-radius:8px;
   overflow:hidden;
+  background:#e8e8e8;
+  cursor:grab;
+  user-select:none;
 }
-#theimg{
-  display:block;
-  border-radius:8px;
+#viewport.grabbing{cursor:grabbing;}
+/* inner: scaled+translated */
+#inner{
+  position:absolute;
+  top:0;left:0;
+  transform-origin:0 0;
 }
-#thecanvas{position:absolute;top:0;left:0;pointer-events:all;cursor:crosshair;}
+#theimg{display:block;}
+#thecanvas{position:absolute;top:0;left:0;pointer-events:none;}
+
+/* zoom controls */
+.zoom-bar{display:flex;align-items:center;gap:6px;}
+.zbtn{width:28px;height:28px;border:1px solid #ccc;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.zbtn:hover{background:#f0f0f0;}
+#zoomLabel{font-size:11px;color:#888;min-width:36px;text-align:center;}
 
 .rh{font-size:11px;font-weight:500;color:#aaa;letter-spacing:.5px;margin:8px 0 4px;text-transform:uppercase}
 .di{display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:1px}
-.di:hover{background:#f5f5f5}
-.di.act{background:#EEEDFE}
+.di:hover{background:#f5f5f5}.di.act{background:#EEEDFE}
 .dc{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 .ck{margin-left:auto;color:#3B6D11;font-size:11px}
-
 .divider{height:1px;background:#eee;margin:10px 0}
 .mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
-.mrow:last-child{border:none}
-.ml{color:#777}
-.mv{font-weight:500}
+.mrow:last-child{border:none}.ml{color:#777}.mv{font-weight:500}
 .bg{background:#EAF3DE;color:#3B6D11;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
 .bw{background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
 .pend{color:#bbb;font-size:12px;text-align:center;padding:10px 0}
@@ -60,9 +70,18 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 
 <div id="editor-section">
   <div class="left">
-    <div id="imgwrap">
-      <img id="theimg">
-      <canvas id="thecanvas"></canvas>
+    <div class="zoom-bar">
+      <button class="zbtn" id="zoomOut">−</button>
+      <span id="zoomLabel">100%</span>
+      <button class="zbtn" id="zoomIn">+</button>
+      <button class="zbtn" id="zoomFit" title="重置縮放" style="width:auto;padding:0 8px;font-size:11px;">重置</button>
+      <span style="font-size:11px;color:#aaa;margin-left:4px;">滾輪縮放・拖曳平移</span>
+    </div>
+    <div id="viewport">
+      <div id="inner">
+        <img id="theimg">
+        <canvas id="thecanvas"></canvas>
+      </div>
     </div>
   </div>
   <div class="right">
@@ -73,7 +92,7 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
       <span style="font-size:12px;color:#888;white-space:nowrap">cm</span>
     </div>
     <div id="dotlist"></div>
-    <p class="hint">選取點位 → 點擊圖片放置，可拖曳調整</p>
+    <p class="hint">選取點位 → 點擊圖片放置，可拖曳調整<br>再次點擊已選點位 或 點擊空白處取消選取後可平移圖片</p>
     <div style="display:flex;gap:6px;margin-top:10px">
       <button class="ubtn" id="resetBtn" style="flex:1;font-size:11px;padding:5px 4px">🔄 重選位置</button>
       <button class="ubtn" id="newImgBtn" style="flex:1;font-size:11px;padding:5px 4px">🖼 換圖片</button>
@@ -112,126 +131,209 @@ var GROUPS=[
 
 var dots=[];
 var activeDot='headTop';
-var dragging=null;
+var draggingDot=null;
 var dragOff={x:0,y:0};
+
+// pan/zoom state
+var zoom=1, baseZoom=1;
+var panX=0, panY=0;
+var isPanning=false, panStart={x:0,y:0}, panOrigin={x:0,y:0};
 
 var theimg=document.getElementById('theimg');
 var thecanvas=document.getElementById('thecanvas');
 var ctx=thecanvas.getContext('2d');
+var viewport=document.getElementById('viewport');
+var inner=document.getElementById('inner');
 
 function resetDots(){dots=DOTS.map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});}
 
-function getRenderedSize(){
-  return {w: theimg.offsetWidth, h: theimg.offsetHeight};
-}
-
+/* ---------- fit & size ---------- */
 function fitImage(){
-  var wrap=document.getElementById('imgwrap');
-  var maxW=wrap.parentElement.offsetWidth;
-  var maxH=window.innerHeight-80;
+  var maxW=viewport.parentElement.offsetWidth;
+  var maxH=window.innerHeight-120;
   var natW=theimg.naturalWidth, natH=theimg.naturalHeight;
-  var scale=Math.min(maxW/natW, maxH/natH, 1);
-  // allow upscale if image is tiny
-  if(natW<maxW && natH<maxH) scale=Math.min(maxW/natW, maxH/natH);
-  var w=Math.round(natW*scale), h=Math.round(natH*scale);
-  theimg.style.width=w+'px';
-  theimg.style.height=h+'px';
-  wrap.style.width=w+'px';
-  wrap.style.height=h+'px';
+  baseZoom=Math.min(maxW/natW, maxH/natH);
+  zoom=baseZoom;
+  panX=0; panY=0;
+  applyTransform();
+  // viewport height = image height at base zoom
+  viewport.style.height=Math.round(natH*baseZoom)+'px';
+  // canvas matches natural size; CSS transform handles display
+  thecanvas.width=natW;
+  thecanvas.height=natH;
+  thecanvas.style.width=natW+'px';
+  thecanvas.style.height=natH+'px';
 }
 
-function syncCanvas(){
-  var s=getRenderedSize();
-  thecanvas.width=s.w;
-  thecanvas.height=s.h;
-  thecanvas.style.width=s.w+'px';
-  thecanvas.style.height=s.h+'px';
+function applyTransform(){
+  inner.style.transform='translate('+panX+'px,'+panY+'px) scale('+zoom+')';
+  document.getElementById('zoomLabel').textContent=Math.round(zoom/baseZoom*100)+'%';
 }
 
-function i2c(ix,iy){
-  var s=getRenderedSize();
-  return {x:ix*(s.w/theimg.naturalWidth), y:iy*(s.h/theimg.naturalHeight)};
-}
-function c2i(cx,cy){
-  var s=getRenderedSize();
-  return {x:cx*(theimg.naturalWidth/s.w), y:cy*(theimg.naturalHeight/s.h)};
+function clampPan(){
+  var natW=theimg.naturalWidth, natH=theimg.naturalHeight;
+  var vw=viewport.offsetWidth, vh=viewport.offsetHeight;
+  var scaledW=natW*zoom, scaledH=natH*zoom;
+  // allow panning only within image bounds
+  panX=Math.min(0, Math.max(vw-scaledW, panX));
+  panY=Math.min(0, Math.max(vh-scaledH, panY));
 }
 
+/* ---------- zoom ---------- */
+function zoomAt(factor, cx, cy){
+  // cx,cy in viewport coords
+  var newZoom=Math.max(baseZoom, Math.min(baseZoom*8, zoom*factor));
+  var ratio=newZoom/zoom;
+  panX=cx-(cx-panX)*ratio;
+  panY=cy-(cy-panY)*ratio;
+  zoom=newZoom;
+  clampPan();
+  applyTransform();
+  draw();
+}
+
+viewport.addEventListener('wheel',function(e){
+  e.preventDefault();
+  var r=viewport.getBoundingClientRect();
+  var cx=e.clientX-r.left, cy=e.clientY-r.top;
+  zoomAt(e.deltaY<0?1.15:1/1.15, cx, cy);
+},{passive:false});
+
+document.getElementById('zoomIn').addEventListener('click',function(){
+  var cx=viewport.offsetWidth/2, cy=viewport.offsetHeight/2;
+  zoomAt(1.3, cx, cy);
+});
+document.getElementById('zoomOut').addEventListener('click',function(){
+  var cx=viewport.offsetWidth/2, cy=viewport.offsetHeight/2;
+  zoomAt(1/1.3, cx, cy);
+});
+document.getElementById('zoomFit').addEventListener('click',function(){
+  zoom=baseZoom; panX=0; panY=0;
+  applyTransform(); draw();
+});
+
+/* ---------- viewport coords <-> image (natural) coords ---------- */
+function v2img(vx, vy){
+  return {x:(vx-panX)/zoom, y:(vy-panY)/zoom};
+}
+function img2v(ix, iy){
+  return {x:ix*zoom+panX, y:iy*zoom+panY};
+}
+
+/* ---------- canvas draw (in natural image space) ---------- */
 function draw(){
   ctx.clearRect(0,0,thecanvas.width,thecanvas.height);
   var pairs=[['headTop','headBottom'],['headLeft','headRight'],['shoulderL','shoulderR'],['waistL','waistR']];
   pairs.forEach(function(p){
     var a=getDot(p[0]),b=getDot(p[1]);
     if(!a||a.x===null||b.x===null)return;
-    var pa=i2c(a.x,a.y),pb=i2c(b.x,b.y);
-    ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
-    ctx.strokeStyle=a.color+'77';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=a.color+'77';ctx.lineWidth=2/zoom;ctx.setLineDash([8/zoom,5/zoom]);ctx.stroke();ctx.setLineDash([]);
   });
   dots.forEach(function(d){
     if(d.x===null)return;
-    var p=i2c(d.x,d.y);
     var act=activeDot===d.id;
-    ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);
+    var r=12/zoom;
+    ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);
     ctx.fillStyle=act?d.color:d.color+'cc';ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=act?2.5:1.5;ctx.stroke();
-    ctx.fillStyle='#fff';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(d.label[0],p.x,p.y);
+    ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=(act?2.5:1.5)/zoom;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold '+(10/zoom)+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(d.label[0],d.x,d.y);
   });
   calcMetrics();
 }
 
 function getDot(id){for(var i=0;i<dots.length;i++){if(dots[i].id===id)return dots[i];}return null;}
 
-function getPos(e){
-  var r=thecanvas.getBoundingClientRect();
-  var src=e.touches?e.touches[0]:e;
-  return {x:src.clientX-r.left, y:src.clientY-r.top};
-}
-
-function nearDot(cx,cy){
+/* ---------- hit test in viewport coords ---------- */
+function nearDot(vx,vy){
   for(var i=dots.length-1;i>=0;i--){
     var d=dots[i];if(d.x===null)continue;
-    var p=i2c(d.x,d.y);
-    if(Math.hypot(p.x-cx,p.y-cy)<14)return d.id;
+    var p=img2v(d.x,d.y);
+    if(Math.hypot(p.x-vx,p.y-vy)<14)return d.id;
   }
   return null;
 }
 
-thecanvas.addEventListener('mousedown',function(e){
+function getVPos(e){
+  var r=viewport.getBoundingClientRect();
+  var src=e.touches?e.touches[0]:e;
+  return {x:src.clientX-r.left, y:src.clientY-r.top};
+}
+
+/* ---------- pointer events on viewport ---------- */
+viewport.addEventListener('mousedown',function(e){
   e.preventDefault();
-  var pos=getPos(e);
-  var hit=nearDot(pos.x,pos.y);
+  var vp=getVPos(e);
+  var hit=nearDot(vp.x,vp.y);
   if(hit){
-    dragging=hit;
-    var d=getDot(hit);var p=i2c(d.x,d.y);
-    dragOff={x:p.x-pos.x,y:p.y-pos.y};
-    activeDot=hit;
+    // clicking an existing dot: if it's already active, deselect; else select & prepare drag
+    if(hit===activeDot){
+      activeDot=null;
+      renderList();draw();
+    } else {
+      draggingDot=hit;
+      activeDot=hit;
+      renderList();draw();
+    }
+  } else if(activeDot){
+    // active dot selected: place it
+    var d=getDot(activeDot);
+    if(d){
+      var ip=v2img(vp.x,vp.y);
+      d.x=ip.x; d.y=ip.y;
+      // advance to next empty dot
+      var idx=dots.findIndex(function(dd){return dd.id===activeDot;});
+      var advanced=false;
+      for(var i=idx+1;i<dots.length;i++){if(dots[i].x===null){activeDot=dots[i].id;advanced=true;break;}}
+      if(!advanced) activeDot=null; // all placed, deselect
+      renderList();draw();
+    }
   } else {
-    var d2=getDot(activeDot);
-    if(!d2)return;
-    var ip=c2i(pos.x,pos.y);
-    d2.x=ip.x;d2.y=ip.y;
-    var idx=dots.findIndex(function(dd){return dd.id===activeDot;});
-    for(var i=idx+1;i<dots.length;i++){if(dots[i].x===null){activeDot=dots[i].id;break;}}
+    // no active dot: pan
+    isPanning=true;
+    viewport.classList.add('grabbing');
+    panStart={x:e.clientX,y:e.clientY};
+    panOrigin={x:panX,y:panY};
   }
-  renderList();draw();
 });
 
-thecanvas.addEventListener('mousemove',function(e){
-  if(!dragging)return;
-  var pos=getPos(e);
-  var d=getDot(dragging);
-  var ip=c2i(pos.x+dragOff.x,pos.y+dragOff.y);
-  d.x=ip.x;d.y=ip.y;
-  draw();renderList();
+viewport.addEventListener('mousemove',function(e){
+  if(draggingDot){
+    var vp=getVPos(e);
+    var d=getDot(draggingDot);
+    var ip=v2img(vp.x,vp.y);
+    d.x=ip.x; d.y=ip.y;
+    draw();renderList();
+  } else if(isPanning){
+    panX=panOrigin.x+(e.clientX-panStart.x);
+    panY=panOrigin.y+(e.clientY-panStart.y);
+    clampPan();applyTransform();
+  }
 });
-thecanvas.addEventListener('mouseup',function(){dragging=null;});
-thecanvas.addEventListener('mouseleave',function(){dragging=null;});
 
-thecanvas.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0];thecanvas.dispatchEvent(new MouseEvent('mousedown',{clientX:t.clientX,clientY:t.clientY}));},{passive:false});
-thecanvas.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];thecanvas.dispatchEvent(new MouseEvent('mousemove',{clientX:t.clientX,clientY:t.clientY}));},{passive:false});
-thecanvas.addEventListener('touchend',function(){thecanvas.dispatchEvent(new MouseEvent('mouseup'));});
+viewport.addEventListener('mouseup',function(){
+  draggingDot=null;isPanning=false;viewport.classList.remove('grabbing');
+});
+viewport.addEventListener('mouseleave',function(){
+  draggingDot=null;isPanning=false;viewport.classList.remove('grabbing');
+});
 
+// touch
+viewport.addEventListener('touchstart',function(e){
+  e.preventDefault();
+  var t=e.touches[0];
+  viewport.dispatchEvent(new MouseEvent('mousedown',{button:0,clientX:t.clientX,clientY:t.clientY}));
+},{passive:false});
+viewport.addEventListener('touchmove',function(e){
+  e.preventDefault();
+  var t=e.touches[0];
+  viewport.dispatchEvent(new MouseEvent('mousemove',{clientX:t.clientX,clientY:t.clientY}));
+},{passive:false});
+viewport.addEventListener('touchend',function(){viewport.dispatchEvent(new MouseEvent('mouseup'));});
+
+/* ---------- render dot list ---------- */
 function renderList(){
   var el=document.getElementById('dotlist');
   el.innerHTML='';
@@ -241,7 +343,10 @@ function renderList(){
       var row=document.createElement('div');
       row.className='di'+(activeDot===d.id?' act':'');
       row.innerHTML='<span class="dc" style="background:'+d.color+'"></span><span>'+d.label+'</span>'+(d.x!==null?'<span class="ck">✓</span>':'');
-      row.addEventListener('click',function(){activeDot=d.id;renderList();draw();});
+      row.addEventListener('click',function(){
+        activeDot=(activeDot===d.id)?null:d.id;
+        renderList();draw();
+      });
       el.appendChild(row);
     });
   });
@@ -249,12 +354,12 @@ function renderList(){
 
 function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
+/* ---------- metrics ---------- */
 function calcMetrics(){
   var el=document.getElementById('metrics');
   if(dots.some(function(d){return d.x===null;})){
     el.innerHTML='<div class="pend">完成所有點位後顯示</div>';
-    document.getElementById('actual-section').style.display='none';
-    return;
+    document.getElementById('actual-section').style.display='none';return;
   }
   var hT=getDot('headTop'),hB=getDot('headBottom'),hL=getDot('headLeft'),hR=getDot('headRight');
   var sL=getDot('shoulderL'),sR=getDot('shoulderR'),wL=getDot('waistL'),wR=getDot('waistR');
@@ -264,11 +369,8 @@ function calcMetrics(){
   var totalH=dist(hT,ft);
   var totalHpx=Math.abs(ft.y-hT.y);
   var navelH=Math.abs(ft.y-nav.y);
-  var legH=Math.abs(ft.y-nav.y); // navel to foot ≈ leg length proxy
   var navelR=navelH/totalHpx;
-  // 頭肩比：肩寬 / 頭高（傳統健身標準）
   var shoulderHeadR=shouldW/headH;
-
   var rows=[
     {label:'頭身比',val:(totalH/headH).toFixed(2)+' 頭',good:(totalH/headH)>=7,tip:(totalH/headH)>=7?'勻稱':'偏短'},
     {label:'頭肩比（肩/頭高）',val:shoulderHeadR.toFixed(2),good:shoulderHeadR>=2.0&&shoulderHeadR<=2.3,tip:shoulderHeadR>=2.0&&shoulderHeadR<=2.3?'標準':shoulderHeadR<2.0?'偏窄':'偏寬'},
@@ -277,43 +379,30 @@ function calcMetrics(){
   ];
   el.innerHTML=rows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+(r.good?'bg':'bw')+'">'+r.tip+'</span></span></div>';}).join('');
 
-  // 實際尺寸
   var hVal=parseFloat(document.getElementById('heightInput').value);
   var aEl=document.getElementById('actuals');
   var aSection=document.getElementById('actual-section');
-  if(!hVal||hVal<100||hVal>250){
-    aSection.style.display='none';return;
-  }
-  var scale=hVal/totalHpx; // cm per pixel
-  var actualShould=(shouldW*scale).toFixed(1);
-  var actualWaist=(waistW*scale).toFixed(1);
-  var actualLeg=(legH*scale).toFixed(1);
-  var actualHead=(headH*scale).toFixed(1);
+  if(!hVal||hVal<100||hVal>250){aSection.style.display='none';return;}
+  var scale=hVal/totalHpx;
   var aRows=[
-    {label:'肩寬',val:actualShould+' cm'},
-    {label:'腰寬',val:actualWaist+' cm'},
-    {label:'腿長（肚臍至腳）',val:actualLeg+' cm'},
-    {label:'頭高',val:actualHead+' cm'},
+    {label:'肩寬',val:(shouldW*scale).toFixed(1)+' cm'},
+    {label:'腰寬',val:(waistW*scale).toFixed(1)+' cm'},
+    {label:'腿長（肚臍至腳）',val:(navelH*scale).toFixed(1)+' cm'},
+    {label:'頭高',val:(headH*scale).toFixed(1)+' cm'},
   ];
   aEl.innerHTML=aRows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'</span></div>';}).join('');
   aSection.style.display='block';
 }
 
+/* ---------- load image ---------- */
 function loadImage(file){
   var reader=new FileReader();
   reader.onload=function(e){
     theimg.onload=function(){
-      resetDots();
-      activeDot='headTop';
+      resetDots();activeDot='headTop';
       document.getElementById('upload-section').style.display='none';
-      var es=document.getElementById('editor-section');
-      es.style.display='flex';
-      setTimeout(function(){
-        fitImage();
-        syncCanvas();
-        renderList();
-        draw();
-      },100);
+      document.getElementById('editor-section').style.display='flex';
+      setTimeout(function(){fitImage();renderList();draw();},100);
     };
     theimg.src=e.target.result;
   };
@@ -321,20 +410,19 @@ function loadImage(file){
 }
 
 document.getElementById('ubtn').addEventListener('click',function(){document.getElementById('fileInput').click();});
+document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadImage(e.target.files[0]);});
 document.getElementById('heightInput').addEventListener('input',function(){if(dots.every(function(d){return d.x!==null;}))calcMetrics();});
 document.getElementById('resetBtn').addEventListener('click',function(){resetDots();activeDot='headTop';renderList();draw();});
 document.getElementById('newImgBtn').addEventListener('click',function(){
   document.getElementById('editor-section').style.display='none';
   document.getElementById('upload-section').style.display='';
-  theimg.src='';
-  document.getElementById('fileInput').value='';
+  theimg.src='';document.getElementById('fileInput').value='';
 });
-document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadImage(e.target.files[0]);});
 var uz=document.getElementById('upload-section');
 uz.addEventListener('dragover',function(e){e.preventDefault();uz.style.borderColor='#7F77DD';});
 uz.addEventListener('dragleave',function(){uz.style.borderColor='#ccc';});
 uz.addEventListener('drop',function(e){e.preventDefault();uz.style.borderColor='#ccc';if(e.dataTransfer.files[0])loadImage(e.dataTransfer.files[0]);});
-window.addEventListener('resize',function(){if(theimg.src&&theimg.naturalWidth>0){fitImage();syncCanvas();draw();}});
+window.addEventListener('resize',function(){if(theimg.src&&theimg.naturalWidth>0){fitImage();draw();}});
 </script>
 </body>
 </html>
