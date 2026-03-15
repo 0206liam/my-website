@@ -72,11 +72,25 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
     </div>
   </div>
   <div class="right">
+    <div class="rh" style="margin-top:0">身高輸入</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+      <input id="heightInput" type="number" min="100" max="250" placeholder="例：170"
+        style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:0">
+      <span style="font-size:12px;color:#888;white-space:nowrap">cm</span>
+    </div>
     <div id="dotlist"></div>
     <p class="hint">選取點位 → 點擊圖片放置，可拖曳調整</p>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="ubtn" id="resetBtn" style="flex:1;font-size:11px;padding:5px 4px">🔄 重選位置</button>
+      <button class="ubtn" id="newImgBtn" style="flex:1;font-size:11px;padding:5px 4px">🖼 換圖片</button>
+    </div>
     <div class="divider"></div>
     <div class="rh" style="margin-top:0">比例結果</div>
     <div id="metrics"><div class="pend">完成所有點位後顯示</div></div>
+    <div id="actual-section" style="display:none">
+      <div class="rh">實際尺寸（cm）</div>
+      <div id="actuals"></div>
+    </div>
   </div>
 </div>
 </div>
@@ -230,7 +244,9 @@ function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 function calcMetrics(){
   var el=document.getElementById('metrics');
   if(dots.some(function(d){return d.x===null;})){
-    el.innerHTML='<div class="pend">完成所有點位後顯示</div>';return;
+    el.innerHTML='<div class="pend">完成所有點位後顯示</div>';
+    document.getElementById('actual-section').style.display='none';
+    return;
   }
   var hT=getDot('headTop'),hB=getDot('headBottom'),hL=getDot('headLeft'),hR=getDot('headRight');
   var sL=getDot('shoulderL'),sR=getDot('shoulderR'),wL=getDot('waistL'),wR=getDot('waistR');
@@ -238,15 +254,41 @@ function calcMetrics(){
   var headH=dist(hT,hB),headW=dist(hL,hR);
   var shouldW=dist(sL,sR),waistW=dist(wL,wR);
   var totalH=dist(hT,ft);
-  var navelH=Math.abs(ft.y-nav.y),totalHpx=Math.abs(ft.y-hT.y);
+  var totalHpx=Math.abs(ft.y-hT.y);
+  var navelH=Math.abs(ft.y-nav.y);
+  var legH=Math.abs(ft.y-nav.y); // navel to foot ≈ leg length proxy
   var navelR=navelH/totalHpx;
+  // 頭肩比：肩寬 / 頭高（傳統健身標準）
+  var shoulderHeadR=shouldW/headH;
+
   var rows=[
     {label:'頭身比',val:(totalH/headH).toFixed(2)+' 頭',good:(totalH/headH)>=7,tip:(totalH/headH)>=7?'勻稱':'偏短'},
-    {label:'頭肩比',val:(shouldW/headW).toFixed(2),good:(shouldW/headW)>=1.5&&(shouldW/headW)<=2,tip:(shouldW/headW)>=1.5&&(shouldW/headW)<=2?'標準':'注意'},
+    {label:'頭肩比（肩/頭高）',val:shoulderHeadR.toFixed(2),good:shoulderHeadR>=2.0&&shoulderHeadR<=2.3,tip:shoulderHeadR>=2.0&&shoulderHeadR<=2.3?'標準':shoulderHeadR<2.0?'偏窄':'偏寬'},
     {label:'腰肩比',val:(waistW/shouldW).toFixed(2),good:(waistW/shouldW)<=0.75,tip:(waistW/shouldW)<=0.75?'標準':'偏寬'},
-    {label:'肚臍高度比',val:(navelR*100).toFixed(1)+'%',good:navelR>=0.618,tip:navelR>=0.618?'黃金比例':'偏低'},
+    {label:'肚臍高度比',val:navelR.toFixed(3),good:navelR>=0.618&&navelR<=0.640,tip:navelR>=0.618&&navelR<=0.640?'黃金比例':navelR<0.618?'偏低':'偏高'},
   ];
   el.innerHTML=rows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+(r.good?'bg':'bw')+'">'+r.tip+'</span></span></div>';}).join('');
+
+  // 實際尺寸
+  var hVal=parseFloat(document.getElementById('heightInput').value);
+  var aEl=document.getElementById('actuals');
+  var aSection=document.getElementById('actual-section');
+  if(!hVal||hVal<100||hVal>250){
+    aSection.style.display='none';return;
+  }
+  var scale=hVal/totalHpx; // cm per pixel
+  var actualShould=(shouldW*scale).toFixed(1);
+  var actualWaist=(waistW*scale).toFixed(1);
+  var actualLeg=(legH*scale).toFixed(1);
+  var actualHead=(headH*scale).toFixed(1);
+  var aRows=[
+    {label:'肩寬',val:actualShould+' cm'},
+    {label:'腰寬',val:actualWaist+' cm'},
+    {label:'腿長（肚臍至腳）',val:actualLeg+' cm'},
+    {label:'頭高',val:actualHead+' cm'},
+  ];
+  aEl.innerHTML=aRows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'</span></div>';}).join('');
+  aSection.style.display='block';
 }
 
 function loadImage(file){
@@ -270,6 +312,14 @@ function loadImage(file){
 }
 
 document.getElementById('ubtn').addEventListener('click',function(){document.getElementById('fileInput').click();});
+document.getElementById('heightInput').addEventListener('input',function(){if(dots.every(function(d){return d.x!==null;}))calcMetrics();});
+document.getElementById('resetBtn').addEventListener('click',function(){resetDots();activeDot='headTop';renderList();draw();});
+document.getElementById('newImgBtn').addEventListener('click',function(){
+  document.getElementById('editor-section').style.display='none';
+  document.getElementById('upload-section').style.display='';
+  theimg.src='';
+  document.getElementById('fileInput').value='';
+});
 document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadImage(e.target.files[0]);});
 var uz=document.getElementById('upload-section');
 uz.addEventListener('dragover',function(e){e.preventDefault();uz.style.borderColor='#7F77DD';});
