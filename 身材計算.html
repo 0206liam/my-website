@@ -19,21 +19,15 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 
 #imgwrap{
   position:relative;
-  display:block;
   line-height:0;
   border-radius:8px;
   overflow:hidden;
-  width:100%;
 }
 #theimg{
   display:block;
-  width:100%;
-  height:auto;
-  max-height:calc(100vh - 80px);
-  object-fit:contain;
   border-radius:8px;
 }
-#thecanvas{position:absolute;top:0;left:0;pointer-events:all;cursor:crosshair;width:100%;height:100%}
+#thecanvas{position:absolute;top:0;left:0;pointer-events:all;cursor:crosshair;}
 
 .rh{font-size:11px;font-weight:500;color:#aaa;letter-spacing:.5px;margin:8px 0 4px;text-transform:uppercase}
 .di{display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:1px}
@@ -128,10 +122,22 @@ var ctx=thecanvas.getContext('2d');
 function resetDots(){dots=DOTS.map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});}
 
 function getRenderedSize(){
-  var tagW=theimg.offsetWidth, tagH=theimg.offsetHeight;
+  return {w: theimg.offsetWidth, h: theimg.offsetHeight};
+}
+
+function fitImage(){
+  var wrap=document.getElementById('imgwrap');
+  var maxW=wrap.parentElement.offsetWidth;
+  var maxH=window.innerHeight-80;
   var natW=theimg.naturalWidth, natH=theimg.naturalHeight;
-  var scale=Math.min(tagW/natW, tagH/natH);
-  return {w:Math.round(natW*scale), h:Math.round(natH*scale)};
+  var scale=Math.min(maxW/natW, maxH/natH, 1);
+  // allow upscale if image is tiny
+  if(natW<maxW && natH<maxH) scale=Math.min(maxW/natW, maxH/natH);
+  var w=Math.round(natW*scale), h=Math.round(natH*scale);
+  theimg.style.width=w+'px';
+  theimg.style.height=h+'px';
+  wrap.style.width=w+'px';
+  wrap.style.height=h+'px';
 }
 
 function syncCanvas(){
@@ -140,7 +146,6 @@ function syncCanvas(){
   thecanvas.height=s.h;
   thecanvas.style.width=s.w+'px';
   thecanvas.style.height=s.h+'px';
-  document.getElementById('imgwrap').style.height=s.h+'px';
 }
 
 function i2c(ix,iy){
@@ -304,6 +309,7 @@ function loadImage(file){
       var es=document.getElementById('editor-section');
       es.style.display='flex';
       setTimeout(function(){
+        fitImage();
         syncCanvas();
         renderList();
         draw();
@@ -328,7 +334,7 @@ var uz=document.getElementById('upload-section');
 uz.addEventListener('dragover',function(e){e.preventDefault();uz.style.borderColor='#7F77DD';});
 uz.addEventListener('dragleave',function(){uz.style.borderColor='#ccc';});
 uz.addEventListener('drop',function(e){e.preventDefault();uz.style.borderColor='#ccc';if(e.dataTransfer.files[0])loadImage(e.dataTransfer.files[0]);});
-window.addEventListener('resize',function(){if(theimg.src&&theimg.naturalWidth>0){syncCanvas();draw();}});
+window.addEventListener('resize',function(){if(theimg.src&&theimg.naturalWidth>0){fitImage();syncCanvas();draw();}});
 </script>
 </body>
 </html>
