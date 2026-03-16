@@ -796,31 +796,30 @@
             startAutoScroll();
         }
 
-        function handleTouchDrag(e) {
-            if (!isDragging || !draggedElement) return;
-            e.preventDefault();
+function handleTouchDrag(e) {
+    if (!isDragging || !draggedElement) return;
+    e.preventDefault();
 
-            const touch = e.touches[0];
-            const x = touch.clientX - dragOffset.x;
-            const y = touch.clientY - dragOffset.y + dragStartScrollY;
+    const touch = e.touches[0];
+    const x = touch.clientX - dragOffset.x;
+    const y = touch.clientY - dragOffset.y + window.scrollY; // 改這裡
 
-            requestAnimationFrame(() => {
-                if (draggedElement) {
-                    draggedElement.style.left = x + 'px';
-                    draggedElement.style.top  = y + 'px';
-                }
-            });
-
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
-
-            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
-
-            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
-                targetItem.classList.add('drag-over');
-            }
+    requestAnimationFrame(() => {
+        if (draggedElement) {
+            draggedElement.style.left = x + 'px';
+            draggedElement.style.top  = y + 'px';
         }
+    });
 
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
+
+    if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+        targetItem.classList.add('drag-over');
+    }
+}
         function checkAutoScroll(e) {
             if (!isDragging || !e.touches[0]) return;
             
