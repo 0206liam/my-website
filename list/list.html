@@ -848,32 +848,17 @@
             scrollSpeed = newScrollSpeed;
         }
 
-        function startAutoScroll() {
-            if (autoScrollInterval) return;
-            
-            autoScrollInterval = setInterval(() => {
-                if (scrollSpeed !== 0) {
-                    const currentScrollY = window.scrollY || window.pageYOffset;
-                    const newScrollY = currentScrollY + scrollSpeed;
-                    
-                    // 確保滾動範圍在合理範圍內
-                    const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
-                    const clampedScrollY = Math.max(0, Math.min(maxScrollY, newScrollY));
-                    
-                    window.scrollTo({
-                        top: clampedScrollY,
-                        behavior: 'instant'
-                    });
-                    
-                    // 更新拖曳元素的位置
-                    if (draggedElement && isDragging) {
-                        const rect = draggedElement.getBoundingClientRect();
-                        const newTop = rect.top + scrollSpeed;
-                        draggedElement.style.top = newTop + 'px';
-                    }
-                }
-            }, AUTO_SCROLL_INTERVAL);
+
+function startAutoScroll() {
+    if (autoScrollInterval) return;
+    
+    autoScrollInterval = setInterval(() => {
+        if (scrollSpeed !== 0) {
+            window.scrollBy(0, scrollSpeed);
         }
+    }, AUTO_SCROLL_INTERVAL);
+}
+
 
         function stopAutoScroll() {
             if (autoScrollInterval) {
