@@ -756,71 +756,70 @@
             });
         }
 
+        function startTouchDrag(e, element, index) {
+            e.preventDefault();
 
-        
-function startTouchDrag(e, element, index) {
-    e.preventDefault();
+            isDragging = true;
+            draggedElement = element;
+            draggedIndex = index;
 
-    isDragging = true;
-    draggedElement = element;
-    draggedIndex = index;
+            const touch = e.touches[0];
+            const rect = element.getBoundingClientRect();
 
-    const touch = e.touches[0];
-    const rect = element.getBoundingClientRect();
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
 
-    dragOffset.x = touch.clientX - rect.left;
-    dragOffset.y = touch.clientY - rect.top;
+            dragStartScrollY = window.scrollY || window.pageYOffset || 0;
 
-    const placeholder = document.createElement('div');
-    placeholder.className = 'list-item placeholder';
-    placeholder.style.height = rect.height + 'px';
-    placeholder.style.opacity = '0.4';
-    element.parentNode.insertBefore(placeholder, element);
+            const placeholder = document.createElement('div');
+            placeholder.className = 'list-item placeholder';
+            placeholder.style.height = rect.height + 'px';
+            placeholder.style.opacity = '0.4';
+            element.parentNode.insertBefore(placeholder, element);
 
-    element.classList.add('dragging');
-    element.style.transition = 'none';
-    element.style.position = 'fixed';
-    element.style.left = rect.left + 'px';
-    element.style.top  = rect.top + 'px';
-    element.style.width = rect.width + 'px';
-    element.style.zIndex = '9999';
-    element.style.pointerEvents = 'none';
+            element.classList.add('dragging');
+            element.style.transition = 'none';
+            element.style.position = 'fixed';
+            element.style.left = rect.left + 'px';
+            element.style.top  = rect.top + 'px';
+            element.style.width = rect.width + 'px';
+            element.style.zIndex = '9999';
+            element.style.pointerEvents = 'none';
 
-    element.style.left = (touch.clientX - dragOffset.x) + 'px';
-    element.style.top  = (touch.clientY - dragOffset.y) + 'px';
+            element.style.left = (touch.clientX - dragOffset.x) + 'px';
+            element.style.top  = (touch.clientY - dragOffset.y + dragStartScrollY) + 'px';
 
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.touchAction = 'none';
-    
-    startAutoScroll();
-}
-
-
-        
-function handleTouchDrag(e) {
-    if (!isDragging || !draggedElement) return;
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    const x = touch.clientX - dragOffset.x;
-    const y = touch.clientY - dragOffset.y;
-
-    requestAnimationFrame(() => {
-        if (draggedElement) {
-            draggedElement.style.left = x + 'px';
-            draggedElement.style.top  = y + 'px';
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.touchAction = 'none';
+            
+            // 初始化自動滾動
+            startAutoScroll();
         }
-    });
 
-    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-    const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+        function handleTouchDrag(e) {
+            if (!isDragging || !draggedElement) return;
+            e.preventDefault();
 
-    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
+            const touch = e.touches[0];
+            const x = touch.clientX - dragOffset.x;
+            const y = touch.clientY - dragOffset.y + dragStartScrollY;
 
-    if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
-        targetItem.classList.add('drag-over');
-    }
-}
+            requestAnimationFrame(() => {
+                if (draggedElement) {
+                    draggedElement.style.left = x + 'px';
+                    draggedElement.style.top  = y + 'px';
+                }
+            });
+
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
+
+            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+                targetItem.classList.add('drag-over');
+            }
+        }
 
         function checkAutoScroll(e) {
             if (!isDragging || !e.touches[0]) return;
