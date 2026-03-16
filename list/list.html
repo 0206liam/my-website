@@ -796,30 +796,31 @@
             startAutoScroll();
         }
 
-        function handleTouchDrag(e) {
-            if (!isDragging || !draggedElement) return;
-            e.preventDefault();
+function handleTouchDrag(e) {
+    if (!isDragging || !draggedElement) return;
+    e.preventDefault();
 
-            const touch = e.touches[0];
-            const x = touch.clientX - dragOffset.x;
-            const y = touch.clientY - dragOffset.y + dragStartScrollY;
+    const touch = e.touches[0];
+    lastTouchY = touch.clientY; // 加這行
+    const x = touch.clientX - dragOffset.x;
+    const y = touch.clientY - dragOffset.y;
 
-            requestAnimationFrame(() => {
-                if (draggedElement) {
-                    draggedElement.style.left = x + 'px';
-                    draggedElement.style.top  = y + 'px';
-                }
-            });
-
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
-
-            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
-
-            if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
-                targetItem.classList.add('drag-over');
-            }
+    requestAnimationFrame(() => {
+        if (draggedElement) {
+            draggedElement.style.left = x + 'px';
+            draggedElement.style.top  = y + 'px';
         }
+    });
+
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const targetItem = elementBelow ? elementBelow.closest('.list-item:not(.dragging)') : null;
+
+    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('drag-over'));
+
+    if (targetItem && !targetItem.classList.contains('placeholder') && !targetItem.classList.contains('input-area')) {
+        targetItem.classList.add('drag-over');
+    }
+}
 
         function checkAutoScroll(e) {
             if (!isDragging || !e.touches[0]) return;
@@ -859,23 +860,17 @@ function startAutoScroll() {
         if (scrollSpeed !== 0) {
             const currentScrollY = window.scrollY || window.pageYOffset;
             const newScrollY = currentScrollY + scrollSpeed;
-            
             const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
             const clampedScrollY = Math.max(0, Math.min(maxScrollY, newScrollY));
             
-            window.scrollTo({
-                top: clampedScrollY,
-                behavior: 'instant'
-            });
+            window.scrollTo({ top: clampedScrollY, behavior: 'instant' });
             
             if (draggedElement && isDragging) {
-                const currentTop = parseFloat(draggedElement.style.top) || 0;
-                draggedElement.style.top = (currentTop + scrollSpeed) + 'px';
+                draggedElement.style.top = (lastTouchY - dragOffset.y) + 'px';
             }
         }
     }, AUTO_SCROLL_INTERVAL);
 }
-
 
         function stopAutoScroll() {
             if (autoScrollInterval) {
