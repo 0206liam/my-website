@@ -296,6 +296,8 @@ function calcFrontMetrics(el){
     return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
   }).join('');
   document.getElementById('rib-section').style.display='none';
+  var scoreSection=document.getElementById('total-score-section');
+  if(scoreSection) scoreSection.style.display='none';
   var hVal=parseFloat(document.getElementById('heightInput').value);
   var aSection=document.getElementById('actual-section');
   if(!hVal||hVal<100||hVal>250){aSection.style.display='none';return;}
@@ -358,6 +360,19 @@ function calcSideMetrics(el){
   document.getElementById('rib-metrics').innerHTML=renderSideRows(rows2);
   document.getElementById('rib-section').style.display='block';
   document.getElementById('actual-section').style.display='none';
+
+  // 綜合評分：五項角度/比例數值相加 - 70
+  var total = chestAngle + jawAngle + (thick*100) + chestAngle2 + (thick2*100) - 70;
+  var scoreEl = document.getElementById('total-score');
+  if(!scoreEl){
+    var div = document.createElement('div');
+    div.id = 'total-score-section';
+    div.innerHTML = '<div class="divider"></div><div class="rh" style="margin-top:0">綜合評分</div><div id="total-score"></div>';
+    document.getElementById('rib-section').after(div);
+    scoreEl = document.getElementById('total-score');
+  }
+  document.getElementById('total-score-section').style.display='block';
+  scoreEl.innerHTML = '<div class="mrow"><span class="ml">綜合評分</span><span class="mv" style="font-size:15px;color:#534AB7">'+total.toFixed(1)+'</span></div>';
 }
 
 function nearDot(vx,vy){
