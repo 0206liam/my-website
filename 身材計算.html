@@ -52,6 +52,9 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 .mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
 .mrow:last-child{border:none}.ml{color:#777}.mv{font-weight:500}
 .bg{background:#EAF3DE;color:#3B6D11;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
+  
+.bm{background:#FFF6CC;color:#8A7000;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
+  
 .bw{background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
 .pend{color:#bbb;font-size:12px;text-align:center;padding:10px 0}
 .hint{font-size:11px;color:#bbb;margin-top:8px;line-height:1.5}
@@ -355,6 +358,7 @@ function renderList(){
 function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
 /* ---------- metrics ---------- */
+
 function calcMetrics(){
   var el=document.getElementById('metrics');
   if(dots.some(function(d){return d.x===null;})){
@@ -371,13 +375,26 @@ function calcMetrics(){
   var navelH=Math.abs(ft.y-nav.y);
   var navelR=navelH/totalHpx;
   var shoulderHeadR=shouldW/headH;
+  var headRatio=totalH/headH;
+  var wsr=waistW/shouldW;
+
   var rows=[
-    {label:'頭身比',val:(totalH/headH).toFixed(2)+' 頭',good:(totalH/headH)>=7,tip:(totalH/headH)>=7?'勻稱':'偏短'},
-    {label:'頭肩比（肩/頭高）',val:shoulderHeadR.toFixed(2),good:shoulderHeadR>=2.0&&shoulderHeadR<=2.3,tip:shoulderHeadR>=2.0&&shoulderHeadR<=2.3?'標準':shoulderHeadR<2.0?'偏窄':'偏寬'},
-    {label:'腰肩比',val:(waistW/shouldW).toFixed(2),good:(waistW/shouldW)<=0.75,tip:(waistW/shouldW)<=0.75?'標準':'偏寬'},
-    {label:'肚臍高度比',val:navelR.toFixed(3),good:navelR>=0.618&&navelR<=0.640,tip:navelR>=0.618&&navelR<=0.640?'黃金比例':navelR<0.618?'偏低':'偏高'},
+    {label:'頭身比',val:headRatio.toFixed(2)+' 頭',
+      tip:headRatio>7.5?'理想':headRatio>7.1?'平均':'不佳',
+      cls:headRatio>7.5?'bg':headRatio>7.1?'bm':'bw'},
+    {label:'頭肩比（肩/頭高）',val:shoulderHeadR.toFixed(2),
+      tip:shoulderHeadR>2?'理想':shoulderHeadR>1.8?'平均':'不佳',
+      cls:shoulderHeadR>2?'bg':shoulderHeadR>1.8?'bm':'bw'},
+    {label:'腰肩比',val:wsr.toFixed(2),
+      tip:wsr<=0.618?'理想':wsr<=0.72?'平均':'不佳',
+      cls:wsr<=0.618?'bg':wsr<=0.72?'bm':'bw'},
+    {label:'肚臍高度比',val:navelR.toFixed(3),
+      tip:navelR>0.618?'理想':navelR>0.57?'平均':'不佳',
+      cls:navelR>0.618?'bg':navelR>0.57?'bm':'bw'},
   ];
-  el.innerHTML=rows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+(r.good?'bg':'bw')+'">'+r.tip+'</span></span></div>';}).join('');
+  el.innerHTML=rows.map(function(r){
+    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
+  }).join('');
 
   var hVal=parseFloat(document.getElementById('heightInput').value);
   var aEl=document.getElementById('actuals');
@@ -390,7 +407,9 @@ function calcMetrics(){
     {label:'腿長（肚臍至腳）',val:(navelH*scale).toFixed(1)+' cm'},
     {label:'頭高',val:(headH*scale).toFixed(1)+' cm'},
   ];
-  aEl.innerHTML=aRows.map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'</span></div>';}).join('');
+  aEl.innerHTML=aRows.map(function(r){
+    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'</span></div>';
+  }).join('');
   aSection.style.display='block';
 }
 
