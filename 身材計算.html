@@ -220,6 +220,11 @@ function rate(val, a, b){
   if(val < b) return {tip:'平均', cls:'bm'};
   return {tip:'理想', cls:'bg'};
 }
+function rateDesc(val, a, b){
+  if(val > a) return {tip:'不佳', cls:'bw'};
+  if(val > b) return {tip:'平均', cls:'bm'};
+  return {tip:'理想', cls:'bg'};
+}
 
 // ── draw ──────────────────────────────────────────────
 function draw(){
@@ -309,7 +314,7 @@ function calcFrontMetrics(el){
   var rows=[
     (function(){var v=totalH/headH;var r=rate(v,7,7.4);return {label:'頭身比',val:v.toFixed(2)+' 頭',tip:r.tip,cls:r.cls};}()),
     (function(){var v=shouldW/headH;var r=rate(v,1.8,2.1);return {label:'頭肩比（肩/頭高）',val:v.toFixed(2),tip:r.tip,cls:r.cls};}()),
-    (function(){var v=waistW/shouldW;var r=rate(v,0.72,0.618);return {label:'腰肩比',val:v.toFixed(2),tip:r.tip,cls:r.cls};}()),
+    (function(){var v=waistW/shouldW;var r=rateDesc(v,0.72,0.618);return {label:'腰肩比',val:v.toFixed(2),tip:r.tip,cls:r.cls};}()),
     (function(){var v=navelH/totalHpx;var r=rate(v,0.57,0.618);return {label:'肚臍高度比',val:v.toFixed(3),tip:r.tip,cls:r.cls};}()),
   ];
   el.innerHTML=rows.map(function(r){
