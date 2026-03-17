@@ -380,8 +380,8 @@ function calcMetrics(){
 
   var rows=[
     {label:'頭身比',val:headRatio.toFixed(2)+' 頭',
-      tip:headRatio>7.5?'理想':headRatio>7.1?'平均':'不佳',
-      cls:headRatio>7.5?'bg':headRatio>7.1?'bm':'bw'},
+      tip:headRatio>7.5?'理想':headRatio>7?'平均':'不佳',
+      cls:headRatio>7.5?'bg':headRatio>7?'bm':'bw'},
     {label:'頭肩比（肩/頭高）',val:shoulderHeadR.toFixed(2),
       tip:shoulderHeadR>2?'理想':shoulderHeadR>1.8?'平均':'不佳',
       cls:shoulderHeadR>2?'bg':shoulderHeadR>1.8?'bm':'bw'},
