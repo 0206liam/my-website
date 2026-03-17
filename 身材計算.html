@@ -362,7 +362,7 @@ function calcSideMetrics(el){
   document.getElementById('actual-section').style.display='none';
 
   // 綜合評分：五項角度/比例數值相加 - 70
-  var total = (chestAngle*1.2 + (jawAngle-15)*1.5 + (thick*100)*2 + chestAngle2*1.2 + (thick2*100)*2)/2 - 50;
+  var total = (chestAngle*1.2 + (jawAngle-15)*1.5 + (thick*100)*2 + chestAngle2*1.2 + (thick2*100)*2)/1.7 - 50;
   var scoreEl = document.getElementById('total-score');
   if(!scoreEl){
     var div = document.createElement('div');
