@@ -129,10 +129,10 @@ var GROUPS_FRONT = [
 ];
 
 var DOTS_SIDE = [
-  {id:'clavicle',      label:'鎖骨起點', color:'#7F77DD', group:'chest'},
-  {id:'clavicleBase',  label:'鎖骨垂直基準點', color:'#534AB7', group:'chest'},
-  {id:'chestPeak',     label:'胸肌最凸處', color:'#1D9E75', group:'chest'},
+  {id:'clavicle',      label:'鎖骨起點',     color:'#7F77DD', group:'chest'},
+  {id:'chestPeak',     label:'胸肌最凸處',   color:'#1D9E75', group:'chest'},
   {id:'chestBottom',   label:'胸肌下緣銜接處', color:'#EF9F27', group:'chest'},
+  {id:'clavicleBase',  label:'鎖骨垂直基準點', color:'#534AB7', group:'chest'},
 ];
 var GROUPS_SIDE = [
   {key:'chest', label:'胸部（4點）'},
@@ -400,31 +400,39 @@ function calcFrontMetrics(el){
 }
 
 function calcSideMetrics(el){
-  var cl  = getDot('clavicle');      // 鎖骨角
-  var clB = getDot('clavicleBase');  // 鎖骨中線垂直處
+  var cl  = getDot('clavicle');      // 鎖骨起點
+  var clB = getDot('clavicleBase');  // 鎖骨垂直基準點
   var cp  = getDot('chestPeak');     // 胸肌最凸處
   var cb  = getDot('chestBottom');   // 胸肌下緣銜接處
 
-  // 1. 胸夾角: angle at cl between rays cl→cp and cl→clB
+  // 1. 胸肌夾角: angle at cl between rays cl→cp and cl→cb
   var vCp  = {x:cp.x-cl.x,  y:cp.y-cl.y};
-  var vClB = {x:clB.x-cl.x, y:clB.y-cl.y};
-  var dot  = vCp.x*vClB.x + vCp.y*vClB.y;
+  var vCb  = {x:cb.x-cl.x,  y:cb.y-cl.y};
+  var dot1  = vCp.x*vCb.x + vCp.y*vCb.y;
   var magCp  = Math.hypot(vCp.x, vCp.y)||1;
-  var magClB = Math.hypot(vClB.x,vClB.y)||1;
-  var cosA = Math.min(1,Math.max(-1, dot/(magCp*magClB)));
-  var angleDeg = Math.acos(cosA)*180/Math.PI;
+  var magCb  = Math.hypot(vCb.x, vCb.y)||1;
+  var chestAngleDeg = Math.acos(Math.min(1,Math.max(-1, dot1/(magCp*magCb))))*180/Math.PI;
 
-  // 2. 胸肌厚度比: perpendicular distance from cp to line cl→cb / dist(cl,cb)
+  // 2. 胸夾角 (舊): angle at cl between rays cl→cp and cl→clB
+  var vClB = {x:clB.x-cl.x, y:clB.y-cl.y};
+  var dot2  = vCp.x*vClB.x + vCp.y*vClB.y;
+  var magClB = Math.hypot(vClB.x,vClB.y)||1;
+  var angleDeg = Math.acos(Math.min(1,Math.max(-1, dot2/(magCp*magClB))))*180/Math.PI;
+
+  // 3. 胸肌厚度比: perpendicular distance from cp to line cl→cb / dist(cl,cb)
   var foot    = projectPointToSegment(cp, cl, cb);
   var perpDist= dist(cp, foot);
   var chordLen= dist(cl, cb);
   var thickR  = chordLen>0 ? perpDist/chordLen : 0;
 
   var rows=[
+    {label:'胸肌夾角',     val:chestAngleDeg.toFixed(1)+'°',
+      tip:chestAngleDeg<35?'飽滿':chestAngleDeg<50?'平均':'偏平',
+      cls:chestAngleDeg<35?'bg':chestAngleDeg<50?'bm':'bw'},
     {label:'胸夾角',       val:angleDeg.toFixed(1)+'°',
       tip:angleDeg<35?'飽滿':angleDeg<50?'平均':'偏平',
       cls:angleDeg<35?'bg':angleDeg<50?'bm':'bw'},
-    {label:'胸肌厚度比',   val:thickR.toFixed(3),
+    {label:'胸肌厚度比',   val:(thickR*100).toFixed(1)+'%',
       tip:thickR>0.45?'飽滿':thickR>0.30?'平均':'偏薄',
       cls:thickR>0.45?'bg':thickR>0.30?'bm':'bw'},
   ];
