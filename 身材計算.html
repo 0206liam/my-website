@@ -8,7 +8,6 @@ body{font-family:sans-serif;background:#f0f0f0;color:#222;min-height:400px}
 #app{padding:1rem}
 h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 
-/* mode toggle */
 .mode-bar{display:flex;gap:8px;margin-bottom:1rem}
 .mbtn{flex:1;padding:7px;border:1.5px solid #ccc;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;transition:.15s}
 .mbtn.active{border-color:#7F77DD;background:#EEEDFE;color:#534AB7;font-weight:500}
@@ -18,7 +17,6 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 .ubtn{margin-top:10px;padding:7px 18px;border:1px solid #bbb;border-radius:7px;font-size:13px;cursor:pointer;background:#fff}
 
 #editor-section{display:none;gap:12px}
-#editor-section.show{display:flex}
 .left{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .right{width:220px;flex-shrink:0;background:#fff;border-radius:10px;border:1px solid #ddd;padding:12px;overflow-y:auto;max-height:90vh}
 
@@ -29,7 +27,7 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 #thecanvas{position:absolute;top:0;left:0;pointer-events:none;}
 
 .zoom-bar{display:flex;align-items:center;gap:6px;}
-.zbtn{width:28px;height:28px;border:1px solid #ccc;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.zbtn{width:28px;height:28px;border:1px solid #ccc;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .zbtn:hover{background:#f0f0f0;}
 #zoomLabel{font-size:11px;color:#888;min-width:36px;text-align:center;}
 
@@ -46,6 +44,7 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 .bw{background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
 .pend{color:#bbb;font-size:12px;text-align:center;padding:10px 0}
 .hint{font-size:11px;color:#bbb;margin-top:8px;line-height:1.5}
+.sub-section{background:#f8f8f8;border-radius:7px;padding:7px 8px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -82,12 +81,12 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
   </div>
   <div class="right">
     <div id="heightSection">
-    <div class="rh" style="margin-top:0">身高輸入</div>
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-      <input id="heightInput" type="number" min="100" max="250" placeholder="例：170"
-        style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:0">
-      <span style="font-size:12px;color:#888;white-space:nowrap">cm</span>
-    </div>
+      <div class="rh" style="margin-top:0">身高輸入</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <input id="heightInput" type="number" min="100" max="250" placeholder="例：170"
+          style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:0">
+        <span style="font-size:12px;color:#888;white-space:nowrap">cm</span>
+      </div>
     </div>
     <div id="dotlist"></div>
     <p class="hint">選取點位 → 點擊圖片放置，可拖曳調整<br>再次點擊已選點位 或 點擊空白處取消選取後可平移圖片</p>
@@ -102,23 +101,27 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
       <div class="rh">實際尺寸（cm）</div>
       <div id="actuals"></div>
     </div>
+    <div id="rib-section" style="display:none">
+      <div class="divider"></div>
+      <div class="rh" style="margin-top:0">比例結果（以肋骨最凹處計算）</div>
+      <div id="rib-metrics"></div>
+    </div>
   </div>
 </div>
 </div>
 
 <script>
-// ── mode ──────────────────────────────────────────────
 var currentMode = 'front';
 
 var DOTS_FRONT = [
-  {id:'headTop',    label:'頭頂', color:'#7F77DD', group:'head'},
-  {id:'headBottom', label:'下巴', color:'#534AB7', group:'head'},
-  {id:'shoulderL',  label:'左肩', color:'#1D9E75', group:'shoulder'},
-  {id:'shoulderR',  label:'右肩', color:'#0F6E56', group:'shoulder'},
-  {id:'waistL',     label:'左腰', color:'#EF9F27', group:'waist'},
-  {id:'waistR',     label:'右腰', color:'#BA7517', group:'waist'},
-  {id:'navel',      label:'肚臍', color:'#D85A30', group:'navel'},
-  {id:'foot',       label:'腳底', color:'#E24B4A', group:'foot'},
+  {id:'headTop',    label:'頭頂',   color:'#7F77DD', group:'head'},
+  {id:'headBottom', label:'下巴',   color:'#534AB7', group:'head'},
+  {id:'shoulderL',  label:'左肩',   color:'#1D9E75', group:'shoulder'},
+  {id:'shoulderR',  label:'右肩',   color:'#0F6E56', group:'shoulder'},
+  {id:'waistL',     label:'左腰',   color:'#EF9F27', group:'waist'},
+  {id:'waistR',     label:'右腰',   color:'#BA7517', group:'waist'},
+  {id:'navel',      label:'肚臍',   color:'#D85A30', group:'navel'},
+  {id:'foot',       label:'腳底',   color:'#E24B4A', group:'foot'},
 ];
 var GROUPS_FRONT = [
   {key:'head',     label:'頭部（2點）'},
@@ -128,23 +131,22 @@ var GROUPS_FRONT = [
   {key:'foot',     label:'腳底（1點）'},
 ];
 
+// order: 鎖骨起點 → 胸肌最凸處 → 胸肌下緣銜接處 → 肋骨最凹陷處 → 鎖骨垂直基準點
 var DOTS_SIDE = [
-  {id:'clavicle',      label:'鎖骨起點',     color:'#7F77DD', group:'chest'},
-  {id:'chestPeak',     label:'胸肌最凸處',   color:'#1D9E75', group:'chest'},
-  {id:'chestBottom',   label:'胸肌下緣銜接處', color:'#EF9F27', group:'chest'},
-  {id:'clavicleBase',  label:'鎖骨垂直基準點', color:'#534AB7', group:'chest'},
+  {id:'clavicle',    label:'鎖骨起點',      color:'#7F77DD', group:'chest'},
+  {id:'rib',         label:'肋骨最凹陷處',  color:'#D85A30', group:'chest'},
+  {id:'chestBottom', label:'胸肌下緣銜接處', color:'#EF9F27', group:'chest'},
+  {id:'chestPeak',   label:'胸肌最凸處',    color:'#1D9E75', group:'chest'},
+  {id:'clavicleBase',label:'鎖骨垂直基準點', color:'#534AB7', group:'chest'},
 ];
 var GROUPS_SIDE = [
-  {key:'chest', label:'胸部（4點）'},
+  {key:'chest', label:'胸部（5點）'},
 ];
 
 function getDotDef(){return currentMode==='front'?DOTS_FRONT:DOTS_SIDE;}
 function getGroupDef(){return currentMode==='front'?GROUPS_FRONT:GROUPS_SIDE;}
 
-// ── state ─────────────────────────────────────────────
-var dots = [];
-var activeDot = null;
-var draggingDot = null;
+var dots=[], activeDot=null, draggingDot=null;
 var zoom=1, baseZoom=1, panX=0, panY=0;
 var isPanning=false, panStart={x:0,y:0}, panOrigin={x:0,y:0};
 
@@ -158,190 +160,140 @@ function setMode(m){
   currentMode = m;
   document.getElementById('mFront').classList.toggle('active', m==='front');
   document.getElementById('mSide').classList.toggle('active',  m==='side');
-  document.getElementById('uploadHint').textContent =
-    m==='front' ? '上傳全身正面照片' : '上傳上半身側面照片';
-  document.getElementById('heightSection').style.display = m==='front' ? '' : 'none';
-  // if image already loaded, reset dots for new mode
-  if(theimg.src && theimg.naturalWidth>0){
-    resetDots(); renderList(); draw();
-  }
+  document.getElementById('uploadHint').textContent = m==='front'?'上傳全身正面照片':'上傳上半身側面照片';
+  document.getElementById('heightSection').style.display = m==='front'?'':'none';
+  if(theimg.src && theimg.naturalWidth>0){ resetDots(); renderList(); draw(); }
 }
 
 function resetDots(){
-  dots = getDotDef().map(function(d){
-    return {id:d.id, label:d.label, color:d.color, group:d.group, x:null, y:null};
-  });
+  dots = getDotDef().map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});
   activeDot = getDotDef()[0].id;
 }
 
-// ── fit & size ────────────────────────────────────────
 function fitImage(){
-  var maxW = viewport.parentElement.offsetWidth;
-  var maxH = window.innerHeight - 120;
-  var natW = theimg.naturalWidth, natH = theimg.naturalHeight;
-  baseZoom = Math.min(maxW/natW, maxH/natH);
-  zoom = baseZoom; panX = 0; panY = 0;
+  var maxW=viewport.parentElement.offsetWidth, maxH=window.innerHeight-120;
+  var natW=theimg.naturalWidth, natH=theimg.naturalHeight;
+  baseZoom=Math.min(maxW/natW,maxH/natH); zoom=baseZoom; panX=0; panY=0;
   applyTransform();
-  viewport.style.height = Math.round(natH*baseZoom)+'px';
-  thecanvas.width  = natW; thecanvas.height = natH;
-  thecanvas.style.width = natW+'px'; thecanvas.style.height = natH+'px';
+  viewport.style.height=Math.round(natH*baseZoom)+'px';
+  thecanvas.width=natW; thecanvas.height=natH;
+  thecanvas.style.width=natW+'px'; thecanvas.style.height=natH+'px';
 }
 function applyTransform(){
-  inner.style.transform = 'translate('+panX+'px,'+panY+'px) scale('+zoom+')';
-  document.getElementById('zoomLabel').textContent = Math.round(zoom/baseZoom*100)+'%';
+  inner.style.transform='translate('+panX+'px,'+panY+'px) scale('+zoom+')';
+  document.getElementById('zoomLabel').textContent=Math.round(zoom/baseZoom*100)+'%';
 }
 function clampPan(){
-  var natW=theimg.naturalWidth, natH=theimg.naturalHeight;
-  var vw=viewport.offsetWidth,  vh=viewport.offsetHeight;
-  panX = Math.min(0, Math.max(vw - natW*zoom, panX));
-  panY = Math.min(0, Math.max(vh - natH*zoom, panY));
+  var vw=viewport.offsetWidth, vh=viewport.offsetHeight;
+  panX=Math.min(0,Math.max(vw-theimg.naturalWidth*zoom,panX));
+  panY=Math.min(0,Math.max(vh-theimg.naturalHeight*zoom,panY));
 }
 
-// ── zoom ──────────────────────────────────────────────
-function zoomAt(factor, cx, cy){
-  var newZoom = Math.max(baseZoom, Math.min(baseZoom*8, zoom*factor));
-  var ratio = newZoom/zoom;
-  panX = cx-(cx-panX)*ratio; panY = cy-(cy-panY)*ratio;
-  zoom = newZoom; clampPan(); applyTransform(); draw();
+function zoomAt(factor,cx,cy){
+  var nz=Math.max(baseZoom,Math.min(baseZoom*8,zoom*factor)), r=nz/zoom;
+  panX=cx-(cx-panX)*r; panY=cy-(cy-panY)*r; zoom=nz; clampPan(); applyTransform(); draw();
 }
 viewport.addEventListener('wheel',function(e){
-  e.preventDefault();
-  var r=viewport.getBoundingClientRect();
-  zoomAt(e.deltaY<0?1.15:1/1.15, e.clientX-r.left, e.clientY-r.top);
+  e.preventDefault(); var r=viewport.getBoundingClientRect();
+  zoomAt(e.deltaY<0?1.15:1/1.15,e.clientX-r.left,e.clientY-r.top);
 },{passive:false});
-document.getElementById('zoomIn').addEventListener('click',function(){
-  zoomAt(1.3, viewport.offsetWidth/2, viewport.offsetHeight/2);});
-document.getElementById('zoomOut').addEventListener('click',function(){
-  zoomAt(1/1.3, viewport.offsetWidth/2, viewport.offsetHeight/2);});
-document.getElementById('zoomFit').addEventListener('click',function(){
-  zoom=baseZoom; panX=0; panY=0; applyTransform(); draw();});
+document.getElementById('zoomIn').addEventListener('click',function(){zoomAt(1.3,viewport.offsetWidth/2,viewport.offsetHeight/2);});
+document.getElementById('zoomOut').addEventListener('click',function(){zoomAt(1/1.3,viewport.offsetWidth/2,viewport.offsetHeight/2);});
+document.getElementById('zoomFit').addEventListener('click',function(){zoom=baseZoom;panX=0;panY=0;applyTransform();draw();});
 
-// ── coord helpers ─────────────────────────────────────
-function v2img(vx,vy){return {x:(vx-panX)/zoom, y:(vy-panY)/zoom};}
-function img2v(ix,iy){return {x:ix*zoom+panX,   y:iy*zoom+panY};}
-
-function getDot(id){
-  for(var i=0;i<dots.length;i++) if(dots[i].id===id) return dots[i];
-  return null;
+function v2img(vx,vy){return {x:(vx-panX)/zoom,y:(vy-panY)/zoom};}
+function img2v(ix,iy){return {x:ix*zoom+panX,y:iy*zoom+panY};}
+function getDot(id){for(var i=0;i<dots.length;i++)if(dots[i].id===id)return dots[i];return null;}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function projectPointToSegment(P,A,B){
+  var ABx=B.x-A.x,ABy=B.y-A.y,len2=ABx*ABx+ABy*ABy;
+  if(!len2)return {x:A.x,y:A.y};
+  var t=Math.max(0,Math.min(1,((P.x-A.x)*ABx+(P.y-A.y)*ABy)/len2));
+  return {x:A.x+t*ABx,y:A.y+t*ABy};
 }
-function dist(a,b){return Math.hypot(a.x-b.x, a.y-b.y);}
 
-// ── draw ─────────────────────────────────────────────
+// ── rating helper ──
+// thresholds: [a, b]  → <a 不佳, <=b 平均, >b 理想  (lower=worse)
+// or reverse: [a, b]  → >a 不佳, >=b 平均, <b 理想  (higher=worse, set rev=true)
+function rate(val, a, b){
+  if(val < a) return {tip:'不佳', cls:'bw'};
+  if(val < b) return {tip:'平均', cls:'bm'};
+  return {tip:'理想', cls:'bg'};
+}
+
+// ── draw ──────────────────────────────────────────────
 function draw(){
   ctx.clearRect(0,0,thecanvas.width,thecanvas.height);
-
-  if(currentMode==='front'){
-    drawFront();
-  } else {
-    drawSide();
-  }
+  if(currentMode==='front') drawFront(); else drawSide();
   calcMetrics();
 }
 
 function drawLine(a,b,color){
-  if(!a||a.x===null||!b||b.x===null) return;
-  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
-  ctx.strokeStyle = color||'#aaa';
-  ctx.lineWidth = 1.5/zoom;
-  ctx.setLineDash([8/zoom,5/zoom]); ctx.stroke(); ctx.setLineDash([]);
+  if(!a||a.x===null||!b||b.x===null)return;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+  ctx.strokeStyle=color||'#aaa';ctx.lineWidth=1.5/zoom;
+  ctx.setLineDash([8/zoom,5/zoom]);ctx.stroke();ctx.setLineDash([]);
 }
 
-function drawDots(){
+function drawAllDots(){
   dots.forEach(function(d){
-    if(d.x===null) return;
-    var act = activeDot===d.id;
-    var r = 12/zoom;
-    ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2);
-    ctx.fillStyle = act ? d.color : d.color+'cc'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = (act?2.5:1.5)/zoom; ctx.stroke();
-    ctx.fillStyle='#fff';
-    ctx.font='bold '+(10/zoom)+'px sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(d.label[0], d.x, d.y);
+    if(d.x===null)return;
+    var act=activeDot===d.id, r=12/zoom;
+    ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);
+    ctx.fillStyle=act?d.color:d.color+'cc';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=(act?2.5:1.5)/zoom;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold '+(10/zoom)+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(d.label[0],d.x,d.y);
   });
 }
 
 function drawFront(){
-  var pairs=[['headTop','headBottom'],['shoulderL','shoulderR'],['waistL','waistR']];
-  pairs.forEach(function(p){
-    var a=getDot(p[0]),b=getDot(p[1]);
-    drawLine(a,b, a?a.color+'77':null);
+  [['headTop','headBottom'],['shoulderL','shoulderR'],['waistL','waistR']].forEach(function(p){
+    var a=getDot(p[0]),b=getDot(p[1]);drawLine(a,b,a?a.color+'77':null);
   });
-  drawDots();
+  drawAllDots();
 }
 
 function drawSide(){
-  var cl  = getDot('clavicle');
-  var clB = getDot('clavicleBase');
-  var cp  = getDot('chestPeak');
-  var cb  = getDot('chestBottom');
+  var cl=getDot('clavicle'),clB=getDot('clavicleBase'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib');
+  drawLine(cl,clB,'#7F77DD77');   // vertical ref
+  drawLine(cl,cb,'#534AB777');    // chord cl→cb
+  drawLine(cl,rib,'#D85A3077');   // chord cl→rib
 
-  // line: clavicle → clavicleBase (vertical reference)
-  drawLine(cl, clB, '#7F77DD77');
-  // line: clavicle → chestBottom (the "chord" for thickness ratio)
-  drawLine(cl, cb, '#534AB777');
-  // line: chestPeak perpendicular drop to chord (drawn below in calcMetrics)
-
-  // draw angle arc if all 3 angle points present
-  if(cl&&cl.x!==null && cp&&cp.x!==null && clB&&clB.x!==null){
-    // angle at cl between cp and clB
-    var ang1 = Math.atan2(cp.y-cl.y, cp.x-cl.x);
-    var ang2 = Math.atan2(clB.y-cl.y, clB.x-cl.x);
-    var arcR = 30/zoom;
-    ctx.beginPath();
-    ctx.arc(cl.x, cl.y, arcR, ang1, ang2, false);
-    ctx.strokeStyle='#7F77DD99';
-    ctx.lineWidth=1.5/zoom;
-    ctx.setLineDash([]); ctx.stroke();
+  // perpendicular from chestPeak to cl→cb
+  if(cl&&cl.x!==null&&cb&&cb.x!==null&&cp&&cp.x!==null){
+    var foot=projectPointToSegment(cp,cl,cb);
+    ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot.x,foot.y);
+    ctx.strokeStyle='#1D9E7588';ctx.lineWidth=1.5/zoom;
+    ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
-
-  // perpendicular foot from chestPeak to line cl→cb
-  if(cl&&cl.x!==null && cb&&cb.x!==null && cp&&cp.x!==null){
-    var foot = projectPointToSegment(cp, cl, cb);
-    // draw perpendicular line
-    ctx.beginPath(); ctx.moveTo(cp.x,cp.y); ctx.lineTo(foot.x,foot.y);
-    ctx.strokeStyle='#1D9E7588';
-    ctx.lineWidth=1.5/zoom;
-    ctx.setLineDash([5/zoom,4/zoom]); ctx.stroke(); ctx.setLineDash([]);
-    // small right-angle marker
-    var size=8/zoom;
-    var dx=(foot.x-cp.x), dy=(foot.y-cp.y), len=Math.hypot(dx,dy)||1;
-    var nx=dx/len*size, ny=dy/len*size;
-    var vx=(cb.x-cl.x)/Math.hypot(cb.x-cl.x,cb.y-cl.y)*size;
-    var vy=(cb.y-cl.y)/Math.hypot(cb.x-cl.x,cb.y-cl.y)*size;
-    ctx.beginPath();
-    ctx.moveTo(foot.x-vx, foot.y-vy);
-    ctx.lineTo(foot.x-vx+nx, foot.y-vy+ny);
-    ctx.lineTo(foot.x+nx, foot.y+ny);
-    ctx.strokeStyle='#1D9E7588';
-    ctx.lineWidth=1/zoom;
-    ctx.setLineDash([]); ctx.stroke();
+  // perpendicular from chestPeak to cl→rib
+  if(cl&&cl.x!==null&&rib&&rib.x!==null&&cp&&cp.x!==null){
+    var foot2=projectPointToSegment(cp,cl,rib);
+    ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot2.x,foot2.y);
+    ctx.strokeStyle='#D85A3088';ctx.lineWidth=1.5/zoom;
+    ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
-
-  drawDots();
-}
-
-// project point P onto segment AB, return foot point
-function projectPointToSegment(P, A, B){
-  var ABx=B.x-A.x, ABy=B.y-A.y;
-  var len2=ABx*ABx+ABy*ABy;
-  if(len2===0) return {x:A.x,y:A.y};
-  var t=((P.x-A.x)*ABx+(P.y-A.y)*ABy)/len2;
-  t=Math.max(0,Math.min(1,t));
-  return {x:A.x+t*ABx, y:A.y+t*ABy};
+  // angle arc (cl→cp vs cl→cb)
+  if(cl&&cl.x!==null&&cp&&cp.x!==null&&cb&&cb.x!==null){
+    var ang1=Math.atan2(cp.y-cl.y,cp.x-cl.x), ang2=Math.atan2(cb.y-cl.y,cb.x-cl.x);
+    ctx.beginPath();ctx.arc(cl.x,cl.y,30/zoom,ang1,ang2,false);
+    ctx.strokeStyle='#7F77DD99';ctx.lineWidth=1.5/zoom;ctx.setLineDash([]);ctx.stroke();
+  }
+  drawAllDots();
 }
 
 // ── metrics ───────────────────────────────────────────
 function calcMetrics(){
-  var el = document.getElementById('metrics');
-  var allPlaced = dots.every(function(d){return d.x!==null;});
+  var el=document.getElementById('metrics');
+  var allPlaced=dots.every(function(d){return d.x!==null;});
   if(!allPlaced){
     el.innerHTML='<div class="pend">完成所有點位後顯示</div>';
     document.getElementById('actual-section').style.display='none';
+    document.getElementById('rib-section').style.display='none';
     return;
   }
-
   if(currentMode==='front') calcFrontMetrics(el);
   else calcSideMetrics(el);
 }
@@ -351,147 +303,106 @@ function calcFrontMetrics(el){
   var sL=getDot('shoulderL'),sR=getDot('shoulderR');
   var wL=getDot('waistL'),wR=getDot('waistR');
   var nav=getDot('navel'),ft=getDot('foot');
-
-  var headH   = dist(hT,hB);
-  var shouldW = dist(sL,sR);
-  var waistW  = dist(wL,wR);
-  var totalH  = dist(hT,ft);
-  var totalHpx= Math.abs(ft.y-hT.y);
-  var navelH  = Math.abs(ft.y-nav.y);
-  var navelR  = navelH/totalHpx;
-  var shoulderHeadR = shouldW/headH;
-  var headRatio = totalH/headH;
-  var wsr = waistW/shouldW;
-
+  var headH=dist(hT,hB), shouldW=dist(sL,sR), waistW=dist(wL,wR);
+  var totalHpx=Math.abs(ft.y-hT.y), navelH=Math.abs(ft.y-nav.y);
+  var totalH=dist(hT,ft);
   var rows=[
-    {label:'頭身比',val:headRatio.toFixed(2)+' 頭',
-      tip:headRatio>7.4?'理想':headRatio>7?'平均':'不佳',
-      cls:headRatio>7.4?'bg':headRatio>7?'bm':'bw'},
-    {label:'頭肩比（肩/頭高）',val:shoulderHeadR.toFixed(2),
-      tip:shoulderHeadR>2.1?'理想':shoulderHeadR>1.8?'平均':'不佳',
-      cls:shoulderHeadR>2.1?'bg':shoulderHeadR>1.8?'bm':'bw'},
-    {label:'腰肩比',val:wsr.toFixed(2),
-      tip:wsr<=0.618?'理想':wsr<=0.72?'平均':'不佳',
-      cls:wsr<=0.618?'bg':wsr<=0.72?'bm':'bw'},
-    {label:'肚臍高度比',val:navelR.toFixed(3),
-      tip:navelR>0.618?'理想':navelR>0.57?'平均':'不佳',
-      cls:navelR>0.618?'bg':navelR>0.57?'bm':'bw'},
+    (function(){var v=totalH/headH;var r=rate(v,7,7.4);return {label:'頭身比',val:v.toFixed(2)+' 頭',tip:r.tip,cls:r.cls};}()),
+    (function(){var v=shouldW/headH;var r=rate(v,1.8,2.1);return {label:'頭肩比（肩/頭高）',val:v.toFixed(2),tip:r.tip,cls:r.cls};}()),
+    (function(){var v=waistW/shouldW;var r=rate(v,0.72,0.618,true);return {label:'腰肩比',val:v.toFixed(2),tip:r.tip,cls:r.cls};}()),
+    (function(){var v=navelH/totalHpx;var r=rate(v,0.57,0.618);return {label:'肚臍高度比',val:v.toFixed(3),tip:r.tip,cls:r.cls};}()),
   ];
-  el.innerHTML = rows.map(function(r){
-    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+
-           '<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
+  el.innerHTML=rows.map(function(r){
+    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
   }).join('');
+  document.getElementById('rib-section').style.display='none';
 
-  // actual sizes
-  var hVal = parseFloat(document.getElementById('heightInput').value);
-  var aSection = document.getElementById('actual-section');
+  var hVal=parseFloat(document.getElementById('heightInput').value);
+  var aSection=document.getElementById('actual-section');
   if(!hVal||hVal<100||hVal>250){aSection.style.display='none';return;}
-  var scale = hVal/totalHpx;
-  var aRows=[
+  var scale=hVal/totalHpx;
+  document.getElementById('actuals').innerHTML=[
     {label:'肩寬',val:(shouldW*scale).toFixed(1)+' cm'},
     {label:'腰寬',val:(waistW*scale).toFixed(1)+' cm'},
     {label:'腿長（肚臍至腳）',val:(navelH*scale).toFixed(1)+' cm'},
-    {label:'頭高',val:(headH*scale).toFixed(1)+' cm'},
-  ];
-  document.getElementById('actuals').innerHTML = aRows.map(function(r){
-    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'</span></div>';
-  }).join('');
+    {label:'頭高',val:(dist(hT,hB)*scale).toFixed(1)+' cm'},
+  ].map(function(r){return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'</span></div>';}).join('');
   aSection.style.display='block';
 }
 
+function angleAtVertex(vertex, pA, pB){
+  var vA={x:pA.x-vertex.x,y:pA.y-vertex.y};
+  var vB={x:pB.x-vertex.x,y:pB.y-vertex.y};
+  var d=vA.x*vB.x+vA.y*vB.y;
+  var m=Math.hypot(vA.x,vA.y)*Math.hypot(vB.x,vB.y)||1;
+  return Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI;
+}
+function thicknessRatio(peak, A, B){
+  var foot=projectPointToSegment(peak,A,B);
+  var perp=dist(peak,foot), chord=dist(A,B);
+  return chord>0?perp/chord:0;
+}
+
+function renderSideRows(rows){
+  return rows.map(function(r){
+    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
+  }).join('');
+}
+
 function calcSideMetrics(el){
-  var cl  = getDot('clavicle');      // 鎖骨起點
-  var clB = getDot('clavicleBase');  // 鎖骨垂直基準點
-  var cp  = getDot('chestPeak');     // 胸肌最凸處
-  var cb  = getDot('chestBottom');   // 胸肌下緣銜接處
+  var cl=getDot('clavicle'), clB=getDot('clavicleBase');
+  var cp=getDot('chestPeak'), cb=getDot('chestBottom'), rib=getDot('rib');
 
-  // 1. 胸肌夾角: angle at cl between rays cl→cp and cl→cb
-  var vCp  = {x:cp.x-cl.x,  y:cp.y-cl.y};
-  var vCb  = {x:cb.x-cl.x,  y:cb.y-cl.y};
-  var dot1  = vCp.x*vCb.x + vCp.y*vCb.y;
-  var magCp  = Math.hypot(vCp.x, vCp.y)||1;
-  var magCb  = Math.hypot(vCb.x, vCb.y)||1;
-  var chestAngleDeg = Math.acos(Math.min(1,Math.max(-1, dot1/(magCp*magCb))))*180/Math.PI;
-
-  // 2. 胸夾角 (舊): angle at cl between rays cl→cp and cl→clB
-  var vClB = {x:clB.x-cl.x, y:clB.y-cl.y};
-  var dot2  = vCp.x*vClB.x + vCp.y*vClB.y;
-  var magClB = Math.hypot(vClB.x,vClB.y)||1;
-  var angleDeg = Math.acos(Math.min(1,Math.max(-1, dot2/(magCp*magClB))))*180/Math.PI;
-
-  // 3. 胸肌厚度比: perpendicular distance from cp to line cl→cb / dist(cl,cb)
-  var foot    = projectPointToSegment(cp, cl, cb);
-  var perpDist= dist(cp, foot);
-  var chordLen= dist(cl, cb);
-  var thickR  = chordLen>0 ? perpDist/chordLen : 0;
+  // ── 主結果（以胸肌下緣銜接處）──
+  var chestAngle = angleAtVertex(cl, cp, cb);       // 胸肌夾角
+  var jawAngle   = angleAtVertex(cl, cp, clB);      // 胸夾角
+  var thick      = thicknessRatio(cp, cl, cb);      // 胸肌厚度比
 
   var rows=[
-    {label:'胸肌夾角',     val:chestAngleDeg.toFixed(1)+'°',
-      tip:chestAngleDeg<35?'飽滿':chestAngleDeg<50?'平均':'偏平',
-      cls:chestAngleDeg<35?'bg':chestAngleDeg<50?'bm':'bw'},
-    {label:'胸夾角',       val:angleDeg.toFixed(1)+'°',
-      tip:angleDeg<35?'飽滿':angleDeg<50?'平均':'偏平',
-      cls:angleDeg<35?'bg':angleDeg<50?'bm':'bw'},
-    {label:'胸肌厚度比',   val:(thickR*100).toFixed(1)+'%',
-      tip:thickR>0.45?'飽滿':thickR>0.30?'平均':'偏薄',
-      cls:thickR>0.45?'bg':thickR>0.30?'bm':'bw'},
+    (function(){var r=rate(chestAngle,21,24);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(jawAngle,39,44);return {label:'胸夾角',val:jawAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thick*100,20,32);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
   ];
-  el.innerHTML = rows.map(function(r){
-    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+
-           '<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
-  }).join('');
+  el.innerHTML=renderSideRows(rows);
 
+  // ── 副結果（以肋骨最凹陷處）──
+  var chestAngle2 = angleAtVertex(cl, cp, rib);
+  var thick2      = thicknessRatio(cp, cl, rib);
+  var rows2=[
+    (function(){var r=rate(chestAngle2,21,24);return {label:'胸肌夾角',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thick2*100,20,32);return {label:'胸肌厚度比',val:(thick2*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+  ];
+  document.getElementById('rib-metrics').innerHTML=renderSideRows(rows2);
+  document.getElementById('rib-section').style.display='block';
   document.getElementById('actual-section').style.display='none';
 }
 
-// ── hit test ──────────────────────────────────────────
+// ── hit test & events ─────────────────────────────────
 function nearDot(vx,vy){
   for(var i=dots.length-1;i>=0;i--){
-    var d=dots[i]; if(d.x===null) continue;
-    var p=img2v(d.x,d.y);
-    if(Math.hypot(p.x-vx,p.y-vy)<14) return d.id;
-  }
-  return null;
+    var d=dots[i];if(d.x===null)continue;
+    var p=img2v(d.x,d.y);if(Math.hypot(p.x-vx,p.y-vy)<14)return d.id;
+  }return null;
 }
-function getVPos(e){
-  var r=viewport.getBoundingClientRect();
-  var src=e.touches?e.touches[0]:e;
-  return {x:src.clientX-r.left, y:src.clientY-r.top};
-}
+function getVPos(e){var r=viewport.getBoundingClientRect(),src=e.touches?e.touches[0]:e;return {x:src.clientX-r.left,y:src.clientY-r.top};}
 
-// ── pointer events ────────────────────────────────────
 viewport.addEventListener('mousedown',function(e){
-  e.preventDefault();
-  var vp=getVPos(e);
-  var hit=nearDot(vp.x,vp.y);
+  e.preventDefault();var vp=getVPos(e),hit=nearDot(vp.x,vp.y);
   if(hit){
     if(hit===activeDot){activeDot=null;renderList();draw();}
     else{draggingDot=hit;activeDot=hit;renderList();draw();}
-  } else if(activeDot){
-    var d=getDot(activeDot);
-    if(d){
-      var ip=v2img(vp.x,vp.y); d.x=ip.x; d.y=ip.y;
-      var idx=dots.findIndex(function(dd){return dd.id===activeDot;});
-      var advanced=false;
+  }else if(activeDot){
+    var d=getDot(activeDot);if(d){
+      var ip=v2img(vp.x,vp.y);d.x=ip.x;d.y=ip.y;
+      var idx=dots.findIndex(function(dd){return dd.id===activeDot;}),advanced=false;
       for(var i=idx+1;i<dots.length;i++){if(dots[i].x===null){activeDot=dots[i].id;advanced=true;break;}}
-      if(!advanced) activeDot=null;
-      renderList();draw();
+      if(!advanced)activeDot=null;renderList();draw();
     }
-  } else {
-    isPanning=true; viewport.classList.add('grabbing');
-    panStart={x:e.clientX,y:e.clientY}; panOrigin={x:panX,y:panY};
-  }
+  }else{isPanning=true;viewport.classList.add('grabbing');panStart={x:e.clientX,y:e.clientY};panOrigin={x:panX,y:panY};}
 });
 viewport.addEventListener('mousemove',function(e){
-  if(draggingDot){
-    var vp=getVPos(e); var d=getDot(draggingDot);
-    var ip=v2img(vp.x,vp.y); d.x=ip.x; d.y=ip.y;
-    draw(); renderList();
-  } else if(isPanning){
-    panX=panOrigin.x+(e.clientX-panStart.x);
-    panY=panOrigin.y+(e.clientY-panStart.y);
-    clampPan(); applyTransform();
-  }
+  if(draggingDot){var vp=getVPos(e),d=getDot(draggingDot),ip=v2img(vp.x,vp.y);d.x=ip.x;d.y=ip.y;draw();renderList();}
+  else if(isPanning){panX=panOrigin.x+(e.clientX-panStart.x);panY=panOrigin.y+(e.clientY-panStart.y);clampPan();applyTransform();}
 });
 viewport.addEventListener('mouseup',function(){draggingDot=null;isPanning=false;viewport.classList.remove('grabbing');});
 viewport.addEventListener('mouseleave',function(){draggingDot=null;isPanning=false;viewport.classList.remove('grabbing');});
@@ -499,15 +410,12 @@ viewport.addEventListener('touchstart',function(e){e.preventDefault();var t=e.to
 viewport.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];viewport.dispatchEvent(new MouseEvent('mousemove',{clientX:t.clientX,clientY:t.clientY}));},{passive:false});
 viewport.addEventListener('touchend',function(){viewport.dispatchEvent(new MouseEvent('mouseup'));});
 
-// ── render dot list ───────────────────────────────────
 function renderList(){
-  var el=document.getElementById('dotlist');
-  el.innerHTML='';
+  var el=document.getElementById('dotlist');el.innerHTML='';
   getGroupDef().forEach(function(g){
-    var lbl=document.createElement('div'); lbl.className='rh'; lbl.textContent=g.label; el.appendChild(lbl);
+    var lbl=document.createElement('div');lbl.className='rh';lbl.textContent=g.label;el.appendChild(lbl);
     dots.filter(function(d){return d.group===g.key;}).forEach(function(d){
-      var row=document.createElement('div');
-      row.className='di'+(activeDot===d.id?' act':'');
+      var row=document.createElement('div');row.className='di'+(activeDot===d.id?' act':'');
       row.innerHTML='<span class="dc" style="background:'+d.color+'"></span><span>'+d.label+'</span>'+(d.x!==null?'<span class="ck">✓</span>':'');
       row.addEventListener('click',function(){activeDot=(activeDot===d.id)?null:d.id;renderList();draw();});
       el.appendChild(row);
@@ -515,7 +423,6 @@ function renderList(){
   });
 }
 
-// ── load image ────────────────────────────────────────
 function loadImage(file){
   var reader=new FileReader();
   reader.onload=function(e){
@@ -524,10 +431,8 @@ function loadImage(file){
       document.getElementById('upload-section').style.display='none';
       document.getElementById('editor-section').style.display='flex';
       setTimeout(function(){fitImage();renderList();draw();},100);
-    };
-    theimg.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
+    };theimg.src=e.target.result;
+  };reader.readAsDataURL(file);
 }
 
 document.getElementById('ubtn').addEventListener('click',function(){document.getElementById('fileInput').click();});
@@ -537,7 +442,7 @@ document.getElementById('resetBtn').addEventListener('click',function(){resetDot
 document.getElementById('newImgBtn').addEventListener('click',function(){
   document.getElementById('editor-section').style.display='none';
   document.getElementById('upload-section').style.display='';
-  theimg.src=''; document.getElementById('fileInput').value='';
+  theimg.src='';document.getElementById('fileInput').value='';
 });
 
 var uz=document.getElementById('upload-section');
