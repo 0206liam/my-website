@@ -7,30 +7,24 @@
 body{font-family:sans-serif;background:#f0f0f0;color:#222;min-height:400px}
 #app{padding:1rem}
 h1{font-size:17px;font-weight:500;margin-bottom:1rem}
-
 .mode-bar{display:flex;gap:8px;margin-bottom:1rem}
 .mbtn{flex:1;padding:7px;border:1.5px solid #ccc;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;transition:.15s}
 .mbtn.active{border-color:#7F77DD;background:#EEEDFE;color:#534AB7;font-weight:500}
-
 #upload-section{background:#fff;border-radius:10px;border:2px dashed #ccc;padding:2.5rem 1rem;text-align:center}
 #upload-section p{color:#888;font-size:13px;margin-top:6px}
 .ubtn{margin-top:10px;padding:7px 18px;border:1px solid #bbb;border-radius:7px;font-size:13px;cursor:pointer;background:#fff}
-
 #editor-section{display:none;gap:12px}
 .left{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .right{width:220px;flex-shrink:0;background:#fff;border-radius:10px;border:1px solid #ddd;padding:12px;overflow-y:auto;max-height:90vh}
-
 #viewport{position:relative;width:100%;border-radius:8px;overflow:hidden;background:#e8e8e8;cursor:grab;user-select:none;}
 #viewport.grabbing{cursor:grabbing;}
 #inner{position:absolute;top:0;left:0;transform-origin:0 0;}
 #theimg{display:block;}
 #thecanvas{position:absolute;top:0;left:0;pointer-events:none;}
-
 .zoom-bar{display:flex;align-items:center;gap:6px;}
 .zbtn{width:28px;height:28px;border:1px solid #ccc;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .zbtn:hover{background:#f0f0f0;}
 #zoomLabel{font-size:11px;color:#888;min-width:36px;text-align:center;}
-
 .rh{font-size:11px;font-weight:500;color:#aaa;letter-spacing:.5px;margin:8px 0 4px;text-transform:uppercase}
 .di{display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:1px}
 .di:hover{background:#f5f5f5}.di.act{background:#EEEDFE}
@@ -44,25 +38,21 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
 .bw{background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:3px}
 .pend{color:#bbb;font-size:12px;text-align:center;padding:10px 0}
 .hint{font-size:11px;color:#bbb;margin-top:8px;line-height:1.5}
-.sub-section{background:#f8f8f8;border-radius:7px;padding:7px 8px;margin-top:6px}
 </style>
 </head>
 <body>
 <div id="app">
 <h1>身材比例計算器</h1>
-
 <div class="mode-bar">
   <button class="mbtn active" id="mFront" onclick="setMode('front')">🧍 正面模式</button>
   <button class="mbtn" id="mSide" onclick="setMode('side')">🚶 側面模式</button>
 </div>
-
 <div id="upload-section">
   <svg width="36" height="36" viewBox="0 0 36 36" style="display:block;margin:0 auto 8px"><rect width="36" height="36" rx="8" fill="#EEEDFE"/><path d="M18 10v12M12 16l6-6 6 6" stroke="#7F77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="24" width="16" height="2" rx="1" fill="#7F77DD"/></svg>
   <p id="uploadHint">上傳全身正面照片</p>
   <button class="ubtn" id="ubtn">選擇圖片</button>
   <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-
 <div id="editor-section">
   <div class="left">
     <div class="zoom-bar">
@@ -109,10 +99,8 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
   </div>
 </div>
 </div>
-
 <script>
 var currentMode = 'front';
-
 var DOTS_FRONT = [
   {id:'headTop',    label:'頭頂',   color:'#7F77DD', group:'head'},
   {id:'headBottom', label:'下巴',   color:'#534AB7', group:'head'},
@@ -130,8 +118,6 @@ var GROUPS_FRONT = [
   {key:'navel',    label:'肚臍（1點）'},
   {key:'foot',     label:'腳底（1點）'},
 ];
-
-// order: 鎖骨起點 → 胸肌最凸處 → 胸肌下緣銜接處 → 肋骨最凹陷處 → 鎖骨垂直基準點
 var DOTS_SIDE = [
   {id:'clavicle',    label:'鎖骨起點',      color:'#7F77DD', group:'chest'},
   {id:'rib',         label:'肋骨最凹陷處',  color:'#D85A30', group:'chest'},
@@ -188,7 +174,6 @@ function clampPan(){
   panX=Math.min(0,Math.max(vw-theimg.naturalWidth*zoom,panX));
   panY=Math.min(0,Math.max(vh-theimg.naturalHeight*zoom,panY));
 }
-
 function zoomAt(factor,cx,cy){
   var nz=Math.max(baseZoom,Math.min(baseZoom*8,zoom*factor)), r=nz/zoom;
   panX=cx-(cx-panX)*r; panY=cy-(cy-panY)*r; zoom=nz; clampPan(); applyTransform(); draw();
@@ -212,21 +197,19 @@ function projectPointToSegment(P,A,B){
   return {x:A.x+t*ABx,y:A.y+t*ABy};
 }
 
-// ── rating helper ──
-// thresholds: [a, b]  → <a 不佳, <=b 平均, >b 理想  (lower=worse)
-// or reverse: [a, b]  → >a 不佳, >=b 平均, <b 理想  (higher=worse, set rev=true)
+// 不佳 < a <= 平均 < b <= 理想
 function rate(val, a, b){
-  if(val < a) return {tip:'不佳', cls:'bw'};
-  if(val < b) return {tip:'平均', cls:'bm'};
+  if(val <= a) return {tip:'不佳', cls:'bw'};
+  if(val <= b) return {tip:'平均', cls:'bm'};
   return {tip:'理想', cls:'bg'};
 }
+// For front metrics that use rateDesc (higher = worse)
 function rateDesc(val, a, b){
   if(val > a) return {tip:'不佳', cls:'bw'};
   if(val > b) return {tip:'平均', cls:'bm'};
   return {tip:'理想', cls:'bg'};
 }
 
-// ── draw ──────────────────────────────────────────────
 function draw(){
   ctx.clearRect(0,0,thecanvas.width,thecanvas.height);
   if(currentMode==='front') drawFront(); else drawSide();
@@ -239,7 +222,6 @@ function drawLine(a,b,color){
   ctx.strokeStyle=color||'#aaa';ctx.lineWidth=1.5/zoom;
   ctx.setLineDash([8/zoom,5/zoom]);ctx.stroke();ctx.setLineDash([]);
 }
-
 function drawAllDots(){
   dots.forEach(function(d){
     if(d.x===null)return;
@@ -252,35 +234,29 @@ function drawAllDots(){
     ctx.fillText(d.label[0],d.x,d.y);
   });
 }
-
 function drawFront(){
   [['headTop','headBottom'],['shoulderL','shoulderR'],['waistL','waistR']].forEach(function(p){
     var a=getDot(p[0]),b=getDot(p[1]);drawLine(a,b,a?a.color+'77':null);
   });
   drawAllDots();
 }
-
 function drawSide(){
   var cl=getDot('clavicle'),clB=getDot('clavicleBase'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib');
-  drawLine(cl,clB,'#7F77DD77');   // vertical ref
-  drawLine(cl,cb,'#534AB777');    // chord cl→cb
-  drawLine(cl,rib,'#D85A3077');   // chord cl→rib
-
-  // perpendicular from chestPeak to cl→cb
+  drawLine(cl,clB,'#7F77DD77');
+  drawLine(cl,cb,'#534AB777');
+  drawLine(cl,rib,'#D85A3077');
   if(cl&&cl.x!==null&&cb&&cb.x!==null&&cp&&cp.x!==null){
     var foot=projectPointToSegment(cp,cl,cb);
     ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot.x,foot.y);
     ctx.strokeStyle='#1D9E7588';ctx.lineWidth=1.5/zoom;
     ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
-  // perpendicular from chestPeak to cl→rib
   if(cl&&cl.x!==null&&rib&&rib.x!==null&&cp&&cp.x!==null){
     var foot2=projectPointToSegment(cp,cl,rib);
     ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot2.x,foot2.y);
     ctx.strokeStyle='#D85A3088';ctx.lineWidth=1.5/zoom;
     ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
-  // angle arc (cl→cp vs cl→cb)
   if(cl&&cl.x!==null&&cp&&cp.x!==null&&cb&&cb.x!==null){
     var ang1=Math.atan2(cp.y-cl.y,cp.x-cl.x), ang2=Math.atan2(cb.y-cl.y,cb.x-cl.x);
     ctx.beginPath();ctx.arc(cl.x,cl.y,30/zoom,ang1,ang2,false);
@@ -289,7 +265,6 @@ function drawSide(){
   drawAllDots();
 }
 
-// ── metrics ───────────────────────────────────────────
 function calcMetrics(){
   var el=document.getElementById('metrics');
   var allPlaced=dots.every(function(d){return d.x!==null;});
@@ -321,7 +296,6 @@ function calcFrontMetrics(el){
     return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
   }).join('');
   document.getElementById('rib-section').style.display='none';
-
   var hVal=parseFloat(document.getElementById('heightInput').value);
   var aSection=document.getElementById('actual-section');
   if(!hVal||hVal<100||hVal>250){aSection.style.display='none';return;}
@@ -347,7 +321,6 @@ function thicknessRatio(peak, A, B){
   var perp=dist(peak,foot), chord=dist(A,B);
   return chord>0?perp/chord:0;
 }
-
 function renderSideRows(rows){
   return rows.map(function(r){
     return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
@@ -358,31 +331,35 @@ function calcSideMetrics(el){
   var cl=getDot('clavicle'), clB=getDot('clavicleBase');
   var cp=getDot('chestPeak'), cb=getDot('chestBottom'), rib=getDot('rib');
 
-  // ── 主結果（以胸肌下緣銜接處）──
-  var chestAngle = angleAtVertex(cl, cp, cb);       // 胸肌夾角
-  var jawAngle   = angleAtVertex(cl, cp, clB);      // 胸夾角
-  var thick      = thicknessRatio(cp, cl, cb);      // 胸肌厚度比
+  // 主結果（以胸肌下緣銜接處）
+  // 胸肌夾角: 不佳<=21 < 平均<=26 < 理想
+  // 胸夾角:   不佳<=39 < 平均<=45 < 理想
+  // 胸肌厚度比: 不佳<=21 < 平均<=32 < 理想
+  var chestAngle = angleAtVertex(cl, cp, cb);
+  var jawAngle   = angleAtVertex(cl, cp, clB);
+  var thick      = thicknessRatio(cp, cl, cb);
 
   var rows=[
-    (function(){var r=rate(chestAngle,21,24);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(jawAngle,39,44);return {label:'胸夾角',val:jawAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(thick*100,20,32);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(chestAngle,21,26);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(jawAngle,39,45);return {label:'胸夾角',val:jawAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thick*100,21,32);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
   ];
   el.innerHTML=renderSideRows(rows);
 
-  // ── 副結果（以肋骨最凹陷處）──
+  // 副結果（以肋骨最凹陷處）
+  // 胸肌夾角: 不佳<=18 < 平均<=23 < 理想
+  // 胸肌厚度比: 不佳<=20 < 平均<=26 < 理想
   var chestAngle2 = angleAtVertex(cl, cp, rib);
   var thick2      = thicknessRatio(cp, cl, rib);
   var rows2=[
-    (function(){var r=rate(chestAngle2,21,24);return {label:'胸肌夾角',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(thick2*100,20,32);return {label:'胸肌厚度比',val:(thick2*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(chestAngle2,18,23);return {label:'胸肌夾角',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thick2*100,20,26);return {label:'胸肌厚度比',val:(thick2*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
   ];
   document.getElementById('rib-metrics').innerHTML=renderSideRows(rows2);
   document.getElementById('rib-section').style.display='block';
   document.getElementById('actual-section').style.display='none';
 }
 
-// ── hit test & events ─────────────────────────────────
 function nearDot(vx,vy){
   for(var i=dots.length-1;i>=0;i--){
     var d=dots[i];if(d.x===null)continue;
@@ -449,7 +426,6 @@ document.getElementById('newImgBtn').addEventListener('click',function(){
   document.getElementById('upload-section').style.display='';
   theimg.src='';document.getElementById('fileInput').value='';
 });
-
 var uz=document.getElementById('upload-section');
 uz.addEventListener('dragover',function(e){e.preventDefault();uz.style.borderColor='#7F77DD';});
 uz.addEventListener('dragleave',function(){uz.style.borderColor='#ccc';});
