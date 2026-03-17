@@ -354,8 +354,8 @@ function calcSideMetrics(el){
   var chestAngle2 = angleAtVertex(cl, cp, rib);
   var thick2      = thicknessRatio(cp, cl, rib);
   var rows2=[
-    (function(){var r=rate(chestAngle2,18,23);return {label:'胸肌夾角',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(thick2*100,20,26);return {label:'胸肌厚度比',val:(thick2*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(chestAngle2,16,22);return {label:'胸肌夾角',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thick2*100,18,24);return {label:'胸肌厚度比',val:(thick2*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
   ];
   document.getElementById('rib-metrics').innerHTML=renderSideRows(rows2);
   document.getElementById('rib-section').style.display='block';
