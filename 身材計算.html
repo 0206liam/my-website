@@ -345,7 +345,7 @@ function calcSideMetrics(el){
   document.getElementById('actual-section').style.display='none';
 
   // 綜合評分：三項相加（胸肌夾角×1.2 + 胸肌厚度比×2 + 肋骨胸肌夾角×1.2）
- var total = (chestAngle*1 + (thick*100)*1.8 + chestAngle2*1.2) / 1 - 35;
+ var total = (chestAngle*1 + (thick*100)*1.8 + chestAngle2*1.2) / 1.05 - 35;
 
   var scoreEl = document.getElementById('total-score');
   if(!scoreEl){
