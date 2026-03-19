@@ -119,10 +119,9 @@ var DOTS_SIDE = [
   {id:'rib',         label:'肋骨最凹陷處',  color:'#D85A30', group:'chest'},
   {id:'chestBottom', label:'胸肌下緣銜接處', color:'#EF9F27', group:'chest'},
   {id:'chestPeak',   label:'胸肌中段點',    color:'#1D9E75', group:'chest'},
-
 ];
 var GROUPS_SIDE = [
-  {key:'chest', label:'胸部（5點）'},
+  {key:'chest', label:'胸部（4點）'},
 ];
 
 function getDotDef(){return currentMode==='front'?DOTS_FRONT:DOTS_SIDE;}
@@ -193,6 +192,64 @@ function projectPointToSegment(P,A,B){
   return {x:A.x+t*ABx,y:A.y+t*ABy};
 }
 
+// 點 P 到直線 (A,B) 的有向距離（不clamp到線段）
+function pointToLineDistance(P, A, B){
+  var ABx=B.x-A.x, ABy=B.y-A.y, len=Math.hypot(ABx,ABy);
+  if(!len) return 0;
+  return Math.abs((P.x-A.x)*ABy - (P.y-A.y)*ABx) / len;
+}
+
+// 改良版胸肌厚度比：
+// 1. 計算「鎖骨起點→肋骨最凹陷處」方向的法線方向（單位向量）
+// 2. 從胸肌中段點沿該法線方向，算到「鎖骨起點→胸肌下緣」直線的距離
+// 3. 除以 dist(clavicle, rib) 做正規化
+function improvedThicknessRatio(peak, clavicle, rib, chestBottom){
+  var ribDist = dist(clavicle, rib);
+  if(!ribDist) return 0;
+
+  // 鎖骨→肋骨 方向向量
+  var dx = rib.x - clavicle.x, dy = rib.y - clavicle.y;
+  var len = Math.hypot(dx, dy);
+  // 法線方向（順時針旋轉90度）
+  var nx = dy/len, ny = -dx/len;
+
+  // 胸肌中段點沿法線的投影長度（從鎖骨起點到 peak 在法線上的分量）
+  // 即 peak 在法線方向上相對 clavicle 的偏移
+  var proj = (peak.x - clavicle.x)*nx + (peak.y - clavicle.y)*ny;
+
+  // peak 在法線上的足點（即沿「鎖骨→肋骨」線上的對應點）
+  var footOnRibLine = {
+    x: clavicle.x + (peak.x - clavicle.x - proj*nx),
+    y: clavicle.y + (peak.y - clavicle.y - proj*ny)
+  };
+
+  // 從 peak 沿法線延伸，與「鎖骨起點→胸肌下緣」直線的交點距離
+  // 實作：peak 到直線 (clavicle, chestBottom) 的垂直距離
+  // 但方向限制在「鎖骨→肋骨法線」方向上，
+  // 因此取 peak 在法線方向上的投影，再算到 chestBottom 直線的距離
+
+  // 精確做法：沿法線方向從 peak 出發，求與直線(clavicle, chestBottom)的交點距離
+  // 直線(clavicle, chestBottom): 參數式 A + t*(B-A)
+  // 射線(peak, peak+s*normal): peak + s*n
+  // 解聯立
+  var cbDx = chestBottom.x - clavicle.x, cbDy = chestBottom.y - clavicle.y;
+  // 射線與直線交點：
+  // peak.x + s*nx = clavicle.x + t*cbDx
+  // peak.y + s*ny = clavicle.y + t*cbDy
+  // 用克拉瑪法則
+  var denom = nx*cbDy - ny*cbDx;
+  var improved;
+  if(Math.abs(denom) < 1e-9){
+    // 法線與胸肌下緣線平行，回退到點到直線距離
+    improved = pointToLineDistance(peak, clavicle, chestBottom) / ribDist;
+  } else {
+    var rx = clavicle.x - peak.x, ry = clavicle.y - peak.y;
+    var s = (rx*cbDy - ry*cbDx) / denom;
+    improved = Math.abs(s) / ribDist;
+  }
+  return improved;
+}
+
 function rate(val, a, b){
   if(val <= a) return {tip:'不佳', cls:'bw'};
   if(val <= b) return {tip:'平均', cls:'bm'};
@@ -235,16 +292,50 @@ function drawFront(){
   drawAllDots();
 }
 function drawSide(){
-  var cl=getDot('clavicle'),clB=getDot('clavicleBase'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib');
+  var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib');
   drawLine(cl,cb,'#534AB777');
   drawLine(cl,rib,'#D85A3077');
-  // 胸肌厚度：chestPeak 到 (chestBottom, clavicle) 線段的垂線
+
+  // 原始胸肌厚度：chestPeak 到 (clavicle→chestBottom) 線段的垂線
   if(cl&&cl.x!==null&&cb&&cb.x!==null&&cp&&cp.x!==null){
     var foot=projectPointToSegment(cp,cl,cb);
     ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot.x,foot.y);
     ctx.strokeStyle='#1D9E7588';ctx.lineWidth=1.5/zoom;
     ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
+
+  // 改良版：從 chestPeak 沿「鎖骨→肋骨法線」方向到「鎖骨→胸肌下緣」直線的距離線
+  if(cl&&cl.x!==null&&rib&&rib.x!==null&&cp&&cp.x!==null&&cb&&cb.x!==null){
+    var dx=rib.x-cl.x, dy=rib.y-cl.y, len=Math.hypot(dx,dy);
+    if(len>0){
+      var nx=dy/len, ny=-dx/len;
+      // 求交點（同 improvedThicknessRatio 內的計算）
+      var cbDx=cb.x-cl.x, cbDy=cb.y-cl.y;
+      var denom=nx*cbDy-ny*cbDx;
+      var ix, iy;
+      if(Math.abs(denom)<1e-9){
+        var fp=projectPointToSegment(cp,cl,cb);ix=fp.x;iy=fp.y;
+      } else {
+        var rx2=cl.x-cp.x,ry2=cl.y-cp.y;
+        var s2=(rx2*cbDy-ry2*cbDx)/denom;
+        ix=cp.x+s2*nx; iy=cp.y+s2*ny;
+      }
+      ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(ix,iy);
+      ctx.strokeStyle='#7F77DDBB';ctx.lineWidth=2/zoom;
+      ctx.setLineDash([6/zoom,3/zoom]);ctx.stroke();ctx.setLineDash([]);
+      // 畫小方塊表示直角
+      var sqSize=6/zoom;
+      var ex=ix-cp.x, ey=iy-cp.y, elen=Math.hypot(ex,ey)||1;
+      var eux=ex/elen*sqSize, euy=ey/elen*sqSize;
+      var perp={x:-euy,y:eux};
+      ctx.beginPath();
+      ctx.moveTo(ix-eux,iy-euy);
+      ctx.lineTo(ix-eux+perp.x,iy-euy+perp.y);
+      ctx.lineTo(ix+perp.x,iy+perp.y);
+      ctx.strokeStyle='#7F77DDBB';ctx.lineWidth=1/zoom;ctx.setLineDash([]);ctx.stroke();
+    }
+  }
+
   // 胸肌夾角弧
   if(cl&&cl.x!==null&&cp&&cp.x!==null&&cb&&cb.x!==null){
     var ang1=Math.atan2(cp.y-cl.y,cp.x-cl.x), ang2=Math.atan2(cb.y-cl.y,cb.x-cl.x);
@@ -308,7 +399,6 @@ function angleAtVertex(vertex, pA, pB){
   return Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI;
 }
 
-// 胸肌厚度比：chestPeak 到 (clavicle, chestBottom) 線段的最短距離 / dist(rib, clavicle)
 function newThicknessRatio(peak, clavicle, chestBottom, rib){
   var foot=projectPointToSegment(peak, clavicle, chestBottom);
   var perp=dist(peak, foot);
@@ -323,19 +413,17 @@ function renderSideRows(rows){
 }
 
 function calcSideMetrics(el){
-  var cl=getDot('clavicle'), clB=getDot('clavicleBase');
+  var cl=getDot('clavicle');
   var cp=getDot('chestPeak'), cb=getDot('chestBottom'), rib=getDot('rib');
 
-  // 胸肌夾角: 鎖骨起點為頂點，chestPeak 與 chestBottom 的夾角
-  var chestAngle = angleAtVertex(cl, cp, cb);
-  // 胸肌厚度比: chestPeak 到 (clavicle→chestBottom) 線段最短距離 / dist(rib, clavicle)
-  var thick = newThicknessRatio(cp, cl, cb, rib);
-
-  // 以肋骨最凹陷處計算的胸肌夾角
+  var chestAngle  = angleAtVertex(cl, cp, cb);
+  var thick       = newThicknessRatio(cp, cl, cb, rib);
   var chestAngle2 = angleAtVertex(cl, cp, rib);
+  var thickImproved = improvedThicknessRatio(cp, cl, rib, cb);
 
   var rows=[
     (function(){var r=rate(thick*100,24,30);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thickImproved*100,24,30);return {label:'胸肌厚度比（改良）',val:(thickImproved*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(chestAngle,25,29);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(chestAngle2,18,22);return {label:'胸肌夾角（肋凹處）',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
   ];
@@ -344,8 +432,7 @@ function calcSideMetrics(el){
   document.getElementById('rib-section').style.display='none';
   document.getElementById('actual-section').style.display='none';
 
-  // 綜合評分：三項相加（胸肌夾角×1.2 + 胸肌厚度比×2 + 肋骨胸肌夾角×1.2）
- var total = (chestAngle*1 + (thick*100)*1.8 + chestAngle2*1.1) / 0.95 - 45;
+  var total = (chestAngle*1 + (thick*100)*1.8 + chestAngle2*1.1) / 0.95 - 45;
 
   var scoreEl = document.getElementById('total-score');
   if(!scoreEl){
