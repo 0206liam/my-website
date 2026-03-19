@@ -59,8 +59,8 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
       <button class="zbtn" id="zoomOut">−</button>
       <span id="zoomLabel">100%</span>
       <button class="zbtn" id="zoomIn">+</button>
-      <button class="zbtn" id="zoomFit" style="width:auto;padding:0 8px;font-size:11px;">重置</button>
-      <span style="font-size:11px;color:#aaa;margin-left:4px;">滾輪縮放・拖曳平移</span>
+      <button class="zbtn" id="zoomFit" style="width:auto;padding:0 8px;font-size:13px;">重置</button>
+      <span style="font-size:13px;color:#aaa;margin-left:6px;">滾輪縮放・拖曳平移</span>
     </div>
     <div id="viewport">
       <div id="inner">
@@ -91,11 +91,7 @@ h1{font-size:17px;font-weight:500;margin-bottom:1rem}
       <div class="rh">實際尺寸（cm）</div>
       <div id="actuals"></div>
     </div>
-    <div id="rib-section" style="display:none">
-      <div class="divider"></div>
-      <div class="rh" style="margin-top:0">比例結果（以肋骨最凹處計算）</div>
-      <div id="rib-metrics"></div>
-    </div>
+    <div id="rib-section" style="display:none"></div>
   </div>
 </div>
 </div>
@@ -123,7 +119,7 @@ var DOTS_SIDE = [
   {id:'rib',         label:'肋骨最凹陷處',  color:'#D85A30', group:'chest'},
   {id:'chestBottom', label:'胸肌下緣銜接處', color:'#EF9F27', group:'chest'},
   {id:'chestPeak',   label:'胸肌最凸處',    color:'#1D9E75', group:'chest'},
-  {id:'clavicleBase',label:'鎖骨垂直基準點', color:'#534AB7', group:'chest'},
+
 ];
 var GROUPS_SIDE = [
   {key:'chest', label:'胸部（5點）'},
@@ -197,13 +193,11 @@ function projectPointToSegment(P,A,B){
   return {x:A.x+t*ABx,y:A.y+t*ABy};
 }
 
-// 不佳 < a <= 平均 < b <= 理想
 function rate(val, a, b){
   if(val <= a) return {tip:'不佳', cls:'bw'};
   if(val <= b) return {tip:'平均', cls:'bm'};
   return {tip:'理想', cls:'bg'};
 }
-// For front metrics that use rateDesc (higher = worse)
 function rateDesc(val, a, b){
   if(val > a) return {tip:'不佳', cls:'bw'};
   if(val > b) return {tip:'平均', cls:'bm'};
@@ -242,21 +236,16 @@ function drawFront(){
 }
 function drawSide(){
   var cl=getDot('clavicle'),clB=getDot('clavicleBase'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib');
-  drawLine(cl,clB,'#7F77DD77');
   drawLine(cl,cb,'#534AB777');
   drawLine(cl,rib,'#D85A3077');
+  // 胸肌厚度：chestPeak 到 (chestBottom, clavicle) 線段的垂線
   if(cl&&cl.x!==null&&cb&&cb.x!==null&&cp&&cp.x!==null){
     var foot=projectPointToSegment(cp,cl,cb);
     ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot.x,foot.y);
     ctx.strokeStyle='#1D9E7588';ctx.lineWidth=1.5/zoom;
     ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
-  if(cl&&cl.x!==null&&rib&&rib.x!==null&&cp&&cp.x!==null){
-    var foot2=projectPointToSegment(cp,cl,rib);
-    ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(foot2.x,foot2.y);
-    ctx.strokeStyle='#D85A3088';ctx.lineWidth=1.5/zoom;
-    ctx.setLineDash([5/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
-  }
+  // 胸肌夾角弧
   if(cl&&cl.x!==null&&cp&&cp.x!==null&&cb&&cb.x!==null){
     var ang1=Math.atan2(cp.y-cl.y,cp.x-cl.x), ang2=Math.atan2(cb.y-cl.y,cb.x-cl.x);
     ctx.beginPath();ctx.arc(cl.x,cl.y,30/zoom,ang1,ang2,false);
@@ -272,6 +261,7 @@ function calcMetrics(){
     el.innerHTML='<div class="pend">完成所有點位後顯示</div>';
     document.getElementById('actual-section').style.display='none';
     document.getElementById('rib-section').style.display='none';
+    var sc=document.getElementById('total-score-section');if(sc)sc.style.display='none';
     return;
   }
   if(currentMode==='front') calcFrontMetrics(el);
@@ -296,8 +286,7 @@ function calcFrontMetrics(el){
     return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
   }).join('');
   document.getElementById('rib-section').style.display='none';
-  var scoreSection=document.getElementById('total-score-section');
-  if(scoreSection) scoreSection.style.display='none';
+  var sc=document.getElementById('total-score-section');if(sc)sc.style.display='none';
   var hVal=parseFloat(document.getElementById('heightInput').value);
   var aSection=document.getElementById('actual-section');
   if(!hVal||hVal<100||hVal>250){aSection.style.display='none';return;}
@@ -318,11 +307,15 @@ function angleAtVertex(vertex, pA, pB){
   var m=Math.hypot(vA.x,vA.y)*Math.hypot(vB.x,vB.y)||1;
   return Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI;
 }
-function thicknessRatio(peak, A, B){
-  var foot=projectPointToSegment(peak,A,B);
-  var perp=dist(peak,foot), chord=dist(A,B);
-  return chord>0?perp/chord:0;
+
+// 胸肌厚度比：chestPeak 到 (clavicle, chestBottom) 線段的最短距離 / dist(rib, clavicle)
+function newThicknessRatio(peak, clavicle, chestBottom, rib){
+  var foot=projectPointToSegment(peak, clavicle, chestBottom);
+  var perp=dist(peak, foot);
+  var ribDist=dist(rib, clavicle);
+  return ribDist>0 ? perp/ribDist : 0;
 }
+
 function renderSideRows(rows){
   return rows.map(function(r){
     return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
@@ -333,36 +326,27 @@ function calcSideMetrics(el){
   var cl=getDot('clavicle'), clB=getDot('clavicleBase');
   var cp=getDot('chestPeak'), cb=getDot('chestBottom'), rib=getDot('rib');
 
-  // 主結果（以胸肌下緣銜接處）
-  // 胸肌夾角: 不佳<=21 < 平均<=26 < 理想
-  // 胸夾角:   不佳<=39 < 平均<=45 < 理想
-  // 胸肌厚度比: 不佳<=21 < 平均<=32 < 理想
+  // 胸肌夾角: 鎖骨起點為頂點，chestPeak 與 chestBottom 的夾角
   var chestAngle = angleAtVertex(cl, cp, cb);
-  var jawAngle   = angleAtVertex(cl, cp, clB);
-  var thick      = thicknessRatio(cp, cl, cb);
+  // 胸肌厚度比: chestPeak 到 (clavicle→chestBottom) 線段最短距離 / dist(rib, clavicle)
+  var thick = newThicknessRatio(cp, cl, cb, rib);
+
+  // 以肋骨最凹陷處計算的胸肌夾角
+  var chestAngle2 = angleAtVertex(cl, cp, rib);
 
   var rows=[
     (function(){var r=rate(chestAngle,21,26);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(jawAngle,39,45);return {label:'胸夾角',val:jawAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(thick*100,21,32);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(chestAngle2,16,22);return {label:'胸肌夾角（肋凹處）',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
   ];
   el.innerHTML=renderSideRows(rows);
 
-  // 副結果（以肋骨最凹陷處）
-  // 胸肌夾角: 不佳<=18 < 平均<=23 < 理想
-  // 胸肌厚度比: 不佳<=20 < 平均<=26 < 理想
-  var chestAngle2 = angleAtVertex(cl, cp, rib);
-  var thick2      = thicknessRatio(cp, cl, rib);
-  var rows2=[
-    (function(){var r=rate(chestAngle2,16,22);return {label:'胸肌夾角',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(thick2*100,18,24);return {label:'胸肌厚度比',val:(thick2*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
-  ];
-  document.getElementById('rib-metrics').innerHTML=renderSideRows(rows2);
-  document.getElementById('rib-section').style.display='block';
+  document.getElementById('rib-section').style.display='none';
   document.getElementById('actual-section').style.display='none';
 
-  // 綜合評分：五項角度/比例數值相加 - 70
-  var total = (chestAngle*1.2 + (jawAngle-15)*1.5 + (thick*100)*2 + chestAngle2*1.2 + (thick2*100)*2)/1.7 - 50;
+  // 綜合評分：三項相加（胸肌夾角×1.2 + 胸肌厚度比×2 + 肋骨胸肌夾角×1.2）
+  var total = (chestAngle*1.2 + (thick*100)*2 + chestAngle2*1.2) / 1.2 - 40;
+
   var scoreEl = document.getElementById('total-score');
   if(!scoreEl){
     var div = document.createElement('div');
