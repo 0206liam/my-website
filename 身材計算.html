@@ -335,9 +335,9 @@ function calcSideMetrics(el){
   var chestAngle2 = angleAtVertex(cl, cp, rib);
 
   var rows=[
-    (function(){var r=rate(chestAngle,21,26);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(thick*100,21,32);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(chestAngle2,16,22);return {label:'胸肌夾角（肋凹處）',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thick*100,24,30);return {label:'胸肌厚度比',val:(thick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(chestAngle,25,29);return {label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(chestAngle2,18,22);return {label:'胸肌夾角（肋凹處）',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
   ];
   el.innerHTML=renderSideRows(rows);
 
@@ -345,7 +345,7 @@ function calcSideMetrics(el){
   document.getElementById('actual-section').style.display='none';
 
   // 綜合評分：三項相加（胸肌夾角×1.2 + 胸肌厚度比×2 + 肋骨胸肌夾角×1.2）
-  var total = (chestAngle*1.2 + (thick*100)*2 + chestAngle2*1.2) / 1.2 - 40;
+  var total = (chestAngle*1 + (thick*100)*1.8 + chestAngle2*1.2) / 1.6 - 45;
 
   var scoreEl = document.getElementById('total-score');
   if(!scoreEl){
