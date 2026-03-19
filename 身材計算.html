@@ -149,7 +149,7 @@ function setMode(m){
 
 function resetDots(){
   dots = getDotDef().map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});
-  activeDot = getDotDef()[0].id;
+  activeDot = null;
 }
 
 function fitImage(){
