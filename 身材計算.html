@@ -115,14 +115,15 @@ var GROUPS_FRONT=[
   {key:'foot',     label:'腳底（1點）'},
 ];
 var DOTS_SIDE=[
-  {id:'clavicle',    label:'鎖骨起點',      color:'#7F77DD',group:'chest'},
-  {id:'rib',         label:'肋骨最凹陷處',  color:'#D85A30',group:'chest'},
-  {id:'chestBottom', label:'胸肌下緣銜接處',color:'#EF9F27',group:'chest'},
-  {id:'chestPeak',   label:'胸肌中段點',    color:'#1D9E75',group:'chest'},
-  {id:'lowerChest',  label:'下胸',          color:'#E24B4A',group:'chest'},
+  {id:'clavicle',       label:'鎖骨起點',      color:'#7F77DD',group:'chest'},
+  {id:'rib',            label:'肋骨最凹陷處',  color:'#D85A30',group:'chest'},
+  {id:'chestBottom',    label:'胸肌下緣銜接處',color:'#EF9F27',group:'chest'},
+  {id:'chestPeak',      label:'胸肌中段點',    color:'#1D9E75',group:'chest'},
+  {id:'lowerChest',     label:'下胸',          color:'#E24B4A',group:'chest'},
+  {id:'clavicleHollow', label:'鎖骨凹點',      color:'#A855F7',group:'chest'},
 ];
 var GROUPS_SIDE=[
-  {key:'chest',label:'胸部（5點）'},
+  {key:'chest',label:'胸部（6點）'},
 ];
 
 function getDotDef(){return currentMode==='front'?DOTS_FRONT:DOTS_SIDE;}
@@ -147,7 +148,7 @@ function setMode(m){
   if(theimg.src&&theimg.naturalWidth>0){resetDots();renderList();draw();}
 }
 function resetDots(){
-  dots=getDotDef().map(function(d){return {id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});
+  dots=getDotDef().map(function(d){return{id:d.id,label:d.label,color:d.color,group:d.group,x:null,y:null};});
   activeDot=null;
 }
 function fitImage(){
@@ -180,8 +181,8 @@ document.getElementById('zoomIn').addEventListener('click',function(){zoomAt(1.3
 document.getElementById('zoomOut').addEventListener('click',function(){zoomAt(1/1.3,viewport.offsetWidth/2,viewport.offsetHeight/2);});
 document.getElementById('zoomFit').addEventListener('click',function(){zoom=baseZoom;panX=0;panY=0;applyTransform();draw();});
 
-function v2img(vx,vy){return {x:(vx-panX)/zoom,y:(vy-panY)/zoom};}
-function img2v(ix,iy){return {x:ix*zoom+panX,y:iy*zoom+panY};}
+function v2img(vx,vy){return{x:(vx-panX)/zoom,y:(vy-panY)/zoom};}
+function img2v(ix,iy){return{x:ix*zoom+panX,y:iy*zoom+panY};}
 function getDot(id){for(var i=0;i<dots.length;i++)if(dots[i].id===id)return dots[i];return null;}
 function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
@@ -198,9 +199,9 @@ function pointToLineDist(P,A,B){
 }
 function projectPointToSegment(P,A,B){
   var ABx=B.x-A.x,ABy=B.y-A.y,len2=ABx*ABx+ABy*ABy;
-  if(!len2)return {x:A.x,y:A.y};
+  if(!len2)return{x:A.x,y:A.y};
   var t=Math.max(0,Math.min(1,((P.x-A.x)*ABx+(P.y-A.y)*ABy)/len2));
-  return {x:A.x+t*ABx,y:A.y+t*ABy};
+  return{x:A.x+t*ABx,y:A.y+t*ABy};
 }
 function improvedThicknessRatio(peak,clavicle,rib,chestBottom){
   var ribDist=dist(clavicle,rib);
@@ -260,69 +261,40 @@ function drawFront(){
   });
   drawAllDots();
 }
-
-// 畫從點P到線段AB的法線輔助虛線（延伸到線段兩端方向之外）
-function drawNormalGuide(cl, cb){
-  if(!cl||cl.x===null||!cb||cb.x===null) return;
-
-  // 計算 (cl → cb) 的中點
-  var mx=(cl.x+cb.x)/2, my=(cl.y+cb.y)/2;
-
-  // 計算法線方向（垂直於 cl→cb）
-  var dx=cb.x-cl.x, dy=cb.y-cl.y;
-  var len=Math.hypot(dx,dy);
-  if(!len) return;
-  // 法線單位向量（旋轉90度）
-  var nx=-dy/len, ny=dx/len;
-
-  // 延伸長度：取線段長度的 0.6 倍，讓輔助線夠長但不太長
-  var ext=len*0.6;
-  var x1=mx+nx*ext, y1=my+ny*ext;
-  var x2=mx-nx*ext, y2=my-ny*ext;
-
+function drawNormalGuide(cl,cb){
+  if(!cl||cl.x===null||!cb||cb.x===null)return;
+  var mx=(cl.x+cb.x)/2,my=(cl.y+cb.y)/2;
+  var dx=cb.x-cl.x,dy=cb.y-cl.y,len=Math.hypot(dx,dy);
+  if(!len)return;
+  var nx=-dy/len,ny=dx/len,ext=len*0.6;
+  var x1=mx+nx*ext,y1=my+ny*ext,x2=mx-nx*ext,y2=my-ny*ext;
   ctx.save();
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+  ctx.strokeStyle='rgba(29,158,117,0.55)';ctx.lineWidth=1.5/zoom;
+  ctx.setLineDash([6/zoom,4/zoom]);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(mx,my,3/zoom,0,Math.PI*2);
+  ctx.fillStyle='rgba(29,158,117,0.5)';ctx.fill();
+  var sqS=7/zoom,bx=dx/len*sqS,by=dy/len*sqS,px=nx*sqS,py=ny*sqS;
   ctx.beginPath();
-  ctx.moveTo(x1,y1);
-  ctx.lineTo(x2,y2);
-  ctx.strokeStyle='rgba(29,158,117,0.55)'; // 與胸肌中段點同色系，半透明
-  ctx.lineWidth=1.5/zoom;
-  ctx.setLineDash([6/zoom,4/zoom]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // 中點小圓標示
-  ctx.beginPath();
-  ctx.arc(mx,my,3/zoom,0,Math.PI*2);
-  ctx.fillStyle='rgba(29,158,117,0.5)';
-  ctx.fill();
-
-  // 直角符號（在中點處標示與基準線垂直）
-  var sqS=7/zoom;
-  var bx=dx/len*sqS, by=dy/len*sqS; // 沿基準線方向
-  var px=nx*sqS, py=ny*sqS;          // 沿法線方向
-  ctx.beginPath();
-  ctx.moveTo(mx+bx/2, my+by/2);
-  ctx.lineTo(mx+bx/2+px/2, my+by/2+py/2);
-  ctx.lineTo(mx+px/2, my+py/2);
-  ctx.strokeStyle='rgba(29,158,117,0.55)';
-  ctx.lineWidth=1/zoom;
-  ctx.setLineDash([]);
-  ctx.stroke();
-
+  ctx.moveTo(mx+bx/2,my+by/2);
+  ctx.lineTo(mx+bx/2+px/2,my+by/2+py/2);
+  ctx.lineTo(mx+px/2,my+py/2);
+  ctx.strokeStyle='rgba(29,158,117,0.55)';ctx.lineWidth=1/zoom;ctx.setLineDash([]);ctx.stroke();
   ctx.restore();
 }
-
 function drawSide(){
-  var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib'),lc=getDot('lowerChest');
+  var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom');
+  var rib=getDot('rib'),lc=getDot('lowerChest'),ch=getDot('clavicleHollow');
 
   // 基準線
   drawLine(cl,cb,'#EF9F2777');
   drawLine(cl,rib,'#D85A3077');
 
-  // 法線輔助虛線（鎖骨起點→胸肌下緣的中垂線），用於輔助標記胸肌中段點
-  // 只要兩端點都已放置且胸肌中段點尚未放置（或正在選取中）才顯示
-  var showGuide=(cl&&cl.x!==null&&cb&&cb.x!==null);
-  if(showGuide) drawNormalGuide(cl,cb);
+  // 法線輔助虛線
+  if(cl&&cl.x!==null&&cb&&cb.x!==null) drawNormalGuide(cl,cb);
+
+  // 鎖骨凹點連線
+  drawLine(cl,ch,'#A855F744');
 
   // 五點圍成的胸肌輪廓多邊形
   var polyDots=[cl,cp,lc,cb,rib];
@@ -335,7 +307,7 @@ function drawSide(){
     ctx.strokeStyle='#7F77DD88';ctx.lineWidth=1.5/zoom;ctx.setLineDash([6/zoom,3/zoom]);ctx.stroke();ctx.setLineDash([]);
   }
 
-  // 下胸厚度：lowerChest 到 (clavicle→chestBottom) 線段的垂線
+  // 下胸厚度垂線
   if(cl&&cl.x!==null&&cb&&cb.x!==null&&lc&&lc.x!==null){
     var foot=projectPointToSegment(lc,cl,cb);
     ctx.beginPath();ctx.moveTo(lc.x,lc.y);ctx.lineTo(foot.x,foot.y);
@@ -412,7 +384,9 @@ function angleAtVertex(vertex,pA,pB){
 }
 
 function calcSideMetrics(el){
-  var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib'),lc=getDot('lowerChest');
+  var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom');
+  var rib=getDot('rib'),lc=getDot('lowerChest'),ch=getDot('clavicleHollow');
+
   var ribDist=dist(cl,rib);
   var thickImproved=improvedThicknessRatio(cp,cl,rib,cb);
   var lowerThick=ribDist>0?pointToSegmentDist(lc,cl,cb)/ribDist:0;
@@ -420,20 +394,30 @@ function calcSideMetrics(el){
   var chestAngle2=angleAtVertex(cl,cp,rib);
   var polyArea=polygonArea([cl,cp,lc,rib,cb]);
   var areaRatio=ribDist>0?polyArea/(ribDist*ribDist):0;
+
+  // 側面度
+  var clcbDist=dist(cl,cb);
+  var lateralityVal=clcbDist>0?1-dist(cl,ch)/clcbDist:0;
+
   var rows=[
     (function(){var r=rate(thickImproved*100,25,30);return{label:'胸肌厚度比',val:(thickImproved*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(lowerThick*100,20,29);return{label:'下胸厚度比',val:(lowerThick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(areaRatio*100,15,21);return{label:'胸面積比',val:(areaRatio*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(chestAngle,25,29);return{label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(chestAngle2,18,22);return{label:'胸肌夾角（肋凹處）',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
+    {label:'側面度',val:(lateralityVal*100).toFixed(1)+'%',tip:'',cls:''},
   ];
   el.innerHTML=rows.map(function(r){
-    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
+    return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+(r.tip?'<span class="'+r.cls+'">'+r.tip+'</span>':'')+'</span></div>';
   }).join('');
+
   document.getElementById('rib-section').style.display='none';
   document.getElementById('actual-section').style.display='none';
+
   var t=thickImproved*100,lt=lowerThick*100,ar=areaRatio*100;
-  var total=((t-14)*4.3+(lt-13)*4+(ar-8)*5.9+(chestAngle-17)*4.7+(chestAngle2-10)*5)/5;
+  var baseScore=((t-14)*4.3+(lt-13)*4+(ar-8)*5.9+(chestAngle-17)*4.7+(chestAngle2-10)*5)/5;
+  var total=baseScore*lateralityVal*1.1;
+
   var scoreEl=document.getElementById('total-score');
   if(!scoreEl){
     var div=document.createElement('div');
