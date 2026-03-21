@@ -185,30 +185,23 @@ function img2v(ix,iy){return {x:ix*zoom+panX,y:iy*zoom+panY};}
 function getDot(id){for(var i=0;i<dots.length;i++)if(dots[i].id===id)return dots[i];return null;}
 function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
-// 點 P 到線段 AB 的最短距離
 function pointToSegmentDist(P,A,B){
   var ABx=B.x-A.x,ABy=B.y-A.y,len2=ABx*ABx+ABy*ABy;
   if(!len2)return dist(P,A);
   var t=Math.max(0,Math.min(1,((P.x-A.x)*ABx+(P.y-A.y)*ABy)/len2));
   return Math.hypot(P.x-(A.x+t*ABx),P.y-(A.y+t*ABy));
 }
-
-// 點 P 到直線 AB 的距離（不clamp）
 function pointToLineDist(P,A,B){
   var ABx=B.x-A.x,ABy=B.y-A.y,len=Math.hypot(ABx,ABy);
   if(!len)return dist(P,A);
   return Math.abs((P.x-A.x)*ABy-(P.y-A.y)*ABx)/len;
 }
-
-// 點 P 到線段 AB 的垂足（clamp）
 function projectPointToSegment(P,A,B){
   var ABx=B.x-A.x,ABy=B.y-A.y,len2=ABx*ABx+ABy*ABy;
   if(!len2)return {x:A.x,y:A.y};
   var t=Math.max(0,Math.min(1,((P.x-A.x)*ABx+(P.y-A.y)*ABy)/len2));
   return {x:A.x+t*ABx,y:A.y+t*ABy};
 }
-
-// 改良版胸肌厚度比：從 peak 沿「鎖骨→肋骨法線」方向，求與「鎖骨→胸肌下緣」直線的交點距離 / dist(clavicle,rib)
 function improvedThicknessRatio(peak,clavicle,rib,chestBottom){
   var ribDist=dist(clavicle,rib);
   if(!ribDist)return 0;
@@ -221,14 +214,11 @@ function improvedThicknessRatio(peak,clavicle,rib,chestBottom){
   var s=(rx*cbDy-ry*cbDx)/denom;
   return Math.abs(s)/ribDist;
 }
-
-// 多邊形面積（Shoelace）
 function polygonArea(pts){
   var n=pts.length,s=0;
   for(var i=0;i<n;i++){var j=(i+1)%n;s+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}
   return Math.abs(s)/2;
 }
-
 function rate(val,a,b){
   if(val<=a)return{tip:'不佳',cls:'bw'};
   if(val<=b)return{tip:'平均',cls:'bm'};
@@ -270,12 +260,69 @@ function drawFront(){
   });
   drawAllDots();
 }
+
+// 畫從點P到線段AB的法線輔助虛線（延伸到線段兩端方向之外）
+function drawNormalGuide(cl, cb){
+  if(!cl||cl.x===null||!cb||cb.x===null) return;
+
+  // 計算 (cl → cb) 的中點
+  var mx=(cl.x+cb.x)/2, my=(cl.y+cb.y)/2;
+
+  // 計算法線方向（垂直於 cl→cb）
+  var dx=cb.x-cl.x, dy=cb.y-cl.y;
+  var len=Math.hypot(dx,dy);
+  if(!len) return;
+  // 法線單位向量（旋轉90度）
+  var nx=-dy/len, ny=dx/len;
+
+  // 延伸長度：取線段長度的 0.6 倍，讓輔助線夠長但不太長
+  var ext=len*0.6;
+  var x1=mx+nx*ext, y1=my+ny*ext;
+  var x2=mx-nx*ext, y2=my-ny*ext;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.strokeStyle='rgba(29,158,117,0.55)'; // 與胸肌中段點同色系，半透明
+  ctx.lineWidth=1.5/zoom;
+  ctx.setLineDash([6/zoom,4/zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 中點小圓標示
+  ctx.beginPath();
+  ctx.arc(mx,my,3/zoom,0,Math.PI*2);
+  ctx.fillStyle='rgba(29,158,117,0.5)';
+  ctx.fill();
+
+  // 直角符號（在中點處標示與基準線垂直）
+  var sqS=7/zoom;
+  var bx=dx/len*sqS, by=dy/len*sqS; // 沿基準線方向
+  var px=nx*sqS, py=ny*sqS;          // 沿法線方向
+  ctx.beginPath();
+  ctx.moveTo(mx+bx/2, my+by/2);
+  ctx.lineTo(mx+bx/2+px/2, my+by/2+py/2);
+  ctx.lineTo(mx+px/2, my+py/2);
+  ctx.strokeStyle='rgba(29,158,117,0.55)';
+  ctx.lineWidth=1/zoom;
+  ctx.setLineDash([]);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawSide(){
   var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib'),lc=getDot('lowerChest');
 
   // 基準線
   drawLine(cl,cb,'#EF9F2777');
   drawLine(cl,rib,'#D85A3077');
+
+  // 法線輔助虛線（鎖骨起點→胸肌下緣的中垂線），用於輔助標記胸肌中段點
+  // 只要兩端點都已放置且胸肌中段點尚未放置（或正在選取中）才顯示
+  var showGuide=(cl&&cl.x!==null&&cb&&cb.x!==null);
+  if(showGuide) drawNormalGuide(cl,cb);
 
   // 五點圍成的胸肌輪廓多邊形
   var polyDots=[cl,cp,lc,cb,rib];
@@ -294,7 +341,6 @@ function drawSide(){
     ctx.beginPath();ctx.moveTo(lc.x,lc.y);ctx.lineTo(foot.x,foot.y);
     ctx.strokeStyle='#E24B4ABB';ctx.lineWidth=2/zoom;
     ctx.setLineDash([5/zoom,3/zoom]);ctx.stroke();ctx.setLineDash([]);
-    // 直角標
     var sqS=6/zoom,ex=foot.x-lc.x,ey=foot.y-lc.y,el2=Math.hypot(ex,ey)||1;
     var eux=ex/el2*sqS,euy=ey/el2*sqS,px=-euy,py=eux;
     ctx.beginPath();ctx.moveTo(foot.x-eux,foot.y-euy);
@@ -364,33 +410,16 @@ function angleAtVertex(vertex,pA,pB){
   var m=Math.hypot(vA.x,vA.y)*Math.hypot(vB.x,vB.y)||1;
   return Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI;
 }
-function newThicknessRatio(peak,clavicle,chestBottom,rib){
-  var foot=projectPointToSegment(peak,clavicle,chestBottom);
-  var perp=dist(peak,foot);
-  var ribDist=dist(rib,clavicle);
-  return ribDist>0?perp/ribDist:0;
-}
 
 function calcSideMetrics(el){
   var cl=getDot('clavicle'),cp=getDot('chestPeak'),cb=getDot('chestBottom'),rib=getDot('rib'),lc=getDot('lowerChest');
-
   var ribDist=dist(cl,rib);
-
-  // 胸肌厚度比（改良）：chestPeak 沿「鎖骨→肋骨法線」方向到「鎖骨→胸肌下緣」直線的距離 / dist(clavicle,rib)
   var thickImproved=improvedThicknessRatio(cp,cl,rib,cb);
-
-  // 下胸厚度比：lowerChest 到 (clavicle→chestBottom) 線段最短距離 / dist(clavicle,rib)
   var lowerThick=ribDist>0?pointToSegmentDist(lc,cl,cb)/ribDist:0;
-
-  // 胸肌夾角
   var chestAngle=angleAtVertex(cl,cp,cb);
   var chestAngle2=angleAtVertex(cl,cp,rib);
-
-  // 胸面積：五點圍成的多邊形面積 / dist(clavicle,rib)^2
-  // 順序：鎖骨起點 → 胸肌中段點 → 下胸 → 肋骨最凹陷處 → 胸肌下緣
   var polyArea=polygonArea([cl,cp,lc,rib,cb]);
   var areaRatio=ribDist>0?polyArea/(ribDist*ribDist):0;
-
   var rows=[
     (function(){var r=rate(thickImproved*100,24,30);return{label:'胸肌厚度比',val:(thickImproved*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(lowerThick*100,20,28);return{label:'下胸厚度比',val:(lowerThick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
@@ -401,10 +430,8 @@ function calcSideMetrics(el){
   el.innerHTML=rows.map(function(r){
     return '<div class="mrow"><span class="ml">'+r.label+'</span><span class="mv">'+r.val+'<span class="'+r.cls+'">'+r.tip+'</span></span></div>';
   }).join('');
-
   document.getElementById('rib-section').style.display='none';
   document.getElementById('actual-section').style.display='none';
-
   var total=(chestAngle+(lowerThick*100)*1.8+chestAngle2*1.1)/0.95-45;
   var scoreEl=document.getElementById('total-score');
   if(!scoreEl){
