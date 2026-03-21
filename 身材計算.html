@@ -421,9 +421,9 @@ function calcSideMetrics(el){
   var polyArea=polygonArea([cl,cp,lc,rib,cb]);
   var areaRatio=ribDist>0?polyArea/(ribDist*ribDist):0;
   var rows=[
-    (function(){var r=rate(thickImproved*100,24,30);return{label:'胸肌厚度比',val:(thickImproved*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(lowerThick*100,20,28);return{label:'下胸厚度比',val:(lowerThick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
-    (function(){var r=rate(areaRatio*100,15,22);return{label:'胸面積比',val:(areaRatio*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(thickImproved*100,25,30);return{label:'胸肌厚度比',val:(thickImproved*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(lowerThick*100,20,29);return{label:'下胸厚度比',val:(lowerThick*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
+    (function(){var r=rate(areaRatio*100,15,21);return{label:'胸面積比',val:(areaRatio*100).toFixed(1)+'%',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(chestAngle,25,29);return{label:'胸肌夾角',val:chestAngle.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
     (function(){var r=rate(chestAngle2,18,22);return{label:'胸肌夾角（肋凹處）',val:chestAngle2.toFixed(1)+'°',tip:r.tip,cls:r.cls};}()),
   ];
@@ -432,7 +432,8 @@ function calcSideMetrics(el){
   }).join('');
   document.getElementById('rib-section').style.display='none';
   document.getElementById('actual-section').style.display='none';
-  var total=(chestAngle+(lowerThick*100)*1.8+chestAngle2*1.1)/0.95-45;
+  var t=thickImproved*100,lt=lowerThick*100,ar=areaRatio*100;
+  var total=((t-14)*4.3+(lt-13)*4+(ar-8)*5.9+(chestAngle-17)*4.7+(chestAngle2-10)*5)/5;
   var scoreEl=document.getElementById('total-score');
   if(!scoreEl){
     var div=document.createElement('div');
