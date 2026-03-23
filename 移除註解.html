@@ -485,7 +485,7 @@ function stripSpice(code) {
     for (let i = 0; i < l.length; i++) {
       if (l[i] === '(') { depth++; continue; }
       if (l[i] === ')') { depth--; continue; }
-      if (depth === 0 && (l[i] === DOLLAR || l[i] === SEMI)) return l.slice(0, i).trimEnd();
+      if (depth === 0 && (l[i] === DOLLAR || l[i] === SEMI || l[i] === '*')) return l.slice(0, i).trimEnd();
     }
     return l;
   }).join('\n');
