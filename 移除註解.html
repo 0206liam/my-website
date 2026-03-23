@@ -348,7 +348,20 @@ function stripPHP(code) {
 }
 
 function stripHTML(code) {
-  return code.replace(/<!--[\s\S]*?-->/g, '');
+  // 移除 <!-- --> 註解
+  let result = code.replace(/<!--[\s\S]*?-->/g, '');
+
+  // 處理 <script> 區塊內的 JS 註解
+  result = result.replace(/(<script[^>]*>)([\s\S]*?)(<\/script>)/gi, (match, open, content, close) => {
+    return open + stripCStyle(content, true) + close;
+  });
+
+  // 處理 <style> 區塊內的 CSS 註解
+  result = result.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/gi, (match, open, content, close) => {
+    return open + stripCStyle(content, false) + close;
+  });
+
+  return result;
 }
 
 function stripPython(code) {
