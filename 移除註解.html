@@ -157,18 +157,18 @@ const langs = [
 ];
 
 const hints = {
-  js:     '移除 // 單行 和 /* … */ 多行註解',
-  python: '移除 # 單行 和 """ … """ / \'\'\' … \'\'\' 區塊字串',
+  js:     '移除 // 單行 和 /* … */ 多行註解（括號內保留）',
+  python: '移除 # 單行 和 """ … """ 區塊字串（括號內保留）',
   html:   '移除 <!-- … --> 註解',
-  css:    '移除 /* … */ 多行註解',
-  c:      '移除 // 單行 和 /* … */ 多行註解',
-  sql:    '移除 -- 單行 和 /* … */ 多行註解',
-  ruby:   '移除 # 單行 和 =begin … =end 區塊註解',
-  bash:   '移除 # 單行註解（保留 shebang #!）',
-  lua:    '移除 -- 單行 和 --[[ … ]] 多行註解',
-  php:    '移除 //, # 單行 和 /* … */ 多行註解',
-  matlab: '移除 % 單行註解',
-  spice:  '移除行首 * 整行註解 和 行內 $ 後內容（保留第一行）',
+  css:    '移除 /* … */ 多行註解（括號內保留）',
+  c:      '移除 // 單行 和 /* … */ 多行註解（括號內保留）',
+  sql:    '移除 -- 單行 和 /* … */ 多行註解（括號內保留）',
+  ruby:   '移除 # 單行 和 =begin … =end 區塊註解（括號內保留）',
+  bash:   '移除 # 單行註解，保留 shebang #! 和括號內內容',
+  lua:    '移除 -- 單行 和 --[[ … ]] 多行註解（括號內保留）',
+  php:    '移除 //, # 單行 和 /* … */ 多行註解（括號內保留）',
+  matlab: '移除 % 單行註解（括號內保留）',
+  spice:  '移除行首 * 整行註解 和 行內 $ 後內容（保留第一行，括號內保留）',
 };
 
 let selectedLang = null;
@@ -197,12 +197,8 @@ function removeComments() {
   const code = document.getElementById('input').value;
   if (!code.trim()) { setStatus('⚠️ 請輸入程式碼', '#f59e0b'); return; }
   let result;
-  try {
-    result = strip(code, selectedLang);
-  } catch(e) {
-    setStatus('❌ 處理時發生錯誤', '#f87171');
-    return;
-  }
+  try { result = strip(code, selectedLang); }
+  catch(e) { setStatus('❌ 處理時發生錯誤', '#f87171'); return; }
   result = result.split('\n').filter(l => l.trim() !== '').join('\n');
   document.getElementById('output').value = result;
   const removed = countLines(code) - countLines(result);
@@ -227,9 +223,48 @@ function strip(code, lang) {
   }
 }
 
+// 計算括號深度（共用工具）
+function parenDepth(line, upTo) {
+  let d = 0;
+  for (let i = 0; i < upTo; i++) {
+    if (line[i] === '(') d++;
+    else if (line[i] === ')') d--;
+  }
+  return d;
+}
+
+// 在一行中找到第一個「不在括號內、不在字串內」的 token 位置
+// tokens: array of strings to search for
+// returns index or -1
+function findCommentOutside(line, tokens, strChars) {
+  let depth = 0, inStr = false, strChar = '';
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    // 字串處理
+    if (!inStr && strChars && strChars.includes(c)) {
+      inStr = true; strChar = c; continue;
+    }
+    if (inStr) {
+      if (c === '\\') { i++; continue; }
+      if (c === strChar) inStr = false;
+      continue;
+    }
+    // 括號深度
+    if (c === '(') { depth++; continue; }
+    if (c === ')') { depth--; continue; }
+    if (depth > 0) continue;
+    // 比對 token
+    for (const tok of tokens) {
+      if (line.slice(i, i + tok.length) === tok) return i;
+    }
+  }
+  return -1;
+}
+
 function stripCStyle(code, singleLine) {
   let result = '', i = 0;
   while (i < code.length) {
+    // 字串
     if (code[i] === '"' || code[i] === "'") {
       const q = code[i]; let j = i + 1;
       while (j < code.length) {
@@ -239,6 +274,7 @@ function stripCStyle(code, singleLine) {
       }
       result += code.slice(i, j); i = j; continue;
     }
+    // template literal
     if (code[i] === '`') {
       let j = i + 1;
       while (j < code.length) {
@@ -248,15 +284,27 @@ function stripCStyle(code, singleLine) {
       }
       result += code.slice(i, j); i = j; continue;
     }
+    // 括號內跳過
+    if (code[i] === '(') {
+      let depth = 1, j = i + 1;
+      result += code[i];
+      while (j < code.length && depth > 0) {
+        if (code[j] === '(') depth++;
+        else if (code[j] === ')') depth--;
+        result += code[j++];
+      }
+      i = j; continue;
+    }
+    // block comment
     if (code[i] === '/' && code[i+1] === '*') {
       let j = i + 2;
       while (j < code.length && !(code[j] === '*' && code[j+1] === '/')) j++;
       i = j + 2; continue;
     }
+    // line comment
     if (singleLine && code[i] === '/' && code[i+1] === '/') {
-      let j = i;
-      while (j < code.length && code[j] !== '\n') j++;
-      i = j; continue;
+      while (i < code.length && code[i] !== '\n') i++;
+      continue;
     }
     result += code[i++];
   }
@@ -275,15 +323,24 @@ function stripPHP(code) {
       }
       result += code.slice(i, j); i = j; continue;
     }
+    if (code[i] === '(') {
+      let depth = 1, j = i + 1;
+      result += code[i];
+      while (j < code.length && depth > 0) {
+        if (code[j] === '(') depth++;
+        else if (code[j] === ')') depth--;
+        result += code[j++];
+      }
+      i = j; continue;
+    }
     if (code[i] === '/' && code[i+1] === '*') {
       let j = i + 2;
       while (j < code.length && !(code[j] === '*' && code[j+1] === '/')) j++;
       i = j + 2; continue;
     }
     if ((code[i] === '/' && code[i+1] === '/') || code[i] === '#') {
-      let j = i;
-      while (j < code.length && code[j] !== '\n') j++;
-      i = j; continue;
+      while (i < code.length && code[i] !== '\n') i++;
+      continue;
     }
     result += code[i++];
   }
@@ -295,16 +352,15 @@ function stripHTML(code) {
 }
 
 function stripPython(code) {
-  const lines = code.split('\n');
-  const out = [];
-  for (let line of lines) {
-    let inStr = false, strChar = '', j = 0, newLine = '';
+  const lines = code.split('\n'), out = [];
+  for (const line of lines) {
+    let inStr = false, strChar = '', depth = 0, j = 0, newLine = '';
     while (j < line.length) {
       const c = line[j];
       if (!inStr && (c === '"' || c === "'")) {
         if (line.slice(j,j+3) === '"""' || line.slice(j,j+3) === "'''") {
           const q3 = line.slice(j,j+3);
-          let found = line.indexOf(q3, j+3);
+          const found = line.indexOf(q3, j+3);
           if (found >= 0) { newLine += line.slice(j, found+3); j = found+3; continue; }
           else { newLine += line.slice(j); j = line.length; continue; }
         }
@@ -312,11 +368,13 @@ function stripPython(code) {
       }
       if (inStr) {
         newLine += c;
-        if (c === '\\') { j++; newLine += line[j] || ''; }
+        if (c === '\\') { j++; newLine += line[j]||''; }
         else if (c === strChar) inStr = false;
         j++; continue;
       }
-      if (c === '#') break;
+      if (c === '(') { depth++; newLine += c; j++; continue; }
+      if (c === ')') { depth--; newLine += c; j++; continue; }
+      if (c === '#' && depth === 0) break;
       newLine += c; j++;
     }
     out.push(newLine.trimEnd());
@@ -329,20 +387,27 @@ function stripPython(code) {
 function stripSQL(code) {
   let result = stripCStyle(code, false);
   return result.split('\n').map(l => {
-    const idx = l.indexOf('--');
-    return idx >= 0 ? l.slice(0, idx) : l;
+    let depth = 0;
+    for (let i = 0; i < l.length; i++) {
+      if (l[i] === '(') { depth++; continue; }
+      if (l[i] === ')') { depth--; continue; }
+      if (depth === 0 && l.slice(i, i+2) === '--') return l.slice(0, i).trimEnd();
+    }
+    return l;
   }).join('\n');
 }
 
 function stripRuby(code) {
   let result = code.replace(/^=begin[\s\S]*?^=end/gm, '');
   return result.split('\n').map(l => {
-    let inStr = false, strChar = '', out = '';
+    let inStr = false, strChar = '', depth = 0, out = '';
     for (let i = 0; i < l.length; i++) {
       const c = l[i];
       if (!inStr && (c === '"' || c === "'")) { inStr = true; strChar = c; out += c; continue; }
       if (inStr) { out += c; if (c === strChar) inStr = false; continue; }
-      if (c === '#') break;
+      if (c === '(') { depth++; out += c; continue; }
+      if (c === ')') { depth--; out += c; continue; }
+      if (c === '#' && depth === 0) break;
       out += c;
     }
     return out.trimEnd();
@@ -352,12 +417,19 @@ function stripRuby(code) {
 function stripBash(code) {
   return code.split('\n').map((l, idx) => {
     if (idx === 0 && l.startsWith('#!')) return l;
-    let inStr = false, strChar = '', out = '';
+    let inStr = false, strChar = '', depth = 0, out = '';
     for (let i = 0; i < l.length; i++) {
       const c = l[i];
       if (!inStr && (c === '"' || c === "'")) { inStr = true; strChar = c; out += c; continue; }
-      if (inStr) { out += c; if (c === '\\') { i++; out += l[i]||''; } else if (c === strChar) inStr = false; continue; }
-      if (c === '#') break;
+      if (inStr) {
+        out += c;
+        if (c === '\\') { i++; out += l[i]||''; }
+        else if (c === strChar) inStr = false;
+        continue;
+      }
+      if (c === '(') { depth++; out += c; continue; }
+      if (c === ')') { depth--; out += c; continue; }
+      if (c === '#' && depth === 0) break;
       out += c;
     }
     return out.trimEnd();
@@ -367,15 +439,25 @@ function stripBash(code) {
 function stripLua(code) {
   let result = code.replace(/--\[\[[\s\S]*?\]\]/g, '');
   return result.split('\n').map(l => {
-    const idx = l.indexOf('--');
-    return idx >= 0 ? l.slice(0, idx) : l;
+    let depth = 0;
+    for (let i = 0; i < l.length; i++) {
+      if (l[i] === '(') { depth++; continue; }
+      if (l[i] === ')') { depth--; continue; }
+      if (depth === 0 && l.slice(i, i+2) === '--') return l.slice(0, i).trimEnd();
+    }
+    return l;
   }).join('\n');
 }
 
 function stripPercent(code) {
   return code.split('\n').map(l => {
-    const i = l.indexOf('%');
-    return i >= 0 ? l.slice(0, i).trimEnd() : l;
+    let depth = 0;
+    for (let i = 0; i < l.length; i++) {
+      if (l[i] === '(') { depth++; continue; }
+      if (l[i] === ')') { depth--; continue; }
+      if (l[i] === '%' && depth === 0) return l.slice(0, i).trimEnd();
+    }
+    return l;
   }).join('\n');
 }
 
@@ -384,8 +466,13 @@ function stripSpice(code) {
   return code.split('\n').map((l, idx) => {
     if (idx === 0) return l;
     if (l.trimStart().startsWith('*')) return '';
-    const di = l.indexOf(DOLLAR);
-    return di >= 0 ? l.slice(0, di).trimEnd() : l;
+    let depth = 0;
+    for (let i = 0; i < l.length; i++) {
+      if (l[i] === '(') { depth++; continue; }
+      if (l[i] === ')') { depth--; continue; }
+      if (l[i] === DOLLAR && depth === 0) return l.slice(0, i).trimEnd();
+    }
+    return l;
   }).join('\n');
 }
 
