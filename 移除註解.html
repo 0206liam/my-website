@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>移除註解工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #f8fafc;
+    letter-spacing: 0.5px;
+  }
+  .lang-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .lang-btn {
+    padding: 8px 18px;
+    border-radius: 9999px;
+    border: 2px solid #334155;
+    background: #1e293b;
+    color: #94a3b8;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lang-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+  .lang-btn.active {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #fff;
+    box-shadow: 0 0 12px #6366f180;
+  }
+  .editor-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) {
+    .editor-row { grid-template-columns: 1fr; }
+  }
+  .panel { display: flex; flex-direction: column; gap: 8px; }
+  .panel label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  textarea {
+    width: 100%;
+    height: 340px;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: #6366f1; }
+  textarea[readonly] { background: #0f172a; color: #a5f3fc; }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 8px 0;
+  }
+  button.action {
+    padding: 10px 28px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button.run { background: #6366f1; color: #fff; }
+  button.run:hover { background: #4f46e5; }
+  button.clear { background: #334155; color: #94a3b8; }
+  button.clear:hover { background: #475569; color: #e2e8f0; }
+  button.copy { background: #0f766e; color: #fff; }
+  button.copy:hover { background: #0d9488; }
+  .status {
+    text-align: center;
+    font-size: 0.82rem;
+    color: #6366f1;
+    min-height: 20px;
+    font-weight: 500;
+  }
+  .hint {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #475569;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<h1>🧹 移除程式碼註解</h1>
+
+<div class="lang-grid" id="langGrid"></div>
+
+<div class="btn-row">
+  <button class="action run" onclick="removeComments()">▶ 移除註解</button>
+  <button class="action clear" onclick="clearAll()">✕ 清除</button>
+  <button class="action copy" onclick="copyOutput()">⎘ 複製結果</button>
+</div>
+
+<div class="editor-row">
+  <div class="panel">
+    <label>輸入程式碼</label>
+    <textarea id="input" placeholder="在此貼上你的程式碼…"></textarea>
+  </div>
+  <div class="panel">
+    <label>移除後結果</label>
+    <textarea id="output" readonly placeholder="結果將顯示在這裡…"></textarea>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+<div class="hint" id="hint"></div>
+
+<script>
+const langs = [
+  { id: 'js',     label: 'JavaScript / TypeScript' },
+  { id: 'python', label: 'Python' },
+  { id: 'html',   label: 'HTML' },
+  { id: 'css',    label: 'CSS' },
+  { id: 'c',      label: 'C / C++ / Java / C#' },
+  { id: 'sql',    label: 'SQL' },
+  { id: 'ruby',   label: 'Ruby' },
+  { id: 'bash',   label: 'Bash / Shell' },
+  { id: 'lua',    label: 'Lua' },
+  { id: 'php',    label: 'PHP' },
+  { id: 'matlab', label: 'MATLAB / Erlang / LaTeX' },
+  { id: 'spice',  label: 'SPICE Netlist' },
+];
+
+const hints = {
+  js:     '移除 // 單行 和 /* … */ 多行註解',
+  python: '移除 # 單行 和 """ … """ / \'\'\' … \'\'\' 區塊字串',
+  html:   '移除 <!-- … --> 註解',
+  css:    '移除 /* … */ 多行註解',
+  c:      '移除 // 單行 和 /* … */ 多行註解',
+  sql:    '移除 -- 單行 和 /* … */ 多行註解',
+  ruby:   '移除 # 單行 和 =begin … =end 區塊註解',
+  bash:   '移除 # 單行註解（保留 shebang #!）',
+  lua:    '移除 -- 單行 和 --[[ … ]] 多行註解',
+  php:    '移除 //, # 單行 和 /* … */ 多行註解',
+  matlab: '移除 % 單行註解',
+  spice:  '移除行首 * 整行註解 和 行內 $ 後內容（保留第一行）',
+};
+
+let selectedLang = null;
+
+const grid = document.getElementById('langGrid');
+langs.forEach(l => {
+  const btn = document.createElement('button');
+  btn.className = 'lang-btn';
+  btn.textContent = l.label;
+  btn.dataset.id = l.id;
+  btn.onclick = () => selectLang(l.id);
+  grid.appendChild(btn);
+});
+
+function selectLang(id) {
+  selectedLang = id;
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+  document.getElementById('hint').textContent = hints[id] || '';
+  document.getElementById('status').textContent = '';
+}
+
+function removeComments() {
+  if (!selectedLang) { setStatus('⚠️ 請先選擇程式語言', '#f59e0b'); return; }
+  const code = document.getElementById('input').value;
+  if (!code.trim()) { setStatus('⚠️ 請輸入程式碼', '#f59e0b'); return; }
+  let result;
+  try {
+    result = strip(code, selectedLang);
+  } catch(e) {
+    setStatus('❌ 處理時發生錯誤', '#f87171');
+    return;
+  }
+  result = result.split('\n').filter(l => l.trim() !== '').join('\n');
+  document.getElementById('output').value = result;
+  const removed = countLines(code) - countLines(result);
+  setStatus('✅ 完成！約移除 ' + removed + ' 行空白/註解', '#34d399');
+}
+
+function strip(code, lang) {
+  switch (lang) {
+    case 'js':     return stripCStyle(code, true);
+    case 'c':      return stripCStyle(code, true);
+    case 'php':    return stripPHP(code);
+    case 'css':    return stripCStyle(code, false);
+    case 'html':   return stripHTML(code);
+    case 'python': return stripPython(code);
+    case 'sql':    return stripSQL(code);
+    case 'ruby':   return stripRuby(code);
+    case 'bash':   return stripBash(code);
+    case 'lua':    return stripLua(code);
+    case 'matlab': return stripPercent(code);
+    case 'spice':  return stripSpice(code);
+    default: return code;
+  }
+}
+
+function stripCStyle(code, singleLine) {
+  let result = '', i = 0;
+  while (i < code.length) {
+    if (code[i] === '"' || code[i] === "'") {
+      const q = code[i]; let j = i + 1;
+      while (j < code.length) {
+        if (code[j] === '\\') { j += 2; continue; }
+        if (code[j] === q) { j++; break; }
+        j++;
+      }
+      result += code.slice(i, j); i = j; continue;
+    }
+    if (code[i] === '`') {
+      let j = i + 1;
+      while (j < code.length) {
+        if (code[j] === '\\') { j += 2; continue; }
+        if (code[j] === '`') { j++; break; }
+        j++;
+      }
+      result += code.slice(i, j); i = j; continue;
+    }
+    if (code[i] === '/' && code[i+1] === '*') {
+      let j = i + 2;
+      while (j < code.length && !(code[j] === '*' && code[j+1] === '/')) j++;
+      i = j + 2; continue;
+    }
+    if (singleLine && code[i] === '/' && code[i+1] === '/') {
+      let j = i;
+      while (j < code.length && code[j] !== '\n') j++;
+      i = j; continue;
+    }
+    result += code[i++];
+  }
+  return result;
+}
+
+function stripPHP(code) {
+  let result = '', i = 0;
+  while (i < code.length) {
+    if (code[i] === '"' || code[i] === "'") {
+      const q = code[i]; let j = i + 1;
+      while (j < code.length) {
+        if (code[j] === '\\') { j += 2; continue; }
+        if (code[j] === q) { j++; break; }
+        j++;
+      }
+      result += code.slice(i, j); i = j; continue;
+    }
+    if (code[i] === '/' && code[i+1] === '*') {
+      let j = i + 2;
+      while (j < code.length && !(code[j] === '*' && code[j+1] === '/')) j++;
+      i = j + 2; continue;
+    }
+    if ((code[i] === '/' && code[i+1] === '/') || code[i] === '#') {
+      let j = i;
+      while (j < code.length && code[j] !== '\n') j++;
+      i = j; continue;
+    }
+    result += code[i++];
+  }
+  return result;
+}
+
+function stripHTML(code) {
+  return code.replace(/<!--[\s\S]*?-->/g, '');
+}
+
+function stripPython(code) {
+  const lines = code.split('\n');
+  const out = [];
+  for (let line of lines) {
+    let inStr = false, strChar = '', j = 0, newLine = '';
+    while (j < line.length) {
+      const c = line[j];
+      if (!inStr && (c === '"' || c === "'")) {
+        if (line.slice(j,j+3) === '"""' || line.slice(j,j+3) === "'''") {
+          const q3 = line.slice(j,j+3);
+          let found = line.indexOf(q3, j+3);
+          if (found >= 0) { newLine += line.slice(j, found+3); j = found+3; continue; }
+          else { newLine += line.slice(j); j = line.length; continue; }
+        }
+        inStr = true; strChar = c; newLine += c; j++; continue;
+      }
+      if (inStr) {
+        newLine += c;
+        if (c === '\\') { j++; newLine += line[j] || ''; }
+        else if (c === strChar) inStr = false;
+        j++; continue;
+      }
+      if (c === '#') break;
+      newLine += c; j++;
+    }
+    out.push(newLine.trimEnd());
+  }
+  let joined = out.join('\n');
+  joined = joined.replace(/"""[\s\S]*?"""/g, '').replace(/'''[\s\S]*?'''/g, '');
+  return joined;
+}
+
+function stripSQL(code) {
+  let result = stripCStyle(code, false);
+  return result.split('\n').map(l => {
+    const idx = l.indexOf('--');
+    return idx >= 0 ? l.slice(0, idx) : l;
+  }).join('\n');
+}
+
+function stripRuby(code) {
+  let result = code.replace(/^=begin[\s\S]*?^=end/gm, '');
+  return result.split('\n').map(l => {
+    let inStr = false, strChar = '', out = '';
+    for (let i = 0; i < l.length; i++) {
+      const c = l[i];
+      if (!inStr && (c === '"' || c === "'")) { inStr = true; strChar = c; out += c; continue; }
+      if (inStr) { out += c; if (c === strChar) inStr = false; continue; }
+      if (c === '#') break;
+      out += c;
+    }
+    return out.trimEnd();
+  }).join('\n');
+}
+
+function stripBash(code) {
+  return code.split('\n').map((l, idx) => {
+    if (idx === 0 && l.startsWith('#!')) return l;
+    let inStr = false, strChar = '', out = '';
+    for (let i = 0; i < l.length; i++) {
+      const c = l[i];
+      if (!inStr && (c === '"' || c === "'")) { inStr = true; strChar = c; out += c; continue; }
+      if (inStr) { out += c; if (c === '\\') { i++; out += l[i]||''; } else if (c === strChar) inStr = false; continue; }
+      if (c === '#') break;
+      out += c;
+    }
+    return out.trimEnd();
+  }).join('\n');
+}
+
+function stripLua(code) {
+  let result = code.replace(/--\[\[[\s\S]*?\]\]/g, '');
+  return result.split('\n').map(l => {
+    const idx = l.indexOf('--');
+    return idx >= 0 ? l.slice(0, idx) : l;
+  }).join('\n');
+}
+
+function stripPercent(code) {
+  return code.split('\n').map(l => {
+    const i = l.indexOf('%');
+    return i >= 0 ? l.slice(0, i).trimEnd() : l;
+  }).join('\n');
+}
+
+function stripSpice(code) {
+  const DOLLAR = String.fromCharCode(36);
+  return code.split('\n').map((l, idx) => {
+    if (idx === 0) return l;
+    if (l.trimStart().startsWith('*')) return '';
+    const di = l.indexOf(DOLLAR);
+    return di >= 0 ? l.slice(0, di).trimEnd() : l;
+  }).join('\n');
+}
+
+function countLines(str) { return str.split('\n').length; }
+
+function clearAll() {
+  document.getElementById('input').value = '';
+  document.getElementById('output').value = '';
+  setStatus('', '');
+}
+
+async function copyOutput() {
+  const val = document.getElementById('output').value;
+  if (!val) { setStatus('⚠️ 沒有可複製的內容', '#f59e0b'); return; }
+  try {
+    await navigator.clipboard.writeText(val);
+    setStatus('✅ 已複製到剪貼簿！', '#34d399');
+  } catch {
+    setStatus('❌ 複製失敗，請手動複製', '#f87171');
+  }
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = color || '#6366f1';
+}
+</script>
+</body>
+</html>
