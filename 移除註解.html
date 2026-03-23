@@ -168,7 +168,7 @@ const hints = {
   lua:    '移除 -- 單行 和 --[[ … ]] 多行註解（括號內保留）',
   php:    '移除 //, # 單行 和 /* … */ 多行註解（括號內保留）',
   matlab: '移除 % 單行註解（括號內保留）',
-  spice:  '移除行首 * 整行註解 和 行內 $ 後內容（保留第一行，括號內保留）',
+  spice:  '移除行首 * 整行註解 和 行內 $ ; 後內容（保留第一行，括號內保留）',
 };
 
 let selectedLang = null;
@@ -476,14 +476,16 @@ function stripPercent(code) {
 
 function stripSpice(code) {
   const DOLLAR = String.fromCharCode(36);
+  const SEMI = ';';
   return code.split('\n').map((l, idx) => {
     if (idx === 0) return l;
     if (l.trimStart().startsWith('*')) return '';
+    if (l.startsWith(DOLLAR)) return '';
     let depth = 0;
     for (let i = 0; i < l.length; i++) {
       if (l[i] === '(') { depth++; continue; }
       if (l[i] === ')') { depth--; continue; }
-      if (l[i] === DOLLAR && depth === 0) return l.slice(0, i).trimEnd();
+      if (depth === 0 && (l[i] === DOLLAR || l[i] === SEMI)) return l.slice(0, i).trimEnd();
     }
     return l;
   }).join('\n');
