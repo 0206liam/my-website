@@ -2,83 +2,67 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>AI 後台監控系統</title>
+    <title>A端 - 控制台</title>
     <style>
-        body { font-family: monospace; background: #1e1e1e; color: #4af626; padding: 20px; }
-        .config-section { border: 1px solid #4af626; padding: 15px; margin-bottom: 20px; }
-        input { background: #000; color: #4af626; border: 1px solid #4af626; padding: 5px; width: 300px; }
-        button { background: #4af626; color: #000; border: none; padding: 5px 15px; cursor: pointer; }
-        #user-list { margin-top: 20px; }
-        .user-item { cursor: pointer; text-decoration: underline; margin-right: 15px; }
-        #chat-log { background: #000; border: 1px solid #4af626; height: 400px; overflow-y: auto; padding: 10px; margin-top: 10px; }
+        body { font-family: monospace; background: #121212; color: #0f0; padding: 20px; }
+        input, button { background: #333; color: #0f0; border: 1px solid #0f0; padding: 8px; margin: 5px; }
+        #chat-view { border: 1px solid #0f0; height: 300px; overflow-y: auto; padding: 10px; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>TERMINAL - AI BACKEND</h1>
-    
-    <div class="config-section">
-        TOKEN: <input type="password" id="token" placeholder="GitHub Token"><br><br>
-        GIST ID: <input type="text" id="gistId" placeholder="Gist ID"><br><br>
-        <button onclick="saveConfig()">儲存並初始化</button>
+    <h2>MASTER CONTROL PANEL</h2>
+    <div id="setup">
+        <input type="password" id="token" placeholder="GitHub PAT">
+        <input type="text" id="gistId" placeholder="Gist ID">
+        <button onclick="saveAndInit()">初始化並同步雲端</button>
     </div>
-
-    <div>
-        <h3>活動用戶列表</h3>
-        <div id="user-list">正在加載用戶...</div>
-    </div>
-
-    <div>
-        <h3>對話紀錄 - <span id="current-user">未選擇</span></h3>
-        <div id="chat-log"></div>
-    </div>
+    <hr>
+    <div>用戶列表：<span id="user-list"></span></div>
+    <div id="chat-view">選擇用戶以查看對話...</div>
 
 <script>
-    let config = JSON.parse(localStorage.getItem('admin_config') || "{}");
-    if(config.token) document.getElementById('token').value = config.token;
-    if(config.gistId) document.getElementById('gistId').value = config.gistId;
+    let config = JSON.parse(localStorage.getItem('ai_config') || '{}');
+    if(config.token) {
+        document.getElementById('token').value = config.token;
+        document.getElementById('gistId').value = config.gistId;
+    }
 
-    function saveConfig() {
-        const token = document.getElementById('token').value;
-        const gistId = document.getElementById('gistId').value;
-        localStorage.setItem('admin_config', JSON.stringify({token, gistId}));
-        location.reload();
+    function saveAndInit() {
+        const auth = {
+            token: document.getElementById('token').value,
+            gistId: document.getElementById('gistId').value
+        };
+        localStorage.setItem('ai_config', JSON.stringify(auth));
+        alert("設定已儲存至本地");
+        loadData();
     }
 
     async function loadData() {
-        if(!config.token || !config.gistId) return;
-        const response = await fetch(`https://api.github.com/gists/${config.gistId}`, {
-            headers: { "Authorization": `token ${config.token}` }
-        });
-        const data = await response.json();
-        const chats = JSON.parse(data.files["chats.json"].content);
-        
-        // 提取所有唯一用戶碼
-        const users = [...new Set(chats.map(c => c.id))];
-        const userListDiv = document.getElementById('user-list');
-        userListDiv.innerHTML = '';
-        users.forEach(u => {
-            const span = document.createElement('span');
-            span.className = 'user-item';
-            span.innerText = u;
-            span.onclick = () => showChat(u, chats);
-            userListDiv.appendChild(span);
-        });
-    }
+        const { token, gistId } = JSON.parse(localStorage.getItem('ai_config') || '{}');
+        if(!token || !gistId) return;
 
-    function showChat(userId, allChats) {
-        document.getElementById('current-user').innerText = userId;
-        const log = document.getElementById('chat-log');
-        log.innerHTML = '';
-        const userChats = allChats.filter(c => c.id === userId);
-        userChats.forEach(c => {
-            const p = document.createElement('p');
-            p.innerText = `[${c.time}] ${c.role.toUpperCase()}: ${c.msg}`;
-            log.appendChild(p);
-        });
+        try {
+            const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            const data = await res.json();
+            const chats = JSON.parse(data.files["chats.json"].content);
+            
+            const users = [...new Set(chats.map(c => c.id))];
+            const listArea = document.getElementById('user-list');
+            listArea.innerHTML = '';
+            users.forEach(u => {
+                const btn = document.createElement('button');
+                btn.innerText = u;
+                btn.onclick = () => {
+                    const log = chats.filter(c => c.id === u);
+                    document.getElementById('chat-view').innerHTML = log.map(l => `<p>[${l.time}] ${l.msg}</p>`).join('');
+                };
+                listArea.appendChild(btn);
+            });
+        } catch (e) { console.error("同步失敗", e); }
     }
-
-    setInterval(loadData, 5000); // 每5秒自動重新整理
-    loadData();
+    setInterval(loadData, 5000);
 </script>
 </body>
 </html>
