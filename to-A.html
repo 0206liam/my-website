@@ -44,6 +44,8 @@
                 headers: { "Authorization": `token ${token}` }
             });
             const data = await res.json();
+            document.getElementById('chat-view').innerHTML = '連線狀態：' + res.status + '<br>raw: ' + JSON.stringify(data).substring(0, 200);
+            if(res.status !== 200) return;
             const chats = JSON.parse(data.files["chats.json"].content);
 
             const users = [...new Set(chats.map(c => c.uid).filter(Boolean))];
