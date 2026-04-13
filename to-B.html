@@ -45,21 +45,11 @@ function startApp() {
     const key = document.getElementById('auth-key').value;
     
     try {
-        const reversed = key.trim().split('').reverse().join('');
-        const padded = reversed + '='.repeat((4 - reversed.length % 4) % 4);
-        USER_TOKEN = atob(padded);
-        
-        // 直接顯示在頁面上
-        document.querySelector('.login-box').innerHTML = `
-            <p>key: ${key}</p>
-            <p>反轉後: ${reversed}</p>
-            <p>解出TOKEN: ${USER_TOKEN}</p>
-        `;
+        USER_TOKEN = atob(key.trim());
         
         if (!USER_TOKEN.startsWith('ghp_')) throw new Error();
         document.getElementById('auth-overlay').style.display = 'none';
     } catch(e) {
-        document.querySelector('.login-box').innerHTML += `<p style="color:red">錯誤: ${e.message}</p>`;
         alert("授權碼錯誤或已過期");
     }
 }
