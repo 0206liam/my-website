@@ -40,9 +40,12 @@
     let USER_TOKEN = "";
 
     // 啟動與解密
+
 function startApp() {
     const key = document.getElementById('auth-key').value;
+    console.log("抓到的key:", key);
     if (!key) return alert("請輸入授權碼");
+    
     
     try {
         const reversed = key.trim().split('').reverse().join('');          // ← 新增
