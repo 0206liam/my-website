@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 後台監控系統</title>
+    <style>
+        body { font-family: monospace; background: #1e1e1e; color: #4af626; padding: 20px; }
+        .config-section { border: 1px solid #4af626; padding: 15px; margin-bottom: 20px; }
+        input { background: #000; color: #4af626; border: 1px solid #4af626; padding: 5px; width: 300px; }
+        button { background: #4af626; color: #000; border: none; padding: 5px 15px; cursor: pointer; }
+        #user-list { margin-top: 20px; }
+        .user-item { cursor: pointer; text-decoration: underline; margin-right: 15px; }
+        #chat-log { background: #000; border: 1px solid #4af626; height: 400px; overflow-y: auto; padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>TERMINAL - AI BACKEND</h1>
+    
+    <div class="config-section">
+        TOKEN: <input type="password" id="token" placeholder="GitHub Token"><br><br>
+        GIST ID: <input type="text" id="gistId" placeholder="Gist ID"><br><br>
+        <button onclick="saveConfig()">儲存並初始化</button>
+    </div>
+
+    <div>
+        <h3>活動用戶列表</h3>
+        <div id="user-list">正在加載用戶...</div>
+    </div>
+
+    <div>
+        <h3>對話紀錄 - <span id="current-user">未選擇</span></h3>
+        <div id="chat-log"></div>
+    </div>
+
+<script>
+    let config = JSON.parse(localStorage.getItem('admin_config') || "{}");
+    if(config.token) document.getElementById('token').value = config.token;
+    if(config.gistId) document.getElementById('gistId').value = config.gistId;
+
+    function saveConfig() {
+        const token = document.getElementById('token').value;
+        const gistId = document.getElementById('gistId').value;
+        localStorage.setItem('admin_config', JSON.stringify({token, gistId}));
+        location.reload();
+    }
+
+    async function loadData() {
+        if(!config.token || !config.gistId) return;
+        const response = await fetch(`https://api.github.com/gists/${config.gistId}`, {
+            headers: { "Authorization": `token ${config.token}` }
+        });
+        const data = await response.json();
+        const chats = JSON.parse(data.files["chats.json"].content);
+        
+        // 提取所有唯一用戶碼
+        const users = [...new Set(chats.map(c => c.id))];
+        const userListDiv = document.getElementById('user-list');
+        userListDiv.innerHTML = '';
+        users.forEach(u => {
+            const span = document.createElement('span');
+            span.className = 'user-item';
+            span.innerText = u;
+            span.onclick = () => showChat(u, chats);
+            userListDiv.appendChild(span);
+        });
+    }
+
+    function showChat(userId, allChats) {
+        document.getElementById('current-user').innerText = userId;
+        const log = document.getElementById('chat-log');
+        log.innerHTML = '';
+        const userChats = allChats.filter(c => c.id === userId);
+        userChats.forEach(c => {
+            const p = document.createElement('p');
+            p.innerText = `[${c.time}] ${c.role.toUpperCase()}: ${c.msg}`;
+            log.appendChild(p);
+        });
+    }
+
+    setInterval(loadData, 5000); // 每5秒自動重新整理
+    loadData();
+</script>
+</body>
+</html>
