@@ -40,19 +40,20 @@
     let USER_TOKEN = "";
 
     // 啟動與解密
-    function startApp() {
-        const key = document.getElementById('auth-key').value;
-        if (!key) return alert("請輸入授權碼");
-        
-        // 執行反轉並 Base64 解碼 (還原 Token)
-        try {
-            USER_TOKEN = atob(key.split('').reverse().join(''));
-            if (!USER_TOKEN.startsWith('ghp_')) throw new Error();
-            document.getElementById('auth-overlay').style.display = 'none';
-        } catch(e) {
-            alert("授權碼錯誤或已過期");
-        }
+function startApp() {
+    const key = document.getElementById('auth-key').value;
+    if (!key) return alert("請輸入授權碼");
+    
+    try {
+        const reversed = key.trim().split('').reverse().join('');          // ← 新增
+        const padded = reversed + '='.repeat((4 - reversed.length % 4) % 4); // ← 新增
+        USER_TOKEN = atob(padded);                                         // ← 新增
+        if (!USER_TOKEN.startsWith('ghp_')) throw new Error();
+        document.getElementById('auth-overlay').style.display = 'none';
+    } catch(e) {
+        alert("授權碼錯誤或已過期");
     }
+}
 
     async function send() {
         const input = document.getElementById('user-input');
