@@ -43,17 +43,21 @@
 
 function startApp() {
     const key = document.getElementById('auth-key').value;
-    console.log("抓到的key:", key);
-    if (!key) return alert("請輸入授權碼");
-    
     
     try {
-        const reversed = key.trim().split('').reverse().join('');          // ← 新增
-        const padded = reversed + '='.repeat((4 - reversed.length % 4) % 4); // ← 新增
-        USER_TOKEN = atob(padded);                                         // ← 新增
+        const reversed = key.trim().split('').reverse().join('');
+        const padded = reversed + '='.repeat((4 - reversed.length % 4) % 4);
+        USER_TOKEN = atob(padded);
+        
+        console.log("key:", key);
+        console.log("反轉後:", reversed);
+        console.log("補padding:", padded);
+        console.log("解出TOKEN:", USER_TOKEN); // ← 這行才是重點
+        
         if (!USER_TOKEN.startsWith('ghp_')) throw new Error();
         document.getElementById('auth-overlay').style.display = 'none';
     } catch(e) {
+        console.log("錯誤:", e);
         alert("授權碼錯誤或已過期");
     }
 }
