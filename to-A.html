@@ -19,7 +19,6 @@
     <hr>
     <div>用戶列表：<span id="user-list"></span></div>
     <div id="chat-view">選擇用戶以查看對話...</div>
-
 <script>
     let config = JSON.parse(localStorage.getItem('ai_config') || '{}');
     if(config.token) {
@@ -40,28 +39,28 @@
     async function loadData() {
         const { token, gistId } = JSON.parse(localStorage.getItem('ai_config') || '{}');
         if(!token || !gistId) return;
-
         try {
             const res = await fetch(`https://api.github.com/gists/${gistId}`, {
                 headers: { "Authorization": `token ${token}` }
             });
             const data = await res.json();
             const chats = JSON.parse(data.files["chats.json"].content);
-            
-            const users = [...new Set(chats.map(c => c.id))];
+
+            const users = [...new Set(chats.map(c => c.uid).filter(Boolean))];
             const listArea = document.getElementById('user-list');
             listArea.innerHTML = '';
             users.forEach(u => {
                 const btn = document.createElement('button');
                 btn.innerText = u;
                 btn.onclick = () => {
-                    const log = chats.filter(c => c.id === u);
+                    const log = chats.filter(c => c.uid === u);
                     document.getElementById('chat-view').innerHTML = log.map(l => `<p>[${l.time}] ${l.msg}</p>`).join('');
                 };
                 listArea.appendChild(btn);
             });
         } catch (e) { console.error("同步失敗", e); }
     }
+
     setInterval(loadData, 5000);
 </script>
 </body>
