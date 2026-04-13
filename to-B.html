@@ -41,18 +41,18 @@
     const GIST_ID = "cc37ee46d77d8e0bf8fdb83940a12964";
     let USER_TOKEN = "";
     let USER_UID = "";
+    let lastMsgCount = 0;
 
-    // 頁面載入時檢查本地是否已有 token 及 uid
     window.onload = function() {
         const savedToken = localStorage.getItem('ai_token');
         const savedUid = localStorage.getItem('ai_uid');
-        if (savedToken) {
+        if(savedToken) {
             USER_TOKEN = savedToken;
             USER_UID = savedUid || "";
             document.getElementById('auth-overlay').style.display = 'none';
-            if (USER_UID) {
+            if(USER_UID) {
                 showUid();
-                loadHistory(); // 載入雲端對話紀錄
+                loadHistory();
             }
         }
     };
@@ -61,16 +61,11 @@
         const key = document.getElementById('auth-key').value;
         try {
             USER_TOKEN = atob(key.trim());
-            if (!USER_TOKEN.startsWith('ghp_')) throw new Error();
-
-            // 記錄 token 到本地
+            if(!USER_TOKEN.startsWith('ghp_')) throw new Error();
             localStorage.setItem('ai_token', USER_TOKEN);
-
             document.getElementById('auth-overlay').style.display = 'none';
-
-            // 如果已有 uid，載入歷史
             USER_UID = localStorage.getItem('ai_uid') || "";
-            if (USER_UID) {
+            if(USER_UID) {
                 showUid();
                 loadHistory();
             }
@@ -79,7 +74,6 @@
         }
     }
 
-    // 產生七碼 uid（四碼隨機 + 三碼流水號）
     async function generateUid() {
         try {
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -87,14 +81,11 @@
             });
             const data = await res.json();
             let chats = JSON.parse(data.files["chats.json"].content || "[]");
-
-            // 計算目前已有幾個不同 uid，產生流水號
             const existingUids = [...new Set(chats.map(c => c.uid).filter(Boolean))];
             const seq = (existingUids.length + 1).toString().padStart(3, '0');
             const rand = Math.floor(1000 + Math.random() * 9000).toString();
-            return rand + seq; // 例如 8546001
+            return rand + seq;
         } catch(e) {
-            // 若取得失敗，純隨機產生
             return Math.floor(1000 + Math.random() * 9000).toString() + '001';
         }
     }
@@ -103,7 +94,6 @@
         document.getElementById('uid-display').textContent = `用戶代號：${USER_UID}`;
     }
 
-    // 載入雲端對應此 uid 的對話紀錄
     async function loadHistory() {
         try {
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -111,51 +101,50 @@
             });
             const data = await res.json();
             let chats = JSON.parse(data.files["chats.json"].content || "[]");
-
-            // 篩選此 uid 的紀錄
             const myChats = chats.filter(c => c.uid === USER_UID);
-            myChats.forEach(c => appendMsg(`${c.msg}`, c.role));
+            
+            if(myChats.length === lastMsgCount) return; // 沒有新訊息就不更新
+            lastMsgCount = myChats.length;
+
+            const msgs = document.getElementById('msgs');
+            msgs.innerHTML = '';
+            myChats.forEach(c => appendMsg(c.msg, c.role));
         } catch(e) {
-            console.log("載入歷史失敗", e);
+            console.log("載入失敗", e);
         }
     }
 
     async function send() {
         const input = document.getElementById('user-input');
         const text = input.value.trim();
-        if (!text) return;
+        if(!text) return;
 
         appendMsg(text, 'user');
-        input.value = "AI 運算中...";
+        input.value = "傳送中...";
         input.disabled = true;
 
         try {
-            // 若還沒有 uid，現在產生
-            if (!USER_UID) {
+            if(!USER_UID) {
                 USER_UID = await generateUid();
                 localStorage.setItem('ai_uid', USER_UID);
                 showUid();
             }
 
-            const timestamp = new Date().toLocaleString();
-
-            // 取得目前雲端資料
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 headers: { "Authorization": `token ${USER_TOKEN}` }
             });
             const data = await res.json();
             let chats = JSON.parse(data.files["chats.json"].content || "[]");
 
-            // 新增訊息（含 uid 及時間戳）
-            chats.push({ uid: USER_UID, msg: text, time: timestamp, role: 'user' });
+            chats.push({ uid: USER_UID, msg: text, time: new Date().toLocaleString(), role: 'user' });
 
-            // 上傳回雲端
             await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 method: "PATCH",
                 headers: { "Authorization": `token ${USER_TOKEN}` },
                 body: JSON.stringify({ files: { "chats.json": { content: JSON.stringify(chats) } } })
             });
 
+            lastMsgCount++;
             input.value = "";
             input.disabled = false;
         } catch(e) {
@@ -168,9 +157,19 @@
     function appendMsg(t, r) {
         const d = document.createElement('div');
         d.style.textAlign = r === 'user' ? 'right' : 'left';
-        d.innerHTML = `<p style="display:inline-block; padding:8px; background:${r==='user'?'#dcf8c6':'#eee'}; border-radius:10px;">${t}</p>`;
-        document.getElementById('msgs').appendChild(d);
+        d.innerHTML = `<p style="display:inline-block; padding:8px; background:${r === 'admin' ? '#d0e8ff' : r === 'user' ? '#dcf8c6' : '#eee'}; border-radius:10px;">${t}</p>`;
+        const msgs = document.getElementById('msgs');
+        msgs.appendChild(d);
+        msgs.scrollTop = msgs.scrollHeight;
     }
+
+    // 每5秒輪詢新訊息
+    setInterval(() => { if(USER_UID) loadHistory(); }, 5000);
+
+    // Enter 鍵送出
+    document.getElementById('user-input').addEventListener('keydown', e => {
+        if(e.key === 'Enter') send();
+    });
 </script>
 </body>
 </html>
