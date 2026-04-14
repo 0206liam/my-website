@@ -28,9 +28,8 @@
 </div>
 
 <div id="chat-window">
-    <div id="header">量子決策核心</div>
+    <div id="header">AI全知顧問</div>
     <div id="msgs"></div>
-    <div id="uid-display"></div>
     <div id="input-group">
         <input type="text" id="user-input" placeholder="請輸入問題...">
         <button onclick="send()">發送</button>
@@ -137,7 +136,7 @@
         if(!text) return;
 
         appendMsg(text, 'user');
-        input.value = "傳送中...";
+        input.value = "";
         input.disabled = true;
 
         try {
