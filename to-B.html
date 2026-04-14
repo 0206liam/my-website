@@ -2,18 +2,28 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>量子 AI 決策助手</title>
+    <title>AI全知顧問</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 20px; }
-        #chat-window { width: 100%; max-width: 400px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
-        #header { background: #1a73e8; color: white; padding: 15px; text-align: center; font-weight: bold; }
-        #msgs { height: 300px; overflow-y: auto; padding: 15px; border-bottom: 1px solid #eee; }
-        #input-group { padding: 15px; display: flex; gap: 10px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f4f7f6; height: 100dvh; display: flex; flex-direction: column; }
+        #header { background: #1a73e8; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+        #clear-btn { position: absolute; right: 12px; font-size: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; }
+        #msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 4px; }
+        #input-group { padding: 12px 15px; display: flex; gap: 10px; background: white; border-top: 1px solid #eee; flex-shrink: 0; }
+        #user-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
+        #send-btn { background: #1a73e8; color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .login-box { background: white; padding: 20px; border-radius: 10px; text-align: center; }
-        #uid-display { font-size: 11px; color: #aaa; text-align: center; padding: 4px; }
+        .login-box { background: white; padding: 20px; border-radius: 10px; text-align: center; width: 280px; }
+        .login-box h3 { margin-bottom: 8px; }
+        .login-box p { font-size: 12px; color: #666; margin-bottom: 12px; }
+        .login-box input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
+        .login-box button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
+        .confirm-box { background: white; padding: 24px; border-radius: 10px; text-align: center; width: 280px; }
+        .confirm-box p { margin-bottom: 16px; color: #333; }
+        .confirm-btns { display: flex; gap: 10px; }
+        .confirm-btns button { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-cancel { background: #eee; color: #333; }
+        .btn-confirm { background: #e53935; color: white; }
     </style>
 </head>
 <body>
@@ -21,19 +31,30 @@
 <div id="auth-overlay" class="overlay">
     <div class="login-box">
         <h3>請輸入系統授權碼</h3>
-        <p style="font-size: 12px; color: #666;">(請向管理員獲取您的專屬 AI Key)</p>
+        <p>(請向管理員獲取您的專屬 AI Key)</p>
         <input type="password" id="auth-key" placeholder="輸入授權碼...">
         <button onclick="startApp()">啟動 AI</button>
     </div>
 </div>
 
-<div id="chat-window">
-    <div id="header">AI全知顧問</div>
-    <div id="msgs"></div>
-    <div id="input-group">
-        <input type="text" id="user-input" placeholder="請輸入問題...">
-        <button onclick="send()">發送</button>
+<div id="confirm-overlay" class="overlay" style="display:none;">
+    <div class="confirm-box">
+        <p>確定要刪除對話紀錄嗎？<br><small style="color:#999">原始資料不受影響</small></p>
+        <div class="confirm-btns">
+            <button class="btn-cancel" onclick="closeConfirm()">取消</button>
+            <button class="btn-confirm" onclick="clearChat()">確定刪除</button>
+        </div>
     </div>
+</div>
+
+<div id="header">
+    AI全知顧問
+    <button id="clear-btn" onclick="showConfirm()">刪除對話</button>
+</div>
+<div id="msgs"></div>
+<div id="input-group">
+    <input type="text" id="user-input" placeholder="請輸入問題...">
+    <button id="send-btn" onclick="send()">發送</button>
 </div>
 
 <script>
@@ -49,10 +70,7 @@
             USER_TOKEN = savedToken;
             USER_UID = savedUid || "";
             document.getElementById('auth-overlay').style.display = 'none';
-            if(USER_UID) {
-                showUid();
-                loadHistory();
-            }
+            if(USER_UID) loadHistory();
         }
     };
 
@@ -64,13 +82,29 @@
             localStorage.setItem('ai_token', USER_TOKEN);
             document.getElementById('auth-overlay').style.display = 'none';
             USER_UID = localStorage.getItem('ai_uid') || "";
-            if(USER_UID) {
-                showUid();
-                loadHistory();
-            }
+            if(USER_UID) loadHistory();
         } catch(e) {
             alert("授權碼錯誤或已過期");
         }
+    }
+
+    function showConfirm() {
+        document.getElementById('confirm-overlay').style.display = 'flex';
+    }
+
+    function closeConfirm() {
+        document.getElementById('confirm-overlay').style.display = 'none';
+    }
+
+    async function clearChat() {
+        closeConfirm();
+        // 取得舊 uid 的三碼流水號，產生新四碼+同樣三碼
+        const oldSeq = USER_UID.slice(4); // 最後三碼
+        const newRand = Math.floor(1000 + Math.random() * 9000).toString();
+        USER_UID = newRand + oldSeq;
+        localStorage.setItem('ai_uid', USER_UID);
+        lastMsgCount = 0;
+        document.getElementById('msgs').innerHTML = '';
     }
 
     async function generateUid() {
@@ -87,10 +121,6 @@
         } catch(e) {
             return Math.floor(1000 + Math.random() * 9000).toString() + '001';
         }
-    }
-
-    function showUid() {
-        document.getElementById('uid-display').textContent = `用戶代號：${USER_UID}`;
     }
 
     async function loadHistory() {
@@ -135,7 +165,7 @@
         const text = input.value.trim();
         if(!text) return;
 
-        appendMsg(text, 'user');
+        appendMsg(text, 'user', new Date().toLocaleString());
         input.value = "";
         input.disabled = true;
 
@@ -143,7 +173,6 @@
             if(!USER_UID) {
                 USER_UID = await generateUid();
                 localStorage.setItem('ai_uid', USER_UID);
-                showUid();
             }
 
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -161,7 +190,6 @@
             });
 
             lastMsgCount++;
-            input.value = "";
             input.disabled = false;
         } catch(e) {
             alert("連線中斷，請重新檢查授權碼");
@@ -174,18 +202,16 @@
         const d = document.createElement('div');
         d.style.textAlign = r === 'user' ? 'right' : 'left';
         d.innerHTML = `
-            <p style="display:inline-block; padding:8px; background:${r === 'admin' ? '#d0e8ff' : r === 'user' ? '#dcf8c6' : '#eee'}; border-radius:10px; margin-bottom:2px;">${t}</p>
-            ${time ? `<div style="font-size:10px; color:#aaa; margin-bottom:6px;">${time}</div>` : ''}
+            <p style="display:inline-block; padding:8px 12px; background:${r === 'admin' ? '#d0e8ff' : '#dcf8c6'}; border-radius:12px; max-width:75%; word-break:break-word;">${t}</p>
+            ${time ? `<div style="font-size:10px; color:#aaa; margin-bottom:4px;">${time}</div>` : ''}
         `;
         const msgs = document.getElementById('msgs');
         msgs.appendChild(d);
         msgs.scrollTop = msgs.scrollHeight;
     }
 
-    // 每5秒輪詢新訊息
     setInterval(() => { if(USER_UID) loadHistory(); }, 5000);
 
-    // Enter 鍵送出
     document.getElementById('user-input').addEventListener('keydown', e => {
         if(e.key === 'Enter') send();
     });
