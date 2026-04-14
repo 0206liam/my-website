@@ -28,7 +28,7 @@
 </div>
 
 <div id="chat-window">
-    <div id="header">AI人生顧問</div>
+    <div id="header">量子決策核心</div>
     <div id="msgs"></div>
     <div id="uid-display"></div>
     <div id="input-group">
@@ -102,13 +102,30 @@
             const data = await res.json();
             let chats = JSON.parse(data.files["chats.json"].content || "[]");
             const myChats = chats.filter(c => c.uid === USER_UID);
-            
-            if(myChats.length === lastMsgCount) return; // 沒有新訊息就不更新
+
+            if(myChats.length === lastMsgCount) return;
             lastMsgCount = myChats.length;
 
             const msgs = document.getElementById('msgs');
             msgs.innerHTML = '';
-            myChats.forEach(c => appendMsg(c.msg, c.role));
+            myChats.forEach(c => appendMsg(c.msg, c.role, c.time));
+
+            // 標記最後一則 admin 訊息為已讀
+            let changed = false;
+            for(let i = chats.length - 1; i >= 0; i--) {
+                if(chats[i].uid === USER_UID && chats[i].role === 'admin' && !chats[i].read) {
+                    chats[i].read = true;
+                    changed = true;
+                    break;
+                }
+            }
+            if(changed) {
+                await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    method: "PATCH",
+                    headers: { "Authorization": `token ${USER_TOKEN}` },
+                    body: JSON.stringify({ files: { "chats.json": { content: JSON.stringify(chats) } } })
+                });
+            }
         } catch(e) {
             console.log("載入失敗", e);
         }
@@ -154,10 +171,13 @@
         }
     }
 
-    function appendMsg(t, r) {
+    function appendMsg(t, r, time) {
         const d = document.createElement('div');
         d.style.textAlign = r === 'user' ? 'right' : 'left';
-        d.innerHTML = `<p style="display:inline-block; padding:8px; background:${r === 'admin' ? '#d0e8ff' : r === 'user' ? '#dcf8c6' : '#eee'}; border-radius:10px;">${t}</p>`;
+        d.innerHTML = `
+            <p style="display:inline-block; padding:8px; background:${r === 'admin' ? '#d0e8ff' : r === 'user' ? '#dcf8c6' : '#eee'}; border-radius:10px; margin-bottom:2px;">${t}</p>
+            ${time ? `<div style="font-size:10px; color:#aaa; margin-bottom:6px;">${time}</div>` : ''}
+        `;
         const msgs = document.getElementById('msgs');
         msgs.appendChild(d);
         msgs.scrollTop = msgs.scrollHeight;
