@@ -80,15 +80,15 @@
 
                 // 檢查是否已清除對話
                 const cleared = log.some(c => c.role === 'cleared');
+                view.innerHTML = log.filter(c => c.role !== 'cleared').map((l, i, arr) => {
+                    const isLastAdmin = l.role === 'admin' && arr.slice(i+1).every(x => x.role !== 'admin');
+                    const readTag = isLastAdmin ? `<span style="color:${l.read ? '#0f0' : '#888'}; font-size:11px;"> ${l.read ? '✓ 已讀' : '未讀'}</span>` : '';
+                    return `<p style="color:${l.role === 'admin' ? '#ff0' : '#0f0'}">[${l.time}] ${l.role === 'admin' ? '【你】' : '【用戶】'} ${l.msg}${readTag}</p>`;
+                }).join('');
                 if(cleared) {
-                    view.innerHTML = '<p style="color:#f88">此用戶已清除對話</p>';
+                    view.innerHTML += '<p style="color:#f88">此用戶已清除對話</p>';
                     document.getElementById('reply-area').style.display = 'none';
                 } else {
-                    view.innerHTML = log.map((l, i) => {
-                        const isLastAdmin = l.role === 'admin' && log.slice(i+1).every(x => x.role !== 'admin');
-                        const readTag = isLastAdmin ? `<span style="color:${l.read ? '#0f0' : '#888'}; font-size:11px;"> ${l.read ? '✓ 已讀' : '未讀'}</span>` : '';
-                        return `<p style="color:${l.role === 'admin' ? '#ff0' : '#0f0'}">[${l.time}] ${l.role === 'admin' ? '【你】' : '【用戶】'} ${l.msg}${readTag}</p>`;
-                    }).join('');
                     if(atBottom) view.scrollTop = view.scrollHeight;
                 }
             }
