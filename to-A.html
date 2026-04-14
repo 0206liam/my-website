@@ -73,17 +73,24 @@
                 listArea.appendChild(btn);
             });
 
-            // 若已選用戶，自動更新對話
             if(selectedUid) {
                 const log = chats.filter(c => c.uid === selectedUid);
                 const view = document.getElementById('chat-view');
                 const atBottom = view.scrollHeight - view.scrollTop === view.clientHeight;
-                view.innerHTML = log.map((l, i) => {
-                    const isLastAdmin = l.role === 'admin' && log.slice(i+1).every(x => x.role !== 'admin');
-                    const readTag = isLastAdmin ? `<span style="color:${l.read ? '#0f0' : '#888'}; font-size:11px;"> ${l.read ? '✓ 已讀' : '未讀'}</span>` : '';
-                    return `<p style="color:${l.role === 'admin' ? '#ff0' : '#0f0'}">[${l.time}] ${l.role === 'admin' ? '【你】' : '【用戶】'} ${l.msg}${readTag}</p>`;
-                }).join('');
-                if(atBottom) view.scrollTop = view.scrollHeight;
+
+                // 檢查是否已清除對話
+                const cleared = log.some(c => c.role === 'cleared');
+                if(cleared) {
+                    view.innerHTML = '<p style="color:#f88">此用戶已清除對話</p>';
+                    document.getElementById('reply-area').style.display = 'none';
+                } else {
+                    view.innerHTML = log.map((l, i) => {
+                        const isLastAdmin = l.role === 'admin' && log.slice(i+1).every(x => x.role !== 'admin');
+                        const readTag = isLastAdmin ? `<span style="color:${l.read ? '#0f0' : '#888'}; font-size:11px;"> ${l.read ? '✓ 已讀' : '未讀'}</span>` : '';
+                        return `<p style="color:${l.role === 'admin' ? '#ff0' : '#0f0'}">[${l.time}] ${l.role === 'admin' ? '【你】' : '【用戶】'} ${l.msg}${readTag}</p>`;
+                    }).join('');
+                    if(atBottom) view.scrollTop = view.scrollHeight;
+                }
             }
         } catch(e) {
             document.getElementById('chat-view').innerHTML = '錯誤：' + e.message;
