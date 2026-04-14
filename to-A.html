@@ -1,1 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>A端 - 控制台</title>
+    <style>
+        body { font-family: monospace; background: #121212; color: #0f0; padding: 20px; }
+        input, button { background: #333; color: #0f0; border: 1px solid #0f0; padding: 8px; margin: 5px; }
+        #chat-view { border: 1px solid #0f0; height: 300px; overflow-y: auto; padding: 10px; margin-top: 20px; }
+        #reply-area { display: none; margin-top: 10px; }
+        #reply-input { width: 70%; }
+    </style>
+</head>
+<body>
+    <h2>MASTER CONTROL PANEL</h2>
+    <div id="setup">
+        <input type="password" id="token" placeholder="GitHub PAT">
+        <input type="text" id="gistId" placeholder="Gist ID">
+        <button onclick="saveAndInit()">初始化並同步雲端</button>
+    </div>
+    <hr>
+    <div>用戶列表：<span id="user-list"></span></div>
+    <div id="chat-view">選擇用戶以查看對話...</div>
+    <div id="reply-area">
+        <input type="text" id="reply-input" placeholder="輸入回覆...">
+        <button onclick="sendReply()">回覆</button>
+    </div>
 
+<script>
+    let config = JSON.parse(localStorage.getItem('ai_config') || '{}');
+    let selectedUid = null;
+
+    if(config.token) {
+        document.getElementById('token').value = config.token;
+        document.getElementById('gistId').value = config.gistId;
+        loadData(); // 自動初始化
+    }
+
+    function saveAndInit() {
+        const auth = {
+            token: document.getElementById('token').value,
+            gistId: document.getElementById('gistId').value
+        };
+        localStorage.setItem('ai_config', JSON.stringify(auth));
+        alert("設定已儲存至本地");
+        loadData();
+    }
+
+    async function loadData() {
+        const { token, gistId } = JSON.parse(localStorage.getItem('ai_config') || '{}');
+        if(!token || !gistId) return;
+        try {
+            const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            const data = await res.json();
+            if(res.status !== 200) {
+                document.getElementById('chat-view').innerHTML = '連線失敗：' + res.status;
+                return;
+            }
+            const chats = JSON.parse(data.files["chats.json"].content || "[]");
+
+            // 更新用戶列表
+            const users = [...new Set(chats.map(c => c.uid).filter(Boolean))];
+            const listArea = document.getElementById('user-list');
+            listArea.innerHTML = '';
+            users.forEach(u => {
+                const btn = document.createElement('button');
+                btn.innerText = u;
+                btn.style.background = selectedUid === u ? '#0f0' : '#333';
+                btn.style.color = selectedUid === u ? '#000' : '#0f0';
+                btn.onclick = () => selectUser(u);
+                listArea.appendChild(btn);
+            });
+
+            // 若已選用戶，自動更新對話
+            if(selectedUid) {
+                const log = chats.filter(c => c.uid === selectedUid);
+                const view = document.getElementById('chat-view');
+                const atBottom = view.scrollHeight - view.scrollTop === view.clientHeight;
+                view.innerHTML = log.map((l, i) => {
+                    const isLastAdmin = l.role === 'admin' && log.slice(i+1).every(x => x.role !== 'admin');
+                    const readTag = isLastAdmin ? `<span style="color:${l.read ? '#0f0' : '#888'}; font-size:11px;"> ${l.read ? '✓ 已讀' : '未讀'}</span>` : '';
+                    return `<p style="color:${l.role === 'admin' ? '#ff0' : '#0f0'}">[${l.time}] ${l.role === 'admin' ? '【你】' : '【用戶】'} ${l.msg}${readTag}</p>`;
+                }).join('');
+                if(atBottom) view.scrollTop = view.scrollHeight;
+            }
+        } catch(e) {
+            document.getElementById('chat-view').innerHTML = '錯誤：' + e.message;
+        }
+    }
+
+    function selectUser(uid) {
+        selectedUid = uid;
+        document.getElementById('reply-area').style.display = 'block';
+        loadData();
+    }
+
+    async function sendReply() {
+        const input = document.getElementById('reply-input');
+        const text = input.value.trim();
+        if(!text || !selectedUid) return;
+
+        const { token, gistId } = JSON.parse(localStorage.getItem('ai_config') || '{}');
+        input.disabled = true;
+
+        try {
+            const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            const data = await res.json();
+            let chats = JSON.parse(data.files["chats.json"].content || "[]");
+
+            chats.push({
+                uid: selectedUid,
+                msg: text,
+                time: new Date().toLocaleString(),
+                role: 'admin'
+            });
+
+            await fetch(`https://api.github.com/gists/${gistId}`, {
+                method: "PATCH",
+                headers: { "Authorization": `token ${token}` },
+                body: JSON.stringify({ files: { "chats.json": { content: JSON.stringify(chats) } } })
+            });
+
+            input.value = "";
+            input.disabled = false;
+            loadData();
+        } catch(e) {
+            alert("回覆失敗：" + e.message);
+            input.disabled = false;
+        }
+    }
+
+    // Enter 鍵送出
+    document.getElementById('reply-input').addEventListener('keydown', e => {
+        if(e.key === 'Enter') sendReply();
+    });
+
+    setInterval(loadData, 5000);
+</script>
+</body>
+</html>
