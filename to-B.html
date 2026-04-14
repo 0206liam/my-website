@@ -106,8 +106,24 @@
 
     async function clearChat() {
         closeConfirm();
-        // 取得舊 uid 的三碼流水號，產生新四碼+同樣三碼
-        const oldSeq = USER_UID.slice(4); // 最後三碼
+
+        // 通知雲端此用戶已清除對話
+        try {
+            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                headers: { "Authorization": `token ${USER_TOKEN}` }
+            });
+            const data = await res.json();
+            let chats = JSON.parse(data.files["chats.json"].content || "[]");
+            chats.push({ uid: USER_UID, msg: '', time: new Date().toLocaleString(), role: 'cleared' });
+            await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                method: "PATCH",
+                headers: { "Authorization": `token ${USER_TOKEN}` },
+                body: JSON.stringify({ files: { "chats.json": { content: JSON.stringify(chats) } } })
+            });
+        } catch(e) { console.log("通知失敗", e); }
+
+        // 產生新 uid
+        const oldSeq = USER_UID.slice(4);
         const newRand = Math.floor(1000 + Math.random() * 9000).toString();
         USER_UID = newRand + oldSeq;
         localStorage.setItem('ai_uid', USER_UID);
