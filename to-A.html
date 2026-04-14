@@ -33,6 +33,7 @@
     if(config.token) {
         document.getElementById('token').value = config.token;
         document.getElementById('gistId').value = config.gistId;
+        loadData(); // 自動初始化
     }
 
     function saveAndInit() {
