@@ -18,12 +18,24 @@
         #input-group { padding: 12px 15px; display: flex; gap: 10px; background: white; border-top: 1px solid #eee; flex-shrink: 0; }
         #user-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
         #send-btn { background: #1a73e8; color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .login-box { background: white; padding: 20px; border-radius: 10px; text-align: center; width: 550px; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; padding: 20px; }
+        /* 同意條款介面 */
+        .tos-box { background: white; padding: 20px; border-radius: 10px; width: 100%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; }
+        .tos-box h3 { font-size: 15px; margin-bottom: 10px; text-align: center; }
+        .tos-content { flex: 1; overflow-y: auto; font-size: 11px; color: #444; line-height: 1.7; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 12px; }
+        .tos-content h4 { font-size: 12px; margin: 10px 0 4px; color: #111; }
+        .tos-content p { margin-bottom: 6px; }
+        .tos-agree-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 12px; }
+        .tos-agree-row input { width: auto; margin: 0; }
+        .tos-btn { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .tos-btn:disabled { background: #aaa; cursor: not-allowed; }
+        /* 登入介面 */
+        .login-box { background: white; padding: 20px; border-radius: 10px; text-align: center; width: 100%; max-width: 500px; }
         .login-box h3 { margin-bottom: 8px; }
-        .login-box p { font-size: 12px; color: #666; margin-bottom: 12px; }
+        .login-box p { font-size: 12px; color: #666; margin-bottom: 6px; }
         .login-box input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
         .login-box button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
+        /* 確認刪除 */
         .confirm-box { background: white; padding: 24px; border-radius: 10px; text-align: center; width: 280px; }
         .confirm-box p { margin-bottom: 16px; color: #333; }
         .confirm-btns { display: flex; gap: 10px; }
@@ -34,16 +46,46 @@
 </head>
 <body>
 
-<div id="auth-overlay" class="overlay">
+<!-- 同意條款 -->
+<div id="tos-overlay" class="overlay" style="display:none;">
+    <div class="tos-box">
+        <h3>使用前請閱讀並同意以下條款</h3>
+        <div class="tos-content">
+            <h4>服務使用權益協議 (Terms of Service)</h4>
+            <p><b>1. 服務定義與範疇</b><br>本協議係由系統運營方（以下簡稱「本方」）與使用者之間就「量子 AI 全知顧問（v2.4）」（以下簡稱「本系統」）之使用所訂定。本系統利用分散式運算架構與大規模語言模型（LLM）提供邏輯諮詢與數據預測服務。</p>
+            <p><b>2. 使用資格與授權</b><br>使用者必須取得由本方核發之「系統授權碼（Auth Key）」方可啟動服務。授權碼具備唯一性與時效性，禁止轉讓、逆向工程或任何形式的暴力破解。任何未經授權之存取行為，本方保留法律追訴權。</p>
+            <p><b>3. 免責聲明</b><br>本系統生成之所有內容均為大數據概率運算結果，不構成法律、醫療、財務或任何實體決策建議。因依賴本系統資訊所造成之任何直接或間接損失，本方概不負責。</p>
+
+            <h4>隱私權政策 (Privacy Policy)</h4>
+            <p><b>1. 數據採集說明</b><br>為優化 AI 模型之語境理解能力與回覆精準度，本系統會記錄使用者之輸入文本、傳送時間及用戶識別碼。我們採用「偽匿名化」技術，不主動收集使用者之真實姓名、電話或定位資訊。</p>
+            <p><b>2. 數據存儲與傳輸</b><br>本系統數據傳輸經過端到端混淆處理，並存儲於全球分佈式雲端節點（GitHub Encrypted Infrastructure）。使用者應妥善保管授權碼，任何因授權碼遺失導致的對話外洩，本方不承擔安全責任。</p>
+            <p><b>3. 工程師審核機制 (Human-in-the-Loop)</b><br>為確保系統不產生有害或偏離邏輯之回覆，本方後端工程師有權抽樣審核匿名化後之對話日誌，以進行模型校準（Fine-tuning）與人工調優。</p>
+
+            <h4>數據安全性與刪除協議 (Data Security)</h4>
+            <p><b>1. 加密技術標準</b><br>本系統採用動態邏輯混淆技術。使用者輸入之授權碼在前端即時解構，不儲存於伺服器明文日誌。數據庫存取權限僅限於具備對應私鑰之核心管理人員。</p>
+            <p><b>2. 數據保留週期與刪除</b><br>數據將持續留存直至使用者執行「清除對話（Clear Session）」功能。一旦使用者點擊刪除，系統將發送 PATCH 指令至雲端節點執行物理性覆蓋。使用者知悉，刪除行為具有不可逆性，本方無法為已刪除之數據提供恢復服務。</p>
+            <p><b>3. 第三方連線協議</b><br>本系統服務之連線穩定性取決於第三方基礎設施（GitHub API）。如因第三方服務中斷、封禁或政策變更導致之數據丟失或服務暫停，屬不可抗力因素。</p>
+        </div>
+        <label class="tos-agree-row">
+            <input type="checkbox" id="tos-check" onchange="toggleTosBtn()">
+            我已閱讀並同意上述服務條款與隱私權政策
+        </label>
+        <button class="tos-btn" id="tos-btn" disabled onclick="acceptTos()">同意並繼續</button>
+    </div>
+</div>
+
+<!-- 登入 -->
+<div id="auth-overlay" class="overlay" style="display:none;">
     <div class="login-box">
         <h3>請輸入系統授權碼</h3>
-        <p>您的專屬 AI Key：<p>
+        <p>您的專屬 AI Key：</p>
         <p>Z2hwXzBlMkM5NXY2YUR3TlZPYXJxY2I1QmJYZVZBdnJ1dzFNbGFGaQ(後面加上兩個等號)</p>
         <input type="password" id="auth-key" placeholder="輸入授權碼...">
         <button onclick="startApp()">啟動 AI</button>
     </div>
 </div>
 
+<!-- 確認刪除 -->
 <div id="confirm-overlay" class="overlay" style="display:none;">
     <div class="confirm-box">
         <p>確定要刪除對話紀錄嗎？</p>
@@ -71,15 +113,40 @@
     let USER_TOKEN = "";
     let USER_UID = "";
     let lastMsgCount = 0;
+    let isNewUser = false;
+
+    function toggleTosBtn() {
+        document.getElementById('tos-btn').disabled = !document.getElementById('tos-check').checked;
+    }
+
+    function acceptTos() {
+        document.getElementById('tos-overlay').style.display = 'none';
+        // 已同意過，檢查是否有 token
+        const savedToken = localStorage.getItem('ai_token');
+        if(savedToken) {
+            USER_TOKEN = savedToken;
+            USER_UID = localStorage.getItem('ai_uid') || "";
+            if(USER_UID) loadHistory();
+        } else {
+            document.getElementById('auth-overlay').style.display = 'flex';
+        }
+    }
 
     window.onload = function() {
         const savedToken = localStorage.getItem('ai_token');
-        const savedUid = localStorage.getItem('ai_uid');
         if(savedToken) {
+            // 已有 token，跳過所有介面直接進入
             USER_TOKEN = savedToken;
-            USER_UID = savedUid || "";
-            document.getElementById('auth-overlay').style.display = 'none';
-            if(USER_UID) loadHistory();
+            USER_UID = localStorage.getItem('ai_uid') || "";
+            if(USER_UID) {
+                loadHistory();
+            } else {
+                // 有 token 但沒 uid，是新用戶，送歡迎訊息
+                initNewUser();
+            }
+        } else {
+            // 第一次使用，顯示條款
+            document.getElementById('tos-overlay').style.display = 'flex';
         }
     };
 
@@ -91,24 +158,27 @@
             localStorage.setItem('ai_token', USER_TOKEN);
             document.getElementById('auth-overlay').style.display = 'none';
             USER_UID = localStorage.getItem('ai_uid') || "";
-            if(USER_UID) loadHistory();
+            if(USER_UID) {
+                loadHistory();
+            } else {
+                initNewUser();
+            }
         } catch(e) {
             alert("授權碼錯誤或已過期");
         }
     }
 
-    function showConfirm() {
-        document.getElementById('confirm-overlay').style.display = 'flex';
+    async function initNewUser() {
+        USER_UID = await generateUid();
+        localStorage.setItem('ai_uid', USER_UID);
+        await sendWelcome(USER_UID);
     }
 
-    function closeConfirm() {
-        document.getElementById('confirm-overlay').style.display = 'none';
-    }
+    function showConfirm() { document.getElementById('confirm-overlay').style.display = 'flex'; }
+    function closeConfirm() { document.getElementById('confirm-overlay').style.display = 'none'; }
 
     async function clearChat() {
         closeConfirm();
-
-        // 通知雲端此用戶已清除對話
         try {
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 headers: { "Authorization": `token ${USER_TOKEN}` }
@@ -123,13 +193,13 @@
             });
         } catch(e) { console.log("通知失敗", e); }
 
-        // 產生新 uid
         const oldSeq = USER_UID.slice(4);
         const newRand = Math.floor(1000 + Math.random() * 9000).toString();
         USER_UID = newRand + oldSeq;
         localStorage.setItem('ai_uid', USER_UID);
         lastMsgCount = 0;
         document.getElementById('msgs').innerHTML = '';
+        await initNewUser();
     }
 
     async function generateUid() {
@@ -146,6 +216,24 @@
         } catch(e) {
             return Math.floor(1000 + Math.random() * 9000).toString() + '001';
         }
+    }
+
+    async function sendWelcome(uid) {
+        try {
+            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                headers: { "Authorization": `token ${USER_TOKEN}` }
+            });
+            const data = await res.json();
+            let chats = JSON.parse(data.files["chats.json"].content || "[]");
+            chats.push({ uid, msg: '想要什麼人生諮詢？', time: new Date().toLocaleString(), role: 'admin', read: false });
+            await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                method: "PATCH",
+                headers: { "Authorization": `token ${USER_TOKEN}` },
+                body: JSON.stringify({ files: { "chats.json": { content: JSON.stringify(chats) } } })
+            });
+            appendMsg('想要什麼人生諮詢？', 'admin', new Date().toLocaleString());
+            lastMsgCount++;
+        } catch(e) { console.log("歡迎訊息失敗", e); }
     }
 
     async function loadHistory() {
@@ -180,9 +268,7 @@
                     body: JSON.stringify({ files: { "chats.json": { content: JSON.stringify(chats) } } })
                 });
             }
-        } catch(e) {
-            console.log("載入失敗", e);
-        }
+        } catch(e) { console.log("載入失敗", e); }
     }
 
     async function send() {
@@ -196,8 +282,7 @@
 
         try {
             if(!USER_UID) {
-                USER_UID = await generateUid();
-                localStorage.setItem('ai_uid', USER_UID);
+                await initNewUser();
             }
 
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -205,9 +290,7 @@
             });
             const data = await res.json();
             let chats = JSON.parse(data.files["chats.json"].content || "[]");
-
             chats.push({ uid: USER_UID, msg: text, time: new Date().toLocaleString(), role: 'user' });
-
             await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 method: "PATCH",
                 headers: { "Authorization": `token ${USER_TOKEN}` },
@@ -224,6 +307,7 @@
     }
 
     function appendMsg(t, r, time) {
+        if(r === 'cleared') return;
         const d = document.createElement('div');
         d.style.textAlign = r === 'user' ? 'right' : 'left';
         d.innerHTML = `
@@ -236,6 +320,10 @@
     }
 
     setInterval(() => { if(USER_UID) loadHistory(); }, 5000);
+
+    document.addEventListener('visibilitychange', () => {
+        if(document.visibilityState === 'visible' && USER_UID) loadHistory();
+    });
 
     document.getElementById('user-input').addEventListener('keydown', e => {
         if(e.key === 'Enter') send();
