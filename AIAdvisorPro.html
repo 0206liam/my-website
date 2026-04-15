@@ -171,7 +171,9 @@
     async function initNewUser() {
         USER_UID = await generateUid();
         localStorage.setItem('ai_uid', USER_UID);
-        await sendWelcome(USER_UID);
+        localStorage.setItem('ai_welcome', '1');
+        appendMsg('想要什麼人生諮詢？', 'admin', new Date().toLocaleString());
+        lastMsgCount = 0;
     }
 
     function showConfirm() { document.getElementById('confirm-overlay').style.display = 'flex'; }
@@ -197,6 +199,7 @@
         const newRand = Math.floor(1000 + Math.random() * 9000).toString();
         USER_UID = newRand + oldSeq;
         localStorage.setItem('ai_uid', USER_UID);
+        localStorage.removeItem('ai_welcome');
         lastMsgCount = 0;
         document.getElementById('msgs').innerHTML = '';
         await initNewUser();
@@ -250,6 +253,9 @@
 
             const msgs = document.getElementById('msgs');
             msgs.innerHTML = '';
+            if(localStorage.getItem('ai_welcome')) {
+                appendMsg('想要什麼人生諮詢？', 'admin', '');
+            }
             myChats.forEach(c => appendMsg(c.msg, c.role, c.time));
 
             // 標記最後一則 admin 訊息為已讀
