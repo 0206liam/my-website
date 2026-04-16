@@ -4,8 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>檔案檢視器</title>
+<!-- 原有函式庫 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- 新增: PDF.js 函式庫 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // 設定 PDF.js worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; }
@@ -43,6 +51,7 @@
   .badge-txt     { background: #22c55e; color: white; }
   .badge-docx    { background: #2563eb; color: white; }
   .badge-xlsx    { background: #16a34a; color: white; }
+  .badge-pdf     { background: #dc2626; color: white; } /* 新增 PDF 徽章顏色 */
   .badge-special { background: #f59e0b; color: white; }
 
   #preview-area { flex: 1; position: relative; overflow: hidden; }
@@ -50,6 +59,19 @@
   #preview-frame { width: 100%; height: 100%; border: none; background: white; display: none; }
 
   #svg-container { width: 100%; height: 100%; display: none; background: white; overflow: auto; }
+
+  /* PDF Container - 新增 */
+  #pdf-container { 
+    width: 100%; height: 100%; display: none; 
+    background: #525659; overflow: auto; 
+    display: none; flex-direction: column; align-items: center; 
+    padding: 20px; gap: 20px;
+  }
+  .pdf-page-canvas {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    max-width: 100%;
+    height: auto !important;
+  }
 
   /* TXT / special — editable */
   #txt-container { width: 100%; height: 100%; display: none; overflow: hidden; background: #0f172a; display: none; flex-direction: column; }
@@ -122,11 +144,16 @@
       <path d="M20 28h24M20 36h16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
     </svg>
     <p>拖曳檔案到這裡</p>
-    <small>支援 .html　.svg　.txt　.docx　.xlsx　及其他特殊檔案</small>
+    <!-- 更新提示文字以包含 PDF -->
+    <small>支援 .html .svg .txt .docx .xlsx .pdf 及其他特殊檔案</small>
   </div>
   <div id="loading">⏳ 讀取中...</div>
   <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
   <div id="svg-container"></div>
+  
+  <!-- 新增 PDF 容器 -->
+  <div id="pdf-container"></div>
+
   <div id="txt-container">
     <div id="txt-toolbar">
       <span id="txt-mode-label">檢視模式</span>
@@ -145,6 +172,7 @@
   const fileInput    = document.getElementById('file-input');
   const frame        = document.getElementById('preview-frame');
   const svgBox       = document.getElementById('svg-container');
+  const pdfBox       = document.getElementById('pdf-container'); // 新增
   const txtBox       = document.getElementById('txt-container');
   const txtContent   = document.getElementById('txt-content');
   const docxBox      = document.getElementById('docx-container');
@@ -174,7 +202,8 @@
     if (name.match(/\.txt$/))    return 'txt';
     if (name.match(/\.docx$/))   return 'docx';
     if (name.match(/\.xlsx$/))   return 'xlsx';
-    return 'special'; // 所有其他檔案
+    if (name.match(/\.pdf$/))    return 'pdf'; // 新增 PDF 判斷
+    return 'special'; 
   }
 
   function loadFile(file) {
@@ -193,6 +222,7 @@
       txt:     ['TXT',     'badge-txt'],
       docx:    ['DOCX',    'badge-docx'],
       xlsx:    ['XLSX',    'badge-xlsx'],
+      pdf:     ['PDF',     'badge-pdf'], // 新增 PDF 徽章設定
       special: ['特殊檔案', 'badge-special'],
     };
     showBadge(...badgeCfg[type]);
@@ -213,6 +243,47 @@
         }
       };
       r.readAsArrayBuffer(file);
+    
+    } else if (type === 'pdf') {
+      // 新增 PDF 處理邏輯
+      const r = new FileReader();
+      r.onload = async e => {
+        try {
+          const typedArray = new Uint8Array(e.target.result);
+          const pdf = await pdfjsLib.getDocument(typedArray).promise;
+          
+          pdfBox.innerHTML = ''; // 清空舊內容
+          
+          // 迴圈渲染每一頁
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 }); // 預設縮放比例
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            canvas.className = 'pdf-page-canvas';
+            
+            await page.render({
+              canvasContext: context,
+              viewport: viewport
+            }).promise;
+            
+            pdfBox.appendChild(canvas);
+          }
+          
+          loading.style.display = 'none';
+          dropZone.style.display = 'none';
+          pdfBox.style.display = 'flex';
+        } catch (err) {
+          console.error(err);
+          loading.style.display = 'none';
+          alert('PDF 讀取失敗');
+        }
+      };
+      r.readAsArrayBuffer(file);
+
     } else {
       // html, svg, txt, special — 全部以文字讀取
       const r = new FileReader();
@@ -333,6 +404,7 @@
   function hideAll() {
     frame.style.display = 'none'; frame.src = 'about:blank';
     svgBox.style.display = 'none'; svgBox.innerHTML = '';
+    pdfBox.style.display = 'none'; pdfBox.innerHTML = ''; // 新增清除 PDF
     txtBox.style.display = 'none'; txtContent.textContent = '';
     docxBox.style.display = 'none'; docxContent.innerHTML = '';
     xlsxBox.style.display = 'none'; sheetTabs.innerHTML = ''; xlsxWrap.innerHTML = '';
