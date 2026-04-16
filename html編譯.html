@@ -99,10 +99,17 @@
 
   function handleOverlayClick(e) { if (e.target === overlay) closeEditor(); }
 
-  function run() {
-    const doc = preview.contentDocument || preview.contentWindow.document;
-    doc.open(); doc.write(editor.value); doc.close();
-    showStatus('✅ 執行成功');
+
+ function run() {
+    // 1. 先徹底清空 iframe 內容，確保沒有舊的腳本殘留影響
+    preview.src = "about:blank"; 
+    
+    // 2. 稍微延遲一點點（給瀏覽器重置的時間），再注入新程式碼
+    setTimeout(() => {
+      // 使用 srcdoc 是目前處理 HTML 預覽最標準、最穩定的方式
+      preview.srcdoc = editor.value;
+      showStatus('✅ 執行成功');
+    }, 50); 
   }
 
   function runAndClose() { run(); closeEditor(); }
