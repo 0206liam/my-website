@@ -3,133 +3,289 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML 執行器</title>
+<title>全能執行器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#1e1e2e;color:#cdd6f4;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-  /* 頂部工具列 */
-  header { padding: 10px 16px; background: #181825; border-bottom: 1px solid #313244; display: flex; align-items: center; gap: 10px; }
-  header h1 { font-size: 15px; font-weight: 600; color: #cba6f7; flex: 1; }
-  .btn { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity .15s; }
-  .btn:hover { opacity: .8; }
-  .btn-run { background: #a6e3a1; color: #1e1e2e; }
-  .btn-edit { background: #89b4fa; color: #1e1e2e; }
-  .btn-clear { background: #313244; color: #cdd6f4; }
+header{padding:9px 14px;background:#181825;border-bottom:1px solid #313244;display:flex;align-items:center;gap:8px;flex-shrink:0}
+header h1{font-size:14px;font-weight:600;color:#cba6f7;white-space:nowrap;margin-right:4px}
 
-  /* 預覽區全屏 */
-  #preview { flex: 1; border: none; background: #fff; width: 100%; }
+.mode-tabs{display:flex;gap:4px}
+.mtab{padding:4px 12px;border-radius:5px;border:1px solid #313244;background:transparent;color:#7f849c;cursor:pointer;font-size:12px;transition:all .15s}
+.mtab:hover{background:#313244;color:#cdd6f4}
+.mtab.active{background:#7c3aed;border-color:#7c3aed;color:#fff}
 
-  /* 遮罩 */
-  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
-  .overlay.open { display: flex; }
+.spacer{flex:1}
 
-  /* 編輯器彈窗 */
-  .modal { background: #1e1e2e; border: 1px solid #313244; border-radius: 12px; width: min(680px, 94vw); height: min(520px, 88vh); display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
-  .modal-header { padding: 12px 16px; background: #181825; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #313244; }
-  .modal-header span { font-size: 14px; color: #cba6f7; font-weight: 600; }
-  .modal-header small { font-size: 11px; color: #585b70; }
-  .close-btn { background: #313244; border: none; color: #cdd6f4; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-  .close-btn:hover { background: #45475a; }
-  textarea { flex: 1; background: #181825; color: #cdd6f4; border: none; outline: none; padding: 14px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; resize: none; }
-  .modal-footer { padding: 10px 14px; background: #181825; border-radius: 0 0 12px 12px; border-top: 1px solid #313244; display: flex; gap: 8px; align-items: center; }
-  #charCount { font-size: 11px; color: #585b70; margin-left: auto; }
-  #status { font-size: 12px; color: #a6e3a1; min-width: 80px; }
+#mkm-status{font-size:11px;color:#585b70}
+
+.btn{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:opacity .15s}
+.btn:hover{opacity:.8}
+.btn-run{background:#a6e3a1;color:#1e1e2e}
+.btn-edit{background:#89b4fa;color:#1e1e2e}
+.btn-clear{background:#313244;color:#cdd6f4}
+
+/* 預覽區全螢幕 */
+#preview-wrap{flex:1;position:relative;overflow:hidden}
+
+iframe#html-frame{position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff;display:none}
+iframe#html-frame.active{display:block}
+
+#md-preview{position:absolute;inset:0;overflow-y:auto;padding:28px 36px;display:none;background:#0f1117}
+#md-preview.active{display:block}
+#md-preview h1,#md-preview h2,#md-preview h3{color:#f1f5f9;margin:1.2em 0 .4em}
+#md-preview h1{font-size:1.9em;border-bottom:2px solid #2d3148;padding-bottom:.3em}
+#md-preview h2{font-size:1.45em;border-bottom:1px solid #2d3148;padding-bottom:.2em}
+#md-preview h3{font-size:1.15em}
+#md-preview p{margin:.6em 0;color:#cbd5e1}
+#md-preview a{color:#818cf8}
+#md-preview ul,#md-preview ol{padding-left:1.5em;margin:.4em 0;color:#cbd5e1}
+#md-preview li{margin:.2em 0}
+#md-preview blockquote{border-left:3px solid #6d28d9;margin:.8em 0;padding:8px 14px;background:#1e2235;border-radius:0 6px 6px 0;color:#94a3b8}
+#md-preview code{background:#1e2235;color:#f472b6;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.87em}
+#md-preview pre{background:#1a1d2e;border:1px solid #2d3148;border-radius:8px;padding:14px 18px;overflow-x:auto;margin:.8em 0}
+#md-preview pre code{background:none;padding:0;color:#c9d1d9}
+#md-preview table{width:100%;border-collapse:collapse;margin:.8em 0;font-size:.88em}
+#md-preview th{background:#1e2235;color:#a78bfa;padding:8px 12px;border:1px solid #2d3148;text-align:left}
+#md-preview td{padding:7px 12px;border:1px solid #2d3148;color:#cbd5e1}
+#md-preview tr:nth-child(even) td{background:#151722}
+#md-preview hr{border:none;border-top:1px solid #2d3148;margin:1.2em 0}
+.mermaid-wrap{background:#1a1d2e;border:1px solid #2d3148;border-radius:8px;padding:18px;margin:.8em 0;text-align:center;overflow-x:auto}
+.error-msg{color:#f87171;background:#2d1515;border:1px solid #7f1d1d;border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;white-space:pre-wrap;margin:.8em 0}
+
+#markmap-pane{position:absolute;inset:0;display:none;background:#0f1117}
+#markmap-pane.active{display:block}
+#markmap-pane svg{width:100%;height:100%;display:block}
+
+/* 空白提示 */
+#placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#45475a;pointer-events:none}
+#placeholder.hidden{display:none}
+#placeholder .big{font-size:48px}
+#placeholder p{font-size:13px}
+
+/* 彈出編輯器 */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#1e1e2e;border:1px solid #313244;border-radius:12px;width:min(700px,95vw);height:min(560px,90vh);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.modal-header{padding:10px 14px;background:#181825;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #313244;gap:8px}
+.modal-header span{font-size:13px;color:#cba6f7;font-weight:600;flex:1}
+.modal-header small{font-size:11px;color:#585b70;white-space:nowrap}
+.close-btn{background:#313244;border:none;color:#cdd6f4;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.close-btn:hover{background:#45475a}
+.modal textarea{flex:1;background:#181825;color:#cdd6f4;border:none;outline:none;padding:14px;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;resize:none}
+.modal-footer{padding:8px 12px;background:#181825;border-radius:0 0 12px 12px;border-top:1px solid #313244;display:flex;gap:8px;align-items:center}
+#runStatus{font-size:12px;color:#a6e3a1}
+#charCount{font-size:11px;color:#585b70;margin-left:auto}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#2d3148;border-radius:3px}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>⚡ HTML 執行器</h1>
+  <h1>⚡ 全能執行器</h1>
+  <div class="mode-tabs">
+    <button class="mtab active" id="tab-html" onclick="switchMode('html')">HTML</button>
+    <button class="mtab"        id="tab-md"   onclick="switchMode('md')">Markdown</button>
+    <button class="mtab"        id="tab-mm"   onclick="switchMode('mm')">Mermaid</button>
+    <button class="mtab"        id="tab-mkm"  onclick="switchMode('mkm')">Markmap</button>
+  </div>
+  <div class="spacer"></div>
+  <span id="mkm-status">載入 markmap…</span>
   <button class="btn btn-edit" onclick="openEditor()">✏️ 編輯程式碼</button>
 </header>
 
-<iframe id="preview" sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-downloads"></iframe>
+<div id="preview-wrap">
+  <div id="placeholder">
+    <div class="big">⚡</div>
+    <p>選擇模式，點「編輯程式碼」開始</p>
+  </div>
+  <iframe id="html-frame" sandbox="allow-scripts allow-same-origin allow-modals allow-forms"></iframe>
+  <div id="md-preview"></div>
+  <div id="markmap-pane"><svg id="mm-svg"></svg></div>
+</div>
 
-<!-- 編輯器彈窗 -->
-<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+<!-- 彈出編輯器 -->
+<div class="overlay" id="overlay" onclick="handleOverlay(event)">
   <div class="modal">
     <div class="modal-header">
-      <span>📝 程式碼編輯器</span>
-      <small>Ctrl+Enter 執行 &nbsp;|&nbsp; Tab 縮排</small>
+      <span id="modal-title">📝 編輯器</span>
+      <small>Ctrl+Enter 執行 | Esc 關閉</small>
       <button class="close-btn" onclick="closeEditor()">✕</button>
     </div>
-    <textarea id="editor" placeholder="在這裡輸入 HTML 程式碼...
-
-範例：
-<h1 style='color:coral'>Hello!</h1>
-<button onclick=&quot;alert('Hi!')&quot;>點我</button>"></textarea>
+    <textarea id="editor" spellcheck="false" placeholder="在此輸入程式碼…"></textarea>
     <div class="modal-footer">
-      <span id="status"></span>
+      <span id="runStatus"></span>
       <span id="charCount">0 字元</span>
-      <button class="btn btn-clear" onclick="clearCode()" style="padding:5px 12px;font-size:12px">清除</button>
-      <button class="btn btn-run" onclick="runAndClose()" style="padding:5px 14px;font-size:12px">▶ 執行並關閉</button>
+      <button class="btn btn-clear" style="padding:5px 12px;font-size:12px" onclick="clearCode()">清除</button>
+      <button class="btn btn-run"   style="padding:5px 14px;font-size:12px" onclick="runAndClose()">▶ 執行並關閉</button>
     </div>
   </div>
 </div>
 
 <script>
-  const editor = document.getElementById('editor');
-  const preview = document.getElementById('preview');
-  const overlay = document.getElementById('overlay');
-  const status = document.getElementById('status');
-  const charCount = document.getElementById('charCount');
+var mode = 'html';
+var markmapReady = false;
 
-  editor.addEventListener('input', () => {
-    charCount.textContent = editor.value.length + ' 字元';
-  });
+var labels = {html:'HTML',md:'Markdown',mm:'Mermaid',mkm:'Markmap'};
+var placeholders = {
+  html:'<!-- 在此輸入 HTML -->\n<h1 style="color:coral;text-align:center;margin-top:60px">Hello!</h1>\n<button onclick="alert(\'Hi!\')" style="display:block;margin:20px auto;padding:10px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer">點我</button>',
+  md:'# Hello Markdown\n\n這是 **粗體**，這是 *斜體*，`code`。\n\n## 清單\n\n- 項目 A\n- 項目 B\n\n## 表格\n\n| 名稱 | 說明 |\n|------|------|\n| HTML | 網頁結構 |\n| Markdown | 輕量標記 |\n\n> 點 **▶ 執行並關閉** 查看結果。\n\n## 內嵌 Mermaid\n\n```mermaid\nflowchart LR\n    A[開始] --> B{判斷}\n    B -->|是| C[執行]\n    B -->|否| D[結束]\n```\n',
+  mm:'flowchart TD\n    A[使用者] --> B[前端]\n    B --> C[API]\n    C --> D[後端]\n    D --> E[(資料庫)]',
+  mkm:'---\ntitle: 技術地圖\nmarkmap:\n  colorFreezeLevel: 2\n---\n\n## 前端\n\n- HTML / CSS\n- JavaScript\n  - React\n  - Vue\n\n## 後端\n\n- Node.js\n- Python\n  - FastAPI\n\n## 資料庫\n\n- SQL\n- NoSQL\n  - MongoDB\n  - Redis'
+};
 
-  editor.addEventListener('keydown', e => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const s = editor.selectionStart;
-      editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(editor.selectionEnd);
-      editor.selectionStart = editor.selectionEnd = s + 2;
+var saved = {html:'',md:'',mm:'',mkm:''};
+
+var ed = document.getElementById('editor');
+ed.addEventListener('input', function(){document.getElementById('charCount').textContent=ed.value.length+' 字元';});
+ed.addEventListener('keydown', function(e){
+  if(e.key==='Tab'){e.preventDefault();var s=ed.selectionStart;ed.value=ed.value.substring(0,s)+'  '+ed.value.substring(ed.selectionEnd);ed.selectionStart=ed.selectionEnd=s+2;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){runAndClose();}
+  if(e.key==='Escape'){closeEditor();}
+});
+
+function switchMode(m){
+  mode=m;
+  ['html','md','mm','mkm'].forEach(function(k){document.getElementById('tab-'+k).classList.toggle('active',k===m);});
+  document.getElementById('modal-title').textContent='📝 '+labels[m]+' 編輯器';
+  clearPreviews();
+  showPlaceholder(true);
+  openEditor();
+}
+
+function clearPreviews(){
+  document.getElementById('html-frame').classList.remove('active');
+  document.getElementById('md-preview').classList.remove('active');
+  document.getElementById('md-preview').innerHTML='';
+  document.getElementById('markmap-pane').classList.remove('active');
+  resetMmSvg();
+}
+
+function showPlaceholder(show){
+  document.getElementById('placeholder').classList.toggle('hidden',!show);
+}
+
+function openEditor(){
+  ed.value = saved[mode] || placeholders[mode];
+  document.getElementById('charCount').textContent=ed.value.length+' 字元';
+  document.getElementById('modal-title').textContent='📝 '+labels[mode]+' 編輯器';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(function(){ed.focus();},50);
+}
+
+function closeEditor(){document.getElementById('overlay').classList.remove('open');}
+
+function handleOverlay(e){if(e.target===document.getElementById('overlay'))closeEditor();}
+
+function clearCode(){ed.value='';document.getElementById('charCount').textContent='0 字元';}
+
+function runAndClose(){
+  saved[mode]=ed.value;
+  closeEditor();
+  doRender(ed.value.trim());
+}
+
+function showStatus(msg,ok){
+  var el=document.getElementById('runStatus');
+  el.textContent=msg;
+  el.style.color=ok?'#a6e3a1':'#f38ba8';
+  setTimeout(function(){el.textContent='';},2000);
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function doRender(src){
+  clearPreviews();
+  showPlaceholder(false);
+
+  if(mode==='html'){
+    var f=document.getElementById('html-frame');
+    f.classList.add('active');
+    f.src='about:blank';
+    setTimeout(function(){f.srcdoc=src;},40);
+    return;
+  }
+
+  if(mode==='mkm'){
+    if(!markmapReady){alert('Markmap 尚未就緒，請稍後再試。');showPlaceholder(true);return;}
+    document.getElementById('markmap-pane').classList.add('active');
+    try{
+      var T=markmap.Transformer||(markmap.default&&markmap.default.Transformer);
+      var M=markmap.Markmap||(markmap.default&&markmap.default.Markmap);
+      var res=new T().transform(src);
+      var mm2=M.create(document.getElementById('mm-svg'),{colorFreezeLevel:2,duration:400,maxWidth:300,zoom:true,pan:true},res.root);
+      setTimeout(function(){mm2.fit();},150);
+    }catch(e){
+      document.getElementById('markmap-pane').classList.remove('active');
+      showPlaceholder(true);
+      alert('Markmap 錯誤：'+(e.message||e));
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { run(); showStatus('✅ 執行成功'); }
-    if (e.key === 'Escape') closeEditor();
+    return;
+  }
+
+  var out=document.getElementById('md-preview');
+  out.classList.add('active');
+
+  if(mode==='md'){
+    if(typeof marked==='undefined'){alert('marked 未就緒');return;}
+    var blocks=[];
+    var proc=src.replace(/```mermaid\n([\s\S]*?)```/g,function(_,code){blocks.push(code.trim());return '\n%%MRM'+(blocks.length-1)+'%%\n';});
+    var html=marked.parse(proc);
+    blocks.forEach(function(code,i){
+      var w='<div class="mermaid-wrap"><div class="mermaid">'+escHtml(code)+'</div></div>';
+      html=html.replace('<p>%%MRM'+i+'%%</p>',w).replace('%%MRM'+i+'%%',w);
+    });
+    out.innerHTML=html;
+    if(blocks.length&&typeof mermaid!=='undefined') await runMermaid(out);
+  } else {
+    if(typeof mermaid==='undefined'){alert('mermaid 未就緒');return;}
+    out.innerHTML='<div class="mermaid-wrap"><div class="mermaid">'+escHtml(src)+'</div></div>';
+    await runMermaid(out);
+  }
+}
+
+async function runMermaid(container){
+  var nodes=Array.from(container.querySelectorAll('.mermaid'));
+  for(var i=0;i<nodes.length;i++){
+    try{await mermaid.run({nodes:[nodes[i]]});}
+    catch(e){nodes[i].innerHTML='<div class="error-msg">⚠️ '+(e.message||e)+'</div>';}
+  }
+}
+
+function resetMmSvg(){
+  var pane=document.getElementById('markmap-pane');
+  var old=document.getElementById('mm-svg');
+  if(old)pane.removeChild(old);
+  var s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.id='mm-svg';pane.appendChild(s);
+}
+
+window.addEventListener('load',function(){
+  if(typeof mermaid!=='undefined'){
+    mermaid.initialize({startOnLoad:false,theme:'dark',themeVariables:{primaryColor:'#6d28d9',primaryTextColor:'#e2e8f0',primaryBorderColor:'#7c3aed',lineColor:'#818cf8',secondaryColor:'#1e2235',mainBkg:'#1a1d2e',fontFamily:'sans-serif'}});
+  }
+  loadScript(['https://unpkg.com/markmap-autoloader@0.16.4/dist/index.js']).then(function(ok){
+    if(!ok)return loadScript(['https://unpkg.com/d3@7/dist/d3.min.js']).then(function(){return loadScript(['https://unpkg.com/markmap-lib@0.16.4/dist/browser/index.js']);}).then(function(){return loadScript(['https://unpkg.com/markmap-view@0.16.4/dist/browser/index.js']);});
+    return ok;
+  }).then(function(){
+    var ready=typeof markmap!=='undefined'&&(markmap.Transformer||(markmap.default&&markmap.default.Transformer));
+    markmapReady=!!ready;
+    document.getElementById('mkm-status').textContent=ready?'✅ Markmap 就緒':'⚠️ Markmap 載入失敗';
+    setTimeout(function(){document.getElementById('mkm-status').textContent='';},3000);
+  }).catch(function(){document.getElementById('mkm-status').textContent='⚠️ Markmap 載入失敗';});
+});
+
+function loadScript(urls){
+  var i=0;
+  return new Promise(function(resolve){
+    function tryNext(){if(i>=urls.length){resolve(false);return;}var s=document.createElement('script');s.src=urls[i++];s.onload=function(){resolve(true);};s.onerror=function(){tryNext();};document.head.appendChild(s);}
+    tryNext();
   });
-
-  function openEditor() {
-    overlay.classList.add('open');
-    setTimeout(() => editor.focus(), 50);
-  }
-
-  function closeEditor() { overlay.classList.remove('open'); }
-
-  function handleOverlayClick(e) { if (e.target === overlay) closeEditor(); }
-
-
- function run() {
-    // 1. 先徹底清空 iframe 內容，確保沒有舊的腳本殘留影響
-    preview.src = "about:blank"; 
-    
-    // 2. 稍微延遲一點點（給瀏覽器重置的時間），再注入新程式碼
-    setTimeout(() => {
-      // 使用 srcdoc 是目前處理 HTML 預覽最標準、最穩定的方式
-      preview.srcdoc = editor.value;
-      showStatus('✅ 執行成功');
-    }, 50); 
-  }
-
-  function runAndClose() { run(); closeEditor(); }
-
-  function clearAll() {
-    editor.value = '';
-    charCount.textContent = '0 字元';
-    const doc = preview.contentDocument || preview.contentWindow.document;
-    doc.open(); doc.write(''); doc.close();
-  }
-
-  function clearCode() {
-    editor.value = '';
-    charCount.textContent = '0 字元';
-  }
-
-  function showStatus(msg) {
-    status.textContent = msg;
-    setTimeout(() => status.textContent = '', 2000);
-  }
+}
 </script>
 </body>
 </html>
