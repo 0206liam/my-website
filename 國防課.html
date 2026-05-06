@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>馬紹爾群島簡報</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+    font-family:'Microsoft JhengHei','PingFang TC',sans-serif;
+    background:#1a1a1a;
+    overflow:hidden;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    width:100vw;
+    transition:overflow .3s;
+}
+body.scroll-mode{
+    overflow-y:auto;
+    align-items:flex-start;
+}
+
+/* 容器 */
+.slide-container{
+    width:1600px;
+    height:900px;
+    background:white;
+    position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5);
+    transform-origin:center center;
+}
+
+/* slide */
+.slide{
+    display:none;
+    position:absolute;
+    width:100%;
+    height:100%;
+    padding:50px 100px;
+    background:linear-gradient(135deg,#fff,#f4f6ff);
+    opacity:0;
+    transition:opacity .4s;
+}
+.slide.active{
+    display:flex;
+    flex-direction:column;
+    opacity:1;
+}
+
+/* scroll模式 */
+body.scroll-mode .slide{
+    display:flex!important;
+    position:relative;
+    opacity:1!important;
+    height:900px;
+    page-break-after:always;
+}
+
+/* 標題 */
+h2{
+    font-size:4em;
+    color:#667eea;
+    border-bottom:8px solid #667eea;
+    margin-bottom:30px;
+}
+
+/* 卡片 */
+.grid-2,.grid-3{
+    display:grid;
+    gap:30px;
+}
+.grid-2{grid-template-columns:1fr 1fr;}
+.grid-3{grid-template-columns:1fr 1fr 1fr;}
+
+.card{
+    background:white;
+    padding:35px;
+    border-radius:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,.1);
+}
+.card h3{font-size:2em;color:#667eea;margin-bottom:10px;}
+.card p{font-size:1.7em;}
+
+/* 首頁 */
+.title-slide{
+    justify-content:center;
+    align-items:center;
+    color:white;
+    text-align:center;
+    background:linear-gradient(135deg,#667eea,#764ba2);
+}
+.title-slide h1{font-size:6em;}
+.subtitle{font-size:2.5em;margin-top:20px;}
+
+/* 目錄 */
+.toc-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:25px;
+}
+.toc-item{
+    background:white;
+    padding:30px;
+    border-left:10px solid #667eea;
+    font-size:2em;
+    cursor:pointer;
+}
+
+/* 頁碼 */
+.page-number{
+    position:absolute;
+    bottom:30px;
+    right:50px;
+    color:#ccc;
+    cursor:pointer;
+}
+
+/* 按鈕 */
+.print-button{
+    position:fixed;
+    top:30px;
+    left:30px;
+    width:60px;
+    height:60px;
+    background:white;
+    border-radius:50%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    cursor:pointer;
+    z-index:999;
+}
+</style>
+</head>
+
+<body>
+
+<div class="print-button" onclick="toggleScrollMode()">🖨</div>
+
+<div class="slide-container">
+
+<!-- 封面 -->
+<div class="slide title-slide active">
+<h1>馬紹爾群島</h1>
+<div class="subtitle">核試驗與氣候變遷的前線國家</div>
+</div>
+
+<!-- 目錄 -->
+<div class="slide">
+<h2>簡報大綱</h2>
+<div class="toc-grid">
+<div class="toc-item" onclick="jumpTo(2,event)">01 地理環境</div>
+<div class="toc-item" onclick="jumpTo(3,event)">02 歷史發展</div>
+<div class="toc-item" onclick="jumpTo(4,event)">03 核試驗影響</div>
+<div class="toc-item" onclick="jumpTo(5,event)">04 人權與健康</div>
+<div class="toc-item" onclick="jumpTo(6,event)">05 氣候變遷</div>
+<div class="toc-item" onclick="jumpTo(7,event)">06 經濟結構</div>
+<div class="toc-item" onclick="jumpTo(8,event)">07 國際地位</div>
+<div class="toc-item" onclick="jumpTo(9,event)">08 未來挑戰</div>
+</div>
+</div>
+
+<!-- 地理 -->
+<div class="slide">
+<h2>地理環境</h2>
+<div class="grid-2">
+<div class="card"><h3>📍 位置</h3><p>位於太平洋中部，由29個環礁組成。</p></div>
+<div class="card"><h3>🌊 地形</h3><p>平均高度約2公尺。</p></div>
+<div class="card"><h3>🏝 海域</h3><p>海洋面積遠大於陸地。</p></div>
+<div class="card"><h3>🌦 氣候</h3><p>熱帶氣候，高溫多雨。</p></div>
+</div>
+</div>
+
+<!-- 歷史 -->
+<div class="slide">
+<h2>歷史發展</h2>
+<div class="grid-3">
+<div class="card"><h3>西班牙</h3></div>
+<div class="card"><h3>德國</h3></div>
+<div class="card"><h3>日本</h3></div>
+<div class="card"><h3>美國</h3></div>
+<div class="card"><h3>1986獨立</h3></div>
+</div>
+</div>
+
+<!-- 核試 -->
+<div class="slide">
+<h2>核試驗影響</h2>
+<div class="grid-2">
+<div class="card"><h3>💣 67次核爆</h3></div>
+<div class="card"><h3>☢ 輻射污染</h3></div>
+<div class="card"><h3>🚫 強制遷移</h3></div>
+<div class="card"><h3>⚠ 核殖民爭議</h3></div>
+</div>
+</div>
+
+<!-- 人權 -->
+<div class="slide">
+<h2>人權與健康</h2>
+<div class="grid-2">
+<div class="card"><h3>癌症上升</h3></div>
+<div class="card"><h3>人體研究爭議</h3></div>
+<div class="card"><h3>心理創傷</h3></div>
+<div class="card"><h3>補償不足</h3></div>
+</div>
+</div>
+
+<!-- 氣候 -->
+<div class="slide">
+<h2>氣候變遷</h2>
+<div class="grid-2">
+<div class="card"><h3>海平面上升</h3></div>
+<div class="card"><h3>缺水問題</h3></div>
+<div class="card"><h3>災害增加</h3></div>
+<div class="card"><h3>氣候難民</h3></div>
+</div>
+</div>
+
+<!-- 經濟 -->
+<div class="slide">
+<h2>經濟結構</h2>
+<div class="grid-2">
+<div class="card"><h3>美國援助</h3></div>
+<div class="card"><h3>漁業</h3></div>
+<div class="card"><h3>旅遊</h3></div>
+<div class="card"><h3>產業單一</h3></div>
+</div>
+</div>
+
+<!-- 國際 -->
+<div class="slide">
+<h2>國際地位</h2>
+<div class="grid-2">
+<div class="card"><h3>聯合國會員</h3></div>
+<div class="card"><h3>美國合作</h3></div>
+<div class="card"><h3>氣候發聲</h3></div>
+</div>
+</div>
+
+<!-- 未來 -->
+<div class="slide">
+<h2>未來挑戰</h2>
+<div class="grid-2">
+<div class="card"><h3>國家消失風險</h3></div>
+<div class="card"><h3>氣候正義</h3></div>
+</div>
+</div>
+
+<!-- 結尾 -->
+<div class="slide title-slide">
+<h1>THANK YOU</h1>
+</div>
+
+</div>
+
+<script>
+let curr=0;
+let isScrollMode=false;
+const slides=document.querySelectorAll('.slide');
+const container=document.querySelector('.slide-container');
+
+/* 縮放 */
+function autoScale(){
+    if(isScrollMode){
+        container.style.transform="scale(1)";
+        return;
+    }
+
+    const baseW=1600, baseH=900;
+    const ratio=window.innerWidth/window.innerHeight;
+    const baseRatio=baseW/baseH;
+
+    let scale = ratio>baseRatio
+        ? window.innerHeight/baseH
+        : window.innerWidth/baseW;
+
+    container.style.transform=`scale(${scale*0.98})`;
+}
+
+/* 防抖 */
+let timer;
+window.addEventListener('resize',()=>{
+    clearTimeout(timer);
+    timer=setTimeout(autoScale,100);
+});
+window.addEventListener('load',autoScale);
+
+/* 切頁 */
+function show(n){
+    if(isScrollMode)return;
+    if(n<0||n>=slides.length)return;
+
+    slides[curr].classList.remove('active');
+    curr=n;
+    slides[curr].classList.add('active');
+}
+
+/* scroll */
+function toggleScrollMode(){
+    isScrollMode=!isScrollMode;
+    document.body.classList.toggle('scroll-mode',isScrollMode);
+
+    if(isScrollMode){
+        slides.forEach(s=>s.classList.add('active'));
+    }else{
+        slides.forEach((s,i)=>{
+            if(i!==curr)s.classList.remove('active');
+        });
+    }
+    autoScale();
+}
+
+/* 跳頁 */
+function jumpTo(i,e){
+    e.stopPropagation();
+    if(isScrollMode){
+        slides[i].scrollIntoView({behavior:"smooth"});
+    }else{
+        show(i);
+    }
+}
+
+/* 鍵盤 */
+document.addEventListener('keydown',e=>{
+    if(isScrollMode)return;
+    if(["ArrowRight"," ","PageDown"].includes(e.key))show(curr+1);
+    if(["ArrowLeft","PageUp"].includes(e.key))show(curr-1);
+});
+
+/* 滑鼠 */
+document.addEventListener('click',e=>{
+    if(isScrollMode)return;
+
+    if(
+        e.target.closest('.toc-item')||
+        e.target.closest('.page-number')||
+        e.target.closest('.print-button')
+    )return;
+
+    if(e.clientX>window.innerWidth/2)show(curr+1);
+    else show(curr-1);
+});
+</script>
+
+</body>
+</html>
