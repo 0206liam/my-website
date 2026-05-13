@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOSFET 參數計算器</title>
+<style>
+
+/* 加入 */
+.formula-log{margin-top:1rem;padding-top:.8rem;border-top:1px dashed #ccc}
+.formula-log-title{font-size:12px;font-weight:600;color:#888;margin-bottom:5px;text-transform:uppercase}
+.formula-entry{background:#fff;border-radius:6px;padding:5px 8px;margin-bottom:4px;border:1px solid #eee;font-size:13px;font-family:serif;font-style:italic}
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:sans-serif;background:#f5f5f5;color:#111;padding:1rem}
+  h1{font-size:20px;font-weight:500;margin-bottom:.6rem}
+
+.text-input-toggle{width:100%;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#555;font-size:14px;cursor:pointer;text-align:left;margin-bottom:.5rem}
+.text-input-toggle:hover{background:#f0f0f0}
+.text-input-wrap{display:none;margin-bottom:.5rem;border:1px solid #ccc;border-radius:8px;overflow:hidden}
+.text-input-wrap.open{display:block}
+.text-input-header{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:#f0f0f0;font-size:12px;color:#666}
+.text-input-header span{font-weight:600}
+.text-input-hint{font-size:11px;color:#999}
+textarea#bulk-input{width:100%;min-height:160px;padding:8px 10px;border:none;resize:vertical;font-size:13px;font-family:monospace;line-height:1.6;outline:none;background:#fff}
+
+.type-row{display:flex;gap:6px;margin-bottom:.5rem}
+.type-btn{flex:1;padding:7px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#555;font-size:15px;font-weight:500;cursor:pointer}
+.type-btn.active.nmos{background:#E6F1FB;border-color:#378ADD;color:#0C447C}
+.type-btn.active.pmos{background:#FBEAF0;border-color:#D4537E;color:#72243E}
+.region-row{display:flex;gap:6px;margin-bottom:.6rem}
+.region-btn{flex:1;padding:5px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#555;font-size:13px;cursor:pointer}
+.region-btn.active{background:#FFF8E1;border-color:#EF9F27;color:#633806;font-weight:500}
+
+.hint{font-size:12px;color:#888;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:5px 8px;margin-bottom:.6rem;line-height:1.6}
+.hint code{background:#f0f0f0;border-radius:3px;padding:1px 4px;font-size:11px}
+.section-title{font-size:12px;font-weight:600;color:#888;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;margin-top:.6rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:5px}
+.field{display:flex;flex-direction:column;gap:2px}
+.field label{font-size:12px;color:#666}
+.field input{padding:4px 7px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#111;font-size:14px;width:100%}
+.field input:focus{outline:none;border-color:#888}
+.field input.err{border-color:#e24b4a;background:#fff5f5}
+.field .errmsg{font-size:11px;color:#e24b4a;min-height:12px}
+.actions{display:flex;gap:6px;margin-top:.6rem}
+.btn-submit{flex:1;padding:8px;border:1px solid #bbb;border-radius:8px;background:#fff;color:#111;font-size:14px;cursor:pointer;font-weight:500}
+.btn-submit:hover{background:#f0f0f0}
+.btn-clear{padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:transparent;color:#888;font-size:14px;cursor:pointer}
+.btn-clear:hover{background:#f0f0f0}
+.result-box{margin-top:.6rem;padding:.7rem 1rem;border:1px solid #ddd;border-radius:10px;background:#fafafa}
+.result-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.res-group-title{color:#888;font-size:12px;font-weight:600;margin-bottom:4px;text-transform:uppercase}
+.res-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;font-size:13px;gap:8px}
+.res-row:last-child{border:none}
+.res-label{color:#555;white-space:nowrap}
+.res-val{font-weight:500;text-align:right}
+.res-val.given{color:#185FA5}
+.res-val.computed{color:#3B6D11}
+.warn{font-size:12px;color:#BA7517;background:#FAEEDA;border:1px solid #FAC775;border-radius:6px;padding:5px 8px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<h1>MOSFET 參數計算器</h1>
+
+<button class="text-input-toggle" id="toggle-btn" onclick="toggleBulk()">📝 打字輸入</button>
+
+<div class="text-input-wrap" id="bulk-wrap">
+  <div class="text-input-header">
+    <span>打字輸入</span>
+    <span class="text-input-hint">參數名稱佔一行，數值佔下一行</span>
+  </div>
+  <textarea id="bulk-input" placeholder="例：
+類型
+nmos
+操作區域
+飽和區
+Vtn
+0.7
+W
+10u
+L
+1u
+id
+1m"></textarea>
+</div>
+
+<div class="type-row">
+  <button class="type-btn active nmos" id="btn-nmos" onclick="setType('nmos')">NMOS</button>
+  <button class="type-btn pmos" id="btn-pmos" onclick="setType('pmos')">PMOS</button>
+</div>
+
+<div class="section-title">操作區域</div>
+<div class="region-row">
+  <button class="region-btn active" id="reg-unknown" onclick="setRegion('unknown')">未知</button>
+  <button class="region-btn" id="reg-cutoff" onclick="setRegion('cutoff')">截止區</button>
+  <button class="region-btn" id="reg-linear" onclick="setRegion('linear')">線性區</button>
+  <button class="region-btn" id="reg-sat" onclick="setRegion('sat')">飽和區</button>
+</div>
+
+<div class="hint">
+  輸入數值時可直接在數字後加前綴字母，例如 <code>1.2k</code>、<code>330u</code>、<code>5n</code>、<code>2.2M</code><br>
+  支援前綴：<code>G</code>=10⁹ &nbsp;<code>M</code>=10⁶ &nbsp;<code>k</code>=10³ &nbsp;<code>h</code>=10² &nbsp;<code>da</code>=10¹ &nbsp;<code>d</code>=10⁻¹ &nbsp;<code>c</code>=10⁻² &nbsp;<code>m</code>=10⁻³ &nbsp;<code>u</code>=10⁻⁶ &nbsp;<code>n</code>=10⁻⁹ &nbsp;<code>p</code>=10⁻¹² &nbsp;<code>f</code>=10⁻¹⁵
+</div>
+
+<div class="section-title">端點電壓</div>
+<div class="grid">
+  <div class="field"><label>Vd (V)</label><input id="Vd" type="text" placeholder="例：1.2"><div class="errmsg" id="err-Vd"></div></div>
+  <div class="field"><label>Vg (V)</label><input id="Vg" type="text" placeholder="例：1.8"><div class="errmsg" id="err-Vg"></div></div>
+  <div class="field"><label>Vs (V)</label><input id="Vs" type="text" placeholder="例：0"><div class="errmsg" id="err-Vs"></div></div>
+  <div class="field"><label>Vb (V)</label><input id="Vb" type="text" placeholder="例：0"><div class="errmsg" id="err-Vb"></div></div>
+</div>
+
+<div class="section-title">差分電壓</div>
+<div class="grid">
+  <div class="field"><label id="lbl-Vgs">Vgs (V)</label><input id="Vgs" type="text" placeholder=""><div class="errmsg" id="err-Vgs"></div></div>
+  <div class="field"><label id="lbl-Vds">Vds (V)</label><input id="Vds" type="text" placeholder=""><div class="errmsg" id="err-Vds"></div></div>
+  <div class="field"><label>Vsb (V)</label><input id="Vsb" type="text" placeholder=""><div class="errmsg" id="err-Vsb"></div></div>
+  <div class="field"><label id="lbl-Vt">Vtn (V)</label><input id="Vt" type="text" placeholder=""><div class="errmsg" id="err-Vt"></div></div>
+  <div class="field"><label>Vov (V)</label><input id="Vov" type="text" placeholder=""><div class="errmsg" id="err-Vov"></div></div>
+</div>
+
+<div class="section-title">製程參數</div>
+<div class="grid">
+  <div class="field"><label id="lbl-kprime">k'n (A/V²)</label><input id="kprime" type="text" placeholder="例：270u"><div class="errmsg" id="err-kprime"></div></div>
+  <div class="field"><label id="lbl-K">Kn (A/V²)</label><input id="K" type="text" placeholder="例：1.35m"><div class="errmsg" id="err-K"></div></div>
+  <div class="field"><label>W (m)</label><input id="W" type="text" placeholder="例：10u"><div class="errmsg" id="err-W"></div></div>
+  <div class="field"><label>L (m)</label><input id="L" type="text" placeholder="例：1u"><div class="errmsg" id="err-L"></div></div>
+  <div class="field"><label id="lbl-mu">μn (m²/V·s)</label><input id="mu" type="text" placeholder="例：450u"><div class="errmsg" id="err-mu"></div></div>
+  <div class="field"><label>Cox (F/m²)</label><input id="Cox" type="text" placeholder="例：6m"><div class="errmsg" id="err-Cox"></div></div>
+  <div class="field"><label>tox (m)</label><input id="tox" type="text" placeholder="例：6n"><div class="errmsg" id="err-tox"></div></div>
+</div>
+
+<div class="section-title">Body 效應 &amp; 其他製程</div>
+<div class="grid">
+  <div class="field"><label>Vt0 (V)</label><input id="Vt0" type="text" placeholder=""><div class="errmsg" id="err-Vt0"></div></div>
+  <div class="field"><label>γ (V^½)</label><input id="gamma" type="text" placeholder=""><div class="errmsg" id="err-gamma"></div></div>
+  <div class="field"><label>2Φf (V)</label><input id="phi2" type="text" placeholder=""><div class="errmsg" id="err-phi2"></div></div>
+  <div class="field"><label>Na (m⁻³)</label><input id="Na" type="text" placeholder="例：1e22"><div class="errmsg" id="err-Na"></div></div>
+  <div class="field"><label>λ (V⁻¹)</label><input id="lambda" type="text" placeholder="例：20m"><div class="errmsg" id="err-lambda"></div></div>
+  <div class="field"><label>VA (V)</label><input id="VA" type="text" placeholder="例：50"><div class="errmsg" id="err-VA"></div></div>
+</div>
+
+<div class="section-title">電流 &amp; 小信號參數</div>
+<div class="grid">
+  <div class="field"><label>id (A)</label><input id="id" type="text" placeholder="例：1m"><div class="errmsg" id="err-id"></div></div>
+  <div class="field"><label>id0 (A)</label><input id="id0" type="text" placeholder=""><div class="errmsg" id="err-id0"></div></div>
+  <div class="field"><label>gm (S)</label><input id="gm" type="text" placeholder="例：2m"><div class="errmsg" id="err-gm"></div></div>
+  <div class="field"><label>gmb (S)</label><input id="gmb" type="text" placeholder=""><div class="errmsg" id="err-gmb"></div></div>
+  <div class="field"><label>ro (Ω)</label><input id="ro" type="text" placeholder="例：50k"><div class="errmsg" id="err-ro"></div></div>
+  <div class="field"><label>gds (S)</label><input id="gds" type="text" placeholder=""><div class="errmsg" id="err-gds"></div></div>
+  <div class="field"><label>χ</label><input id="chi" type="text" placeholder="例：0.1"><div class="errmsg" id="err-chi"></div></div>
+</div>
+
+<div class="actions">
+  <button class="btn-submit" onclick="compute()">計算</button>
+  <button class="btn-clear" onclick="clearAll()">清除</button>
+</div>
+
+<div id="result"></div>
+
+<script>
+let formulaHistory = []; // 用來紀錄當次計算用到的公式
+
+let mosType = 'nmos';
+let region = 'unknown';
+let syncingBulk = false;
+
+const PREFIXES = [
+  ['da',1e1],['G',1e9],['M',1e6],['k',1e3],['h',1e2],
+  ['d',1e-1],['c',1e-2],['m',1e-3],['u',1e-6],
+  ['n',1e-9],['p',1e-12],['f',1e-15]
+];
+
+function parseVal(str) {
+  str = str.trim();
+  if(str==='') return null;
+  if(/^-?[\d.]+([eE][+-]?\d+)?$/.test(str)) return parseFloat(str);
+  for(const [pfx,mul] of PREFIXES){
+    const m=str.match(new RegExp('^(-?[\\d.]+(?:[eE][+-]?\\d+)?)'+pfx+'$'));
+    if(m){const n=parseFloat(m[1]);if(!isNaN(n))return n*mul;}
+  }
+  return NaN;
+}
+
+const fieldIds = ['Vd','Vg','Vs','Vb','Vgs','Vds','Vsb','Vt','Vov','kprime','K','W','L','mu','Cox','tox','Vt0','gamma','phi2','Na','lambda','VA','id','id0','gm','gmb','ro','gds','chi'];
+
+const units = {
+  Vd:'V',Vg:'V',Vs:'V',Vb:'V',
+  Vgs:'V',Vds:'V',Vsb:'V',Vt:'V',Vov:'V',
+  kprime:'A/V²',K:'A/V²',
+  W:'m',L:'m',mu:'m²/V·s',Cox:'F/m²',tox:'m',
+  Vt0:'V',gamma:'V^½',phi2:'V',Na:'m⁻³',lambda:'V⁻¹',VA:'V',
+  id:'A',id0:'A',gm:'S',gmb:'S',ro:'Ω',gds:'S',chi:''
+};
+
+const regionNames = {unknown:'未知',cutoff:'截止區',linear:'線性區',sat:'飽和區'};
+const regionKeys  = {未知:'unknown',截止區:'cutoff',線性區:'linear',飽和區:'sat'};
+
+const bulkLabelMap = {
+  'vd':'Vd','vg':'Vg','vs':'Vs','vb':'Vb',
+  'vgs':'Vgs','vsg':'Vgs','vds':'Vds','vsd':'Vds','vsb':'Vsb',
+  'vtn':'Vt','vtp':'Vt','vt':'Vt',
+  'vov':'Vov','vds(sat)':'Vov',
+  "k'n":'kprime',"k'p":'kprime',"kn'":'kprime',"kp'":'kprime',
+  'kn':'K','kp':'K','k':'K',
+  'w':'W','l':'L',
+  'μn':'mu','μp':'mu','un':'mu','up':'mu',
+  'cox':'Cox','tox':'tox',
+  'vt0':'Vt0','γ':'gamma','2φf':'phi2','2pf':'phi2',
+  'na':'Na','λ':'lambda','va':'VA',
+  'id':'id','id0':'id0',
+  'gm':'gm','gmb':'gmb','ro':'ro','gds':'gds',
+  'χ':'chi','x':'chi'
+};
+
+function labelToFieldId(raw) {
+  return bulkLabelMap[raw.trim().toLowerCase()] || null;
+}
+
+function getLabels() {
+  const n = mosType==='nmos';
+  return {
+    Vd:'Vd',Vg:'Vg',Vs:'Vs',Vb:'Vb',
+    Vgs:n?'Vgs':'Vsg',Vds:n?'Vds':'Vsd',Vsb:'Vsb',
+    Vt:n?'Vtn':'Vtp',Vov:'Vov',
+    kprime:n?"k'n":"k'p",K:n?'Kn':'Kp',
+    W:'W',L:'L',mu:n?'μn':'μp',Cox:'Cox',tox:'tox',
+    Vt0:'Vt0',gamma:'γ',phi2:'2Φf',Na:'Na',lambda:'λ',VA:'VA',
+    id:'id',id0:'id0',gm:'gm',gmb:'gmb',ro:'ro',gds:'gds',chi:'χ'
+  };
+}
+
+function formToBulk() {
+  if(syncingBulk) return;
+  syncingBulk = true;
+  const lbl = getLabels();
+  let lines = [];
+  lines.push('類型', mosType==='nmos'?'nmos':'pmos');
+  lines.push('操作區域', regionNames[region]);
+  fieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el && el.value.trim()!=='') lines.push(lbl[id]||id, el.value.trim());
+  });
+  document.getElementById('bulk-input').value = lines.join('\n');
+  syncingBulk = false;
+}
+
+function bulkToForm() {
+  if(syncingBulk) return;
+  syncingBulk = true;
+  fieldIds.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const lines = document.getElementById('bulk-input').value.split('\n');
+  let i = 0;
+  while(i < lines.length) {
+    const label = lines[i].trim();
+    const val   = (lines[i+1]||'').trim();
+    i += 2;
+    if(!label) continue;
+    if(label==='類型'||label.toLowerCase()==='type') {
+      if(val.toLowerCase()==='pmos') setType('pmos'); else setType('nmos');
+      continue;
+    }
+    if(label==='操作區域'||label==='region') {
+      const rk = regionKeys[val]; if(rk) setRegion(rk); continue;
+    }
+    const fid = labelToFieldId(label);
+    if(fid) { const el=document.getElementById(fid); if(el) el.value=val; }
+  }
+  syncingBulk = false;
+}
+
+function bindFormListeners() {
+  fieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', formToBulk);
+  });
+  document.getElementById('bulk-input').addEventListener('input', bulkToForm);
+}
+
+function toggleBulk() {
+  const wrap = document.getElementById('bulk-wrap');
+  const btn  = document.getElementById('toggle-btn');
+  const open = wrap.classList.toggle('open');
+  btn.textContent = open ? '📝 打字輸入 ▲' : '📝 打字輸入';
+  if(open) formToBulk();
+}
+
+function setType(t) {
+  mosType = t;
+  document.getElementById('btn-nmos').className='type-btn'+(t==='nmos'?' active nmos':'');
+  document.getElementById('btn-pmos').className='type-btn'+(t==='pmos'?' active pmos':'');
+  document.getElementById('lbl-Vt').textContent     = t==='nmos'?'Vtn (V)':'Vtp (V)';
+  document.getElementById('lbl-Vgs').textContent    = t==='nmos'?'Vgs (V)':'Vsg (V)';
+  document.getElementById('lbl-Vds').textContent    = t==='nmos'?'Vds (V)':'Vsd (V)';
+  document.getElementById('lbl-mu').textContent     = t==='nmos'?'μn (m²/V·s)':'μp (m²/V·s)';
+  document.getElementById('lbl-kprime').textContent = t==='nmos'?"k'n (A/V²)":"k'p (A/V²)";
+  document.getElementById('lbl-K').textContent      = t==='nmos'?'Kn (A/V²)':'Kp (A/V²)';
+  formToBulk();
+}
+
+function setRegion(r) {
+  region = r;
+  ['unknown','cutoff','linear','sat'].forEach(id =>
+    document.getElementById('reg-'+id).classList.toggle('active', id===r)
+  );
+  formToBulk();
+}
+
+function fmt(x, unit) {
+  if(x===null||x===undefined||isNaN(x)) return '—';
+  const a=Math.abs(x);
+  let s;
+  if(a===0) s='0';
+  else if(a>=1e15||(a<1e-15&&a>0)) s=x.toExponential(4);
+  else if(a>=0.001&&a<1e7) s=parseFloat(x.toPrecision(6)).toString();
+  else s=x.toExponential(4);
+  return unit ? s+' '+unit : s;
+}
+
+function clearErrors() {
+  fieldIds.forEach(id => {
+    const el=document.getElementById(id), er=document.getElementById('err-'+id);
+    if(el) el.classList.remove('err');
+    if(er) er.textContent='';
+  });
+}
+
+function compute() {
+  clearErrors();
+  const given={};
+  let hasError=false;
+  formulaHistory = []; 
+  
+  fieldIds.forEach(id => {
+    const el=document.getElementById(id);
+    if(!el) return;
+    const raw=el.value.trim();
+    if(raw==='') return;
+    const val=parseVal(raw);
+    if(isNaN(val)){
+      el.classList.add('err');
+      const er=document.getElementById('err-'+id);
+      if(er) er.textContent='無法識別的格式';
+      hasError=true;
+    } else given[id]=val;
+  });
+  if(hasError) return;
+
+  const c={};
+  const set=(k,v,f)=>{if(given[k]===undefined&&c[k]===undefined&&v!==undefined&&!isNaN(v)){c[k]=v;if(f) formulaHistory.push(f);}};
+  const g=k=>given[k]??c[k];
+
+  if(g('Vg')!==undefined&&g('Vs')!==undefined) set('Vgs',g('Vg')-g('Vs'), "Vgs = Vg - Vs");
+  if(g('Vd')!==undefined&&g('Vs')!==undefined) set('Vds',g('Vd')-g('Vs'), "Vds = Vd - Vs");
+  if(g('Vs')!==undefined&&g('Vb')!==undefined) set('Vsb',g('Vs')-g('Vb'), "Vsb = Vs - Vb");
+  if(g('Vgs')!==undefined&&g('Vs')!==undefined) set('Vg',g('Vgs')+g('Vs'), "Vg = Vgs + Vs");
+  if(g('Vds')!==undefined&&g('Vs')!==undefined) set('Vd',g('Vds')+g('Vs'), "Vd = Vds + Vs");
+
+  if(g('tox')!==undefined) set('Cox',3.45e-11/g('tox'), "Cox = εox / tox");
+  if(g('mu')!==undefined&&g('Cox')!==undefined) set('kprime',g('mu')*g('Cox'), "k' = μ × Cox");
+  if(g('kprime')!==undefined&&g('W')!==undefined&&g('L')!==undefined)
+    set('K',g('kprime')*g('W')/(2*g('L')), "K = k' × W / (2L)");
+  if(g('K')!==undefined&&g('W')!==undefined&&g('L')!==undefined)
+    set('kprime',g('K')*2*g('L')/g('W'), "k' = K × 2L / W");
+
+  if(g('Na')!==undefined&&g('Cox')!==undefined)
+    set('gamma', Math.sqrt(2*1.602e-19*1.04e-10*g('Na'))/g('Cox'), "γ = √(2qεsi×Na) / Cox");
+
+  if(g('Vt0')!==undefined&&g('gamma')!==undefined&&g('phi2')!==undefined&&g('Vsb')!==undefined)
+    set('Vt',g('Vt0')+g('gamma')*(Math.sqrt(g('phi2')+g('Vsb'))-Math.sqrt(g('phi2'))), "Vt = Vt0 + γ(√(2φF+Vsb) - √(2φF))");
+
+  if(g('Vgs')!==undefined&&g('Vt')!==undefined) set('Vov',g('Vgs')-g('Vt'), "Vov = Vgs - Vt");
+  if(g('Vov')!==undefined&&g('Vt')!==undefined) set('Vgs',g('Vt')+g('Vov'), "Vgs = Vt + Vov");
+  if(g('Vgs')!==undefined&&g('Vs')!==undefined) set('Vg',g('Vgs')+g('Vs'), "Vg = Vgs + Vs");
+
+  if(g('lambda')!==undefined) set('VA',1/g('lambda'), "VA = 1 / λ");
+  if(g('VA')!==undefined)     set('lambda',1/g('VA'), "λ = 1 / VA");
+
+  const Vgs=g('Vgs'), Vt=g('Vt'), Vds=g('Vds'), Vov=g('Vov');
+  let detectedRegion='unknown';
+  if(region==='unknown'&&Vgs!==undefined&&Vt!==undefined){
+    if(Vgs<Vt) detectedRegion='cutoff';
+    else if(Vds!==undefined) detectedRegion=Vds<(Vov??(Vgs-Vt))?'linear':'sat';
+  }
+  const activeRegion = region!=='unknown'?region:detectedRegion;
+
+  const warnings=[];
+  if(region!=='unknown'&&Vgs!==undefined&&Vt!==undefined){
+    const vov=Vgs-Vt;
+    if(region==='cutoff'&&vov>=0) warnings.push('警告：Vgs ≥ Vt，不符合截止區條件');
+    if((region==='linear'||region==='sat')&&vov<0) warnings.push('警告：Vgs < Vt，元件應在截止區');
+    if(region==='linear'&&Vds!==undefined&&vov>=0&&Vds>=vov) warnings.push('警告：Vds ≥ Vov，不符合線性區條件');
+    if(region==='sat'&&Vds!==undefined&&vov>=0&&Vds<vov) warnings.push('警告：Vds < Vov，不符合飽和區條件');
+  }
+
+  if(activeRegion==='cutoff'){
+    set('id',0, "Id = 0 (截止區)"); set('id0',0, "Id0 = 0 (截止區)");
+  } else if(activeRegion==='linear'){
+    if(g('K')!==undefined&&g('Vgs')!==undefined&&g('Vt')!==undefined&&g('Vds')!==undefined){
+      const vov=g('Vgs')-g('Vt'), vds=g('Vds');
+      set('id',g('K')*(2*vov*vds-vds*vds)*(1+(g('lambda')??0)*vds), "Id = K × [2(Vgs-Vt)Vds - Vds²] × (1+λVds) (線性區)");
+    }
+  } else if(activeRegion==='sat'){
+    if(g('K')!==undefined&&g('Vgs')!==undefined&&g('Vt')!==undefined){
+      const id0s=g('K')*Math.pow(g('Vgs')-g('Vt'),2);
+      set('id0',id0s, "Id0 = K × (Vgs-Vt)² (飽和區)");
+      set('id',g('lambda')!==undefined&&g('Vds')!==undefined?id0s*(1+g('lambda')*g('Vds')):id0s, "Id = Id0 × (1+λVds) (飽和區)");
+    }
+    if(g('K')!==undefined&&g('Vov')!==undefined){
+      const id0s=g('K')*Math.pow(g('Vov'),2);
+      set('id0',id0s, "Id0 = K × Vov² (飽和區)");
+      set('id',g('lambda')!==undefined&&g('Vds')!==undefined?id0s*(1+g('lambda')*g('Vds')):id0s, "Id = Id0 × (1+λVds) (飽和區)");
+    }
+    const idK=g('id')??g('id0');
+    if(g('K')!==undefined&&idK!==undefined&&g('Vt')!==undefined&&g('Vgs')===undefined){
+      const vov=Math.sqrt(idK/g('K'));
+      set('Vov',vov, "Vov = √(Id/K)");
+      set('Vgs',g('Vt')+vov, "Vgs = Vt + Vov");
+      if(g('Vs')!==undefined) set('Vg',g('Vt')+vov+g('Vs'), "Vg = Vt + Vov + Vs");
+    }
+    if(g('K')!==undefined&&idK!==undefined&&g('Vt')===undefined&&g('Vov')===undefined)
+      set('Vov',Math.sqrt(idK/g('K')), "Vov = √(Id/K)");
+  } else {
+    if(g('K')!==undefined&&g('Vgs')!==undefined&&g('Vt')!==undefined){
+      const id0s=g('K')*Math.pow(g('Vgs')-g('Vt'),2);
+      set('id0',id0s, "Id0 = K × (Vgs-Vt)²");
+      set('id',g('lambda')!==undefined&&g('Vds')!==undefined?id0s*(1+g('lambda')*g('Vds')):id0s, "Id = Id0 × (1+λVds)");
+    }
+  }
+
+  if(g('id0')!==undefined&&g('lambda')!==undefined) set('ro',1/(g('lambda')*g('id0')), "ro = 1 / (λ × Id0)");
+  if(g('id0')!==undefined&&g('VA')!==undefined)     set('ro',g('VA')/g('id0'), "ro = VA / Id0");
+  if(g('ro')!==undefined)  set('gds',1/g('ro'), "gds = 1 / ro");
+  if(g('gds')!==undefined) set('ro',1/g('gds'), "ro = 1 / gds");
+
+  if(activeRegion==='linear'){
+    if(g('K')!==undefined&&g('Vds')!==undefined) set('gm',2*g('K')*g('Vds'), "gm = 2K × Vds (線性區)");
+  } else {
+    if(g('K')!==undefined&&g('Vgs')!==undefined&&g('Vt')!==undefined)
+      set('gm',2*g('K')*(g('Vgs')-g('Vt')), "gm = 2K × (Vgs-Vt)");
+    const idFgm=g('id0')??g('id');
+    if(g('K')!==undefined&&idFgm!==undefined) set('gm',2*Math.sqrt(g('K')*idFgm), "gm = 2√(K × Id)");
+    if(g('id0')!==undefined&&g('Vgs')!==undefined&&g('Vt')!==undefined)
+      set('gm',2*g('id0')/(g('Vgs')-g('Vt')), "gm = 2Id0 / (Vgs-Vt)");
+  }
+
+  if(g('gamma')!==undefined&&g('phi2')!==undefined&&g('Vsb')!==undefined)
+    set('chi',g('gamma')/(2*Math.sqrt(g('phi2')+g('Vsb'))), "χ = γ / (2√(2φF+Vsb))");
+  if(g('gmb')!==undefined&&g('gm')!==undefined) set('chi',g('gmb')/g('gm'), "χ = gmb / gm");
+  if(g('chi')!==undefined&&g('gm')!==undefined) set('gmb',g('chi')*g('gm'), "gmb = χ × gm");
+
+  showResult(given,c,activeRegion,detectedRegion,warnings);
+}
+
+function showResult(given,computed,activeRegion,detectedRegion,warnings){
+  const el=document.getElementById('result');
+  const gKeys=Object.keys(given);
+  const cKeys=Object.keys(computed).filter(k=>computed[k]!==undefined&&!isNaN(computed[k]));
+  if(gKeys.length===0&&cKeys.length===0){
+    el.innerHTML='<div class="result-box"><p style="color:#888;font-size:14px">請輸入至少一個已知值後再計算。</p></div>';
+    return;
+  }
+  const lbl=getLabels();
+  const row=(k,val,cls)=>
+    `<div class="res-row"><span class="res-label">${lbl[k]||k}</span><span class="res-val ${cls}">${fmt(val,units[k])}</span></div>`;
+
+  const isAuto = region==='unknown'&&detectedRegion!=='unknown';
+  const regionLabel = isAuto ? regionNames[detectedRegion] : regionNames[region];
+  const regionRow = `<div class="res-row"><span class="res-label">操作區域</span><span class="res-val ${isAuto?'computed':'given'}">${regionLabel}</span></div>`;
+
+  const warnHtml=warnings.map(w=>`<div class="warn">${w}</div>`).join('');
+  const givenRows=gKeys.map(k=>row(k,given[k],'given')).join('')||'<div style="color:#888;font-size:13px">無</div>';
+  const cRows=cKeys.length?cKeys.map(k=>row(k,computed[k],'computed')).join(''):'<div style="color:#888;font-size:13px">尚無可推算的值</div>';
+
+  const formulaHtml = formulaHistory.length > 0 ? 
+    `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed #ccc;">
+        <div style="font-size:12px; color:#888; margin-bottom:5px;">當次計算用到公式：</div>
+        ${formulaHistory.map(f => `<div style="font-size:13px; font-family:serif; font-style:italic; margin-bottom:3px;">${f}</div>`).join('')}
+    </div>` : '';
+
+  el.innerHTML=`<div class="result-box">
+    ${warnHtml}
+    <div class="result-cols">
+      <div><div class="res-group-title">條件（已知值）</div>${isAuto?givenRows:regionRow+givenRows}</div>
+      <div><div class="res-group-title">答案（計算值）</div>${isAuto?regionRow+cRows:cRows}</div>
+    </div>
+    ${formulaHtml} 
+  </div>`;
+}
+
+function clearAll(){
+  fieldIds.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  clearErrors();
+  document.getElementById('result').innerHTML='';
+  setRegion('unknown');
+  setType('nmos');
+  document.getElementById('bulk-input').value='';
+}
+
+bindFormListeners();
+</script>
+</body>
+</html>
