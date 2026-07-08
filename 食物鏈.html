@@ -1,0 +1,426 @@
+<html lang="zh-TW"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食物鏈</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        canvas {
+            background: #222;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="1848" height="768" style="width: 1232px; height: 512px;"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 1. 基本網格設定
+        const cellSize = 16;
+        let cols = Math.floor((window.innerWidth - 40) / cellSize);
+        let rows = Math.floor((window.innerHeight - 40) / cellSize);
+        cols = Math.max(cols, 5);
+        rows = Math.max(rows, 5);
+
+        // 2. 遊戲資料與狀態
+        const grid = [];
+        let monsters = [];
+        const timers = {};
+
+        const moveInterval = 500;       
+        const animationRatio = 0.8;     
+        const animDurationMs = moveInterval * animationRatio; 
+        
+        // 完美復刻：原本邏輯的 10 倍 moveInterval 重生植物與餓死
+        const respawnTime = moveInterval * 10;  
+        const starvationLimit = 10; 
+
+        const flashCount = 5; 
+        const flashDurationMs = animDurationMs / flashCount; 
+
+        // 全局邏輯計時起點
+        let logicStartTime = performance.now();
+
+        // 初始化地圖與畫布大小
+        initCanvasSize();
+        initGame();
+
+        // 啟動主繪圖循環
+        requestAnimationFrame(drawLoop);
+
+        function initCanvasSize() {
+            const dpr = window.devicePixelRatio || 1;
+            const logicalWidth = cols * cellSize;
+            const logicalHeight = rows * cellSize;
+
+            canvas.style.width = `${logicalWidth}px`;
+            canvas.style.height = `${logicalHeight}px`;
+
+            canvas.width = logicalWidth * dpr;
+            canvas.height = logicalHeight * dpr;
+
+            ctx.scale(dpr, dpr);
+            ctx.imageSmoothingEnabled = false;
+        }
+
+        function initGame() {
+            // 初始化：地圖上一開始全都是 1 (植物)
+            for (let i = 0; i < rows; i++) {
+                grid[i] = [];
+                for (let j = 0; j < cols; j++) {
+                    grid[i][j] = 1;
+                }
+            }
+
+            // 【已修改】移除原本固定的初始動物設定
+
+            // 啟動每 5 秒在隨機地點生成一隻「2」的計時器
+            setInterval(spawnRandomMonster2, 5000);
+            
+            // 為了讓遊戲一開始不要太空，立刻先生成第一隻
+            spawnRandomMonster2();
+        }
+
+        // 隨機生成一隻等級 2 動物的函式
+        function spawnRandomMonster2() {
+            const randomRow = Math.floor(Math.random() * rows);
+            const randomCol = Math.floor(Math.random() * cols);
+
+            const newborn = {
+                id: Date.now() + Math.random(),
+                row: randomRow,
+                col: randomCol,
+                prevRow: randomRow,
+                prevCol: randomCol,
+                value: 2, 
+                duration: 0,
+                isDyingStarve: false,
+                isSplitTarget: false,
+                isDestroyed: false
+            };
+
+            monsters.push(newborn);
+            grid[randomRow][randomCol] = 0; // 動物所在格子設為 0
+        }
+
+        function getFontSize(value) {
+            if (value <= 5) return '10px';
+            if (value <= 10) return '8px';
+            return '6px';
+        }
+
+        function isMonsterAt(row, col) {
+            return monsters.some(m => m.row === row && m.col === col);
+        }
+
+        // 植物重生計時器
+        function setZeroTimer(row, col) {
+            const key = `${row},${col}`;
+            if (timers[key]) clearTimeout(timers[key]);
+
+            timers[key] = setTimeout(() => {
+                if (grid[row][col] === 0 && !isMonsterAt(row, col)) {
+                    grid[row][col] = 1; 
+                }
+                delete timers[key];
+            }, respawnTime);
+        }
+
+        function getValidDirections(row, col) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            return directions.filter(dir => {
+                const newRow = row + dir[0];
+                const newCol = col + dir[1];
+                return newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols;
+            });
+        }
+
+        // 核心邏輯
+        function updateGame() {
+            // 【修正安全機制】原本如果怪物全死會 clearInterval，但現在會持續生成，所以如果沒怪物就跳過，不停止遊戲
+            if (monsters.length === 0) return;
+
+            logicStartTime = performance.now(); 
+            
+            const activeMonsters = [];
+
+            // 1. 檢查飢餓死亡
+            for (let i = 0; i < monsters.length; i++) {
+                let m = monsters[i];
+                m.isDyingStarve = false; 
+
+                if (m.duration === starvationLimit - 1) {
+                    m.isDyingStarve = true; 
+                }
+                if (m.duration >= starvationLimit) {
+                    // 沒吃到就死，直接消失，不需要餓死變植物的邏輯
+                    continue; 
+                }
+                activeMonsters.push(m);
+            }
+
+            const nextTurnMonsters = [];
+
+            // 2. 移動與分裂判定
+            for (let i = 0; i < activeMonsters.length; i++) {
+                let m = activeMonsters[i];
+                const validDirs = getValidDirections(m.row, m.col);
+                
+                if (validDirs.length === 0) {
+                    m.prevRow = m.row;
+                    m.prevCol = m.col;
+                    m.duration++;
+                    nextTurnMonsters.push(m);
+                    continue;
+                }
+                
+                const dir = validDirs[Math.floor(Math.random() * validDirs.length)];
+                const targetRow = m.row + dir[0];
+                const targetCol = m.col + dir[1];
+
+                m.oldRow = m.row;
+                m.oldCol = m.col;
+                m.didMove = true;
+                
+                m.prevRow = m.row; 
+                m.prevCol = m.col;
+                m.row = targetRow; 
+                m.col = targetCol;
+
+                // 如果這隻動物在上一輪判定中「吃到了正確的獵物」，這一步就會分裂
+                if (m.isSplitTarget) {
+                    m.isSplitTarget = false; // 重置標記
+                    
+                    // 分裂：產生一隻一模一樣的新動物留在原地
+                    const newborn = {
+                        id: Date.now() + Math.random(),
+                        row: m.oldRow,
+                        col: m.oldCol,
+                        prevRow: m.oldRow,
+                        prevCol: m.oldCol,
+                        value: m.value,
+                        duration: 0, // 新生命重置飢餓
+                        isDyingStarve: false,
+                        isSplitTarget: false,
+                        isDestroyed: false
+                    };
+                    nextTurnMonsters.push(newborn);
+                }
+
+                m.duration++; // 先預設加 1 步飢餓，等一下真的吃到對應獵物會歸零
+                nextTurnMonsters.push(m);
+            }
+
+            monsters = nextTurnMonsters;
+
+            // 3. 動畫結束後的碰撞與進食结算 (400ms 後)
+            setTimeout(() => {
+                
+                // 清空走過的路徑並啟動植物重生計時
+                monsters.forEach(m => {
+                    if (m.didMove && m.oldRow !== undefined) {
+                        grid[m.oldRow][m.oldCol] = 0;
+                        setZeroTimer(m.oldRow, m.oldCol);
+                        delete m.oldRow;
+                        delete m.oldCol;
+                    }
+                    delete m.didMove;
+                });
+
+                // --- 階段 A：處理踩到植物與路過重置計時 ---
+                monsters.forEach(m => {
+                    // 2 級動物精準獵食：格子必須是 1 才觸發
+                    if (m.value === 2 && grid[m.row][m.col] === 1) {
+                        grid[m.row][m.col] = 0;
+                        m.duration = 0;
+                        m.isSplitTarget = true;
+                    } 
+                    
+                    // 高階動物（>2）踩過去：不論原本是 1 還是正在重生的 0，皆強制重置並重刷計時器
+                    if (m.value > 2) {
+                        grid[m.row][m.col] = 0;
+                        setZeroTimer(m.row, m.col);
+                    }
+                });
+
+                // --- 階段 B：處理動物與動物之間的重疊碰撞 ---
+                const positionMap = {};
+                monsters.forEach(m => {
+                    const key = `${m.row},${m.col}`;
+                    if (!positionMap[key]) positionMap[key] = [];
+                    positionMap[key].push(m);
+                });
+
+                const postCollisionMonsters = [];
+
+                for (const key in positionMap) {
+                    const arr = positionMap[key];
+                    if (arr.length === 1) {
+                        postCollisionMonsters.push(arr[0]);
+                        continue;
+                    }
+
+                    // 同一格有多隻動物，由大到小排序
+                    arr.sort((a, b) => b.value - a.value);
+
+                    // 找出這一格最強大的領頭者
+                    let leader = arr[0];
+                    
+                    // 用來存放融合或互動後存活下來的個體
+                    let cellSurvivors = [leader];
+
+                    for (let k = 1; k < arr.length; k++) {
+                        let challenger = arr[k];
+
+                        if (leader.value === challenger.value) {
+                            // 1. 同級碰撞：2碰到2出現3、3碰到3出現4...以此類推
+                            leader.value += 1; 
+                            leader.duration = 0; // 升級視同獲得新生，重置飢餓
+                            leader.isDyingStarve = false;
+                            // 融合後 challenger 消失
+                        } 
+                        else if (leader.value - challenger.value === 1) {
+                            // 2. 精準獵食：高剛好一階。例如 3 吃 2
+                            leader.duration = 0; // 吃飽了
+                            leader.isSplitTarget = true; // 下一步分裂成兩個 leader
+                            leader.isDyingStarve = false;
+                            // challenger 被吃掉，消失
+                        } 
+                        else if (leader.value - challenger.value > 1) {
+                            // 3. 通用壓制：高兩階以上。例如 5 碰到 2
+                            // 2 直接消失（被消滅），5 飢餓度不歸零、不分裂（leader 狀態不變）
+                        }
+                    }
+
+                    postCollisionMonsters.push(leader);
+                }
+
+                // 濾掉被消滅的
+                monsters = postCollisionMonsters;
+
+                // 重新校正座標起點
+                monsters.forEach(m => {
+                    m.prevRow = m.row;
+                    m.prevCol = m.col;
+                });
+
+            }, animDurationMs); 
+        }
+
+        // 繪圖主循環
+        function drawLoop(timestamp) {
+            ctx.clearRect(0, 0, cols * cellSize, rows * cellSize);
+
+            const elapsed = timestamp - logicStartTime;
+            let progress = Math.min(elapsed / animDurationMs, 1);
+            if (progress < 0) progress = 0;
+
+            // 1. 繪製植物與網格
+            ctx.lineWidth = 1;
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const x = j * cellSize;
+                    const y = i * cellSize;
+                    const value = grid[i][j];
+
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x, y, cellSize, cellSize);
+
+                    ctx.strokeStyle = '#444';
+                    ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
+
+                    if (value === 1) {
+                        ctx.fillStyle = '#4CAF50';
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x + cellSize / 2, y + cellSize / 2);
+                    }
+                }
+            }
+
+            // 2. 繪製動物
+            monsters.forEach(m => {
+                const startX = m.prevCol * cellSize;
+                const startY = m.prevRow * cellSize;
+                const endX = m.col * cellSize;
+                const endY = m.row * cellSize;
+
+                const drawX = startX + (endX - startX) * progress;
+                const drawY = startY + (endY - startY) * progress;
+
+                let boxColor = 'rgba(255, 152, 0, 0.2)';
+                let borderColor = 'rgba(255, 152, 0, 0.5)';
+                let textColor = '#FF9800';
+
+                // 依階級上色
+                if (m.value === 3) {
+                    boxColor = 'rgba(233, 30, 99, 0.2)'; borderColor = 'rgba(233, 30, 99, 0.6)'; textColor = '#E91E63';
+                } else if (m.value === 4) {
+                    boxColor = 'rgba(156, 39, 176, 0.2)'; borderColor = 'rgba(156, 39, 176, 0.6)'; textColor = '#9C27B0';
+                } else if (m.value >= 5) {
+                    boxColor = 'rgba(0, 150, 136, 0.2)'; borderColor = 'rgba(0, 150, 136, 0.6)'; textColor = '#009688';
+                }
+
+                // 飢餓閃爍
+                if (m.isDyingStarve) {
+                    textColor = '#00E5FF';
+                    let starveProgress = (timestamp % flashDurationMs) / flashDurationMs;
+                    let cycle = Math.floor(timestamp / flashDurationMs);
+                    if (cycle % 2 === 1) starveProgress = 1 - starveProgress;
+
+                    const bgAlpha = 0.05 + starveProgress * 0.60;     
+                    const borderAlpha = 0.2 + starveProgress * 0.8;   
+                    boxColor = `rgba(0, 183, 255, ${bgAlpha})`;
+                    borderColor = `rgba(0, 183, 255, ${borderAlpha})`;
+                }
+
+                ctx.fillStyle = boxColor;
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 1;
+
+                const x = drawX + 1.5;
+                const y = drawY + 1.5;
+                const w = cellSize - 3;
+                const h = cellSize - 3;
+
+                ctx.beginPath();
+                ctx.rect(x, y, w, h); 
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = textColor;
+                ctx.font = `bold ${getFontSize(m.value)} sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(m.value, drawX + cellSize / 2, drawY + cellSize / 2);
+            });
+
+            requestAnimationFrame(drawLoop);
+        }
+
+        window.addEventListener('resize', () => {
+            initCanvasSize();
+        });
+
+        const gameInterval = setInterval(updateGame, moveInterval);
+    </script>
+
+</body></html>
