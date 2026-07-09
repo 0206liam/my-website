@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>無限走廊 - 牆面垂直線加粗版 (暗角增強版)</title>
+    <title>無限走廊 - 修正縮放與邊界版</title>
     <style>
         * {
             margin: 0;
@@ -29,26 +29,31 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 【縮放核心修正 1】將原本單純的 resize 改為「調整尺寸後立刻強迫重繪單格」
-        // 這樣在拖曳視窗邊框或按 Ctrl 縮放時，邊緣才不會產生黑邊、拉伸或延遲破圖。
+        // 宣告全域變數，方便所有函式共用正確的物理解析度尺寸
+        let dpr = window.devicePixelRatio || 1;
+        let cWidth = window.innerWidth * dpr;
+        let cHeight = window.innerHeight * dpr;
+
         function resize() {
-            const dpr = window.devicePixelRatio || 1;
+            dpr = window.devicePixelRatio || 1;
+            cWidth = window.innerWidth * dpr;
+            cHeight = window.innerHeight * dpr;
             
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
+            // 設定 Canvas 實際渲染的物理像素（高清關鍵）
+            canvas.width = cWidth;
+            canvas.height = cHeight;
             
+            // 設定 Canvas 在網頁上的顯示 CSS 尺寸
             canvas.style.width = window.innerWidth + 'px';
             canvas.style.height = window.innerHeight + 'px';
             
-            ctx.scale(dpr, dpr);
+            // 移除原本的 ctx.scale(dpr, dpr)，改由投影函式直接計算物理座標
 
-            // 如果動畫已經在跑了，縮放當下立刻補畫一格，完美咬合新邊框
             if (time > 0) {
                 renderFrame();
             }
         }
         window.addEventListener('resize', resize);
-        resize();
         
         // 鏡頭參數
         const camera = {
@@ -62,6 +67,7 @@
         let time = 0;
         const renderDistance = 5000; 
         
+        // 【修正 1】投影函式改用 cWidth / cHeight (物理像素) 來計算
         function project(point3D) {
             const relX = point3D.x - camera.x;
             const relY = point3D.y - camera.y;
@@ -69,9 +75,10 @@
             
             if (relZ <= 5) return null; 
             
-            const scale = (window.innerHeight / 2) / Math.tan((camera.fov * Math.PI) / 360);
-            const screenX = window.innerWidth / 2 + (relX / relZ) * scale;
-            const screenY = window.innerHeight / 2 - (relY / relZ) * scale;
+            // 使用變更後的 cHeight 與 cWidth
+            const scale = (cHeight / 2) / Math.tan((camera.fov * Math.PI) / 360);
+            const screenX = cWidth / 2 + (relX / relZ) * scale;
+            const screenY = cHeight / 2 - (relY / relZ) * scale;
             
             return { x: screenX, y: screenY, z: relZ };
         }
@@ -151,9 +158,10 @@
             const projectedPoints = polygon.points.map(project);
             if (projectedPoints.some(p => p === null)) return;
             
+            // 【修正 2】模糊濾鏡（blur）大小也要跟著 dpr 縮放，否則高解析度下模糊會變得很不明顯
             let blurAmount = 0;
             if (depth > 600) {
-                blurAmount = Math.min((depth - 600) / 300, 8); 
+                blurAmount = Math.min((depth - 600) / 300, 8) * dpr; 
             }
             ctx.filter = blurAmount > 0 ? `blur(${blurAmount}px)` : 'none';
 
@@ -168,7 +176,7 @@
             fog = Math.pow(fog, 2.5); 
             
             if (polygon.type === 'light') {
-                ctx.shadowBlur = Math.max(0, 20 * (1 - fog));
+                ctx.shadowBlur = Math.max(0, 20 * (1 - fog)) * dpr; // 陰影大小乘上 dpr
                 ctx.shadowColor = '#ffffa0';
                 ctx.fillStyle = `rgba(255, 255, 230, ${1 - fog * 0.3})`;
                 ctx.fill();
@@ -187,7 +195,7 @@
                     ctx.fill();
 
                     ctx.strokeStyle = '#44443c'; 
-                    ctx.lineWidth = Math.max(1.1, 600 / depth); 
+                    ctx.lineWidth = Math.max(1.1, 600 / depth) * dpr; // 線條粗細乘上 dpr
                     
                     const w = 250; const h = -200;
                     const z1 = polygon.z1; const z2 = polygon.z2;
@@ -224,7 +232,7 @@
                     ctx.fill();
 
                     ctx.strokeStyle = '#65655d'; 
-                    ctx.lineWidth = Math.max(1.6, 1600 / depth); 
+                    ctx.lineWidth = Math.max(1.6, 1600 / depth) * dpr; 
                     
                     ctx.beginPath();
                     ctx.moveTo(projectedPoints[0].x, projectedPoints[0].y);
@@ -238,11 +246,11 @@
                 
                 if (polygon.type === 'line') {
                     ctx.strokeStyle = '#65655d'; 
-                    ctx.lineWidth = Math.max(1.1, 600 / depth); 
+                    ctx.lineWidth = Math.max(1.1, 600 / depth) * dpr; 
                     ctx.stroke();
                 } else if (polygon.type === 'ceiling') {
                     ctx.strokeStyle = '#65655d'; 
-                    ctx.lineWidth = Math.max(1.2, 1200 / depth); 
+                    ctx.lineWidth = Math.max(1.2, 1200 / depth) * dpr; 
                     ctx.stroke();
                 }
                 
@@ -256,11 +264,11 @@
             }
         }
 
-        // 【縮放核心修正 2】將純粹的繪製抽離成獨立函式，以便 resize 觸發時能「不同步延遲」地直接呼叫它
         function renderFrame() {
             ctx.fillStyle = '#000000';
             ctx.filter = 'none';
-            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+            // 【修正 3】背景清除改用物理尺寸 cWidth, cHeight，確保完美填滿
+            ctx.fillRect(0, 0, cWidth, cHeight);
             
             const activePolygons = generateSegments(camera.z - 150, camera.z + renderDistance);
             
@@ -276,15 +284,13 @@
             });
             
             // ==========================================
-            // 【核心修改：加入全螢幕暗角 (Vignette)】
+            // 【修正 4】暗角 (Vignette) 改用物理像素尺寸計算
             // ==========================================
             ctx.shadowBlur = 0;
             ctx.filter = 'none'; 
             
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            const centerX = width / 2;
-            const centerY = height / 2;
+            const centerX = cWidth / 2;
+            const centerY = cHeight / 2;
             
             const radius = Math.sqrt(centerX * centerX + centerY * centerY);
             
@@ -294,7 +300,7 @@
             vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');  
 
             ctx.fillStyle = vignetteGrad;
-            ctx.fillRect(0, 0, width, height);
+            ctx.fillRect(0, 0, cWidth, cHeight); // 確保暗角完美覆蓋邊界
             // ==========================================
         }
         
@@ -306,12 +312,13 @@
             camera.y = 60 + Math.abs(Math.sin(time * walkSpeed)) * -20; 
             camera.x = Math.cos(time * walkSpeed) * 9;                
             
-            // 呼叫繪製
             renderFrame();
             
             requestAnimationFrame(animate);
         }
         
+        // 初始化先執行一次 resize 以確保初始畫布大小正確
+        resize();
         animate();
     </script>
 </body>
