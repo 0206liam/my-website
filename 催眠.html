@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>無限走廊 - 牆面垂直線加粗版</title>
+    <title>無限走廊 - 牆面垂直線加粗版 (暗角增強版)</title>
     <style>
         * {
             margin: 0;
@@ -29,7 +29,6 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 確保 DPR 放大只影響畫布像素，不影響 3D 投影計算基準
         function resize() {
             const dpr = window.devicePixelRatio || 1;
             
@@ -56,7 +55,6 @@
         let time = 0;
         const renderDistance = 5000; 
         
-        // 3D 投影到 2D 恢復成最原始、最真實的視窗寬高比例計算
         function project(point3D) {
             const relX = point3D.x - camera.x;
             const relY = point3D.y - camera.y;
@@ -71,7 +69,6 @@
             return { x: screenX, y: screenY, z: relZ };
         }
         
-        // 生成走廊結構
         function generateSegments(startZ, endZ) {
             const w = 250;  
             const h = 200;  
@@ -188,14 +185,12 @@
                     const w = 250; const h = -200;
                     const z1 = polygon.z1; const z2 = polygon.z2;
 
-                    // 縱向磁磚線
                     for (let j = 1; j <= 3; j++) {
                         const tileX = -w + (w * 2 / 4) * j;
                         const pStart = project({ x: tileX, y: h, z: z1 });
                         const pEnd = project({ x: tileX, y: h, z: z2 });
                         if (pStart && pEnd) { ctx.beginPath(); ctx.moveTo(pStart.x, pStart.y); ctx.lineTo(pEnd.x, pEnd.y); ctx.stroke(); }
                     }
-                    // 橫向磁磚線
                     for (let j = 0; j <= 3; j++) {
                         const tileZ = z1 + (150 / 3) * j;
                         const pLeft = project({ x: -w, y: h, z: tileZ });
@@ -221,12 +216,10 @@
                     ctx.fillStyle = wallGrad;
                     ctx.fill();
 
-                    // 【修改】單獨幫牆面繪製垂直地面的縫隙線，並稍微加粗（下限設為 1.6，基礎係數 1600）
                     ctx.strokeStyle = '#65655d'; 
                     ctx.lineWidth = Math.max(1.6, 1600 / depth); 
                     
                     ctx.beginPath();
-                    // 連接該牆面片段的前緣垂直線（從底部的點連到頂部的點）
                     ctx.moveTo(projectedPoints[0].x, projectedPoints[0].y);
                     ctx.lineTo(projectedPoints[1].x, projectedPoints[1].y);
                     ctx.stroke();
@@ -236,7 +229,6 @@
                     ctx.fill();
                 }
                 
-                // 牆面裝飾橫線與天花板邊線
                 if (polygon.type === 'line') {
                     ctx.strokeStyle = '#65655d'; 
                     ctx.lineWidth = Math.max(1.1, 600 / depth); 
@@ -282,8 +274,29 @@
                 drawPolygon(item.poly, item.depth);
             });
             
+            // ==========================================
+            // 【核心修改：加入全螢幕暗角 (Vignette)】
+            // ==========================================
             ctx.shadowBlur = 0;
             ctx.filter = 'none'; 
+            
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // 根據螢幕對角線計算暗角範圍
+            const radius = Math.sqrt(centerX * centerX + centerY * centerY);
+            
+            // 建立徑向漸層：中心透明，越往四周（即畫面的「近處」）越黑
+            const vignetteGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, radius);
+            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');     // 畫面中心不變暗
+            vignetteGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)'); // 中間過渡
+            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');  // 四角邊緣接近純黑
+
+            ctx.fillStyle = vignetteGrad;
+            ctx.fillRect(0, 0, width, height);
+            // ==========================================
             
             requestAnimationFrame(animate);
         }
