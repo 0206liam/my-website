@@ -60,12 +60,14 @@
             const relY = point3D.y - camera.y;
             const relZ = point3D.z - camera.z;
             
-            if (relZ <= 5) return null; 
+            // 【修正點 2】調低極限限制，或讓點強制投影在近裁剪面上，防止邊緣牆面突然整塊消失
+            const safeZ = relZ <= 1 ? 1 : relZ; 
             
             const scale = (window.innerHeight / 2) / Math.tan((camera.fov * Math.PI) / 360);
-            const screenX = window.innerWidth / 2 + (relX / relZ) * scale;
-            const screenY = window.innerHeight / 2 - (relY / relZ) * scale;
+            const screenX = window.innerWidth / 2 + (relX / safeZ) * scale;
+            const screenY = window.innerHeight / 2 - (relY / safeZ) * scale;
             
+            // 這裡不再回傳 null，而是傳回帶有 Z 值的坐標
             return { x: screenX, y: screenY, z: relZ };
         }
         
@@ -141,8 +143,10 @@
         }
         
         function drawPolygon(polygon, depth) {
+            // 【修正點 2.1】如果多邊形所有點都在相機後方，才不繪製
+            if (polygon.points.every(p => p.z - camera.z <= 0)) return;
+
             const projectedPoints = polygon.points.map(project);
-            if (projectedPoints.some(p => p === null)) return;
             
             let blurAmount = 0;
             if (depth > 600) {
@@ -250,9 +254,15 @@
         }
         
         function animate() {
-            ctx.fillStyle = '#000000';
+            // 【修正點 1.1】清空畫布改用實際的快取物理大小，確保高 DPR 下四周不會漏光
             ctx.filter = 'none';
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // 暫時重設縮放
+            ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 恢復 DPR 縮放供後續 3D 渲染使用
+            const dpr = window.devicePixelRatio || 1;
+            ctx.scale(dpr, dpr);
             
             time += 1;
             camera.z += speed;
@@ -267,7 +277,7 @@
                 poly: p,
                 depth: getPolygonDepth(p)
             }))
-            .filter(item => item.depth > 0)
+            .filter(item => item.depth > -50) // 容許稍微在鏡頭後的物件也能參與渲染，避免邊緣穿幫
             .sort((a, b) => b.depth - a.depth);
             
             sorted.forEach(item => {
@@ -285,17 +295,16 @@
             const centerX = width / 2;
             const centerY = height / 2;
             
-            // 根據螢幕對角線計算暗角範圍
             const radius = Math.sqrt(centerX * centerX + centerY * centerY);
             
-            // 建立徑向漸層：中心透明，越往四周（即畫面的「近處」）越黑
             const vignetteGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, radius);
-            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');     // 畫面中心不變暗
-            vignetteGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)'); // 中間過渡
-            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');  // 四角邊緣接近純黑
+            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');     
+            vignetteGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)'); 
+            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.8)');  // 邊緣微調黑一點，修飾邊框邊緣
 
             ctx.fillStyle = vignetteGrad;
-            ctx.fillRect(0, 0, width, height);
+            // 【修正點 1.2】利用基礎 CSS 尺寸繪製，在前面已經過 ctx.scale 的情況下能完美貼合
+            ctx.fillRect(0, 0, width, height); 
             // ==========================================
             
             requestAnimationFrame(animate);
