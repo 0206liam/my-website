@@ -29,6 +29,8 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
+        // 【縮放核心修正 1】將原本單純的 resize 改為「調整尺寸後立刻強迫重繪單格」
+        // 這樣在拖曳視窗邊框或按 Ctrl 縮放時，邊緣才不會產生黑邊、拉伸或延遲破圖。
         function resize() {
             const dpr = window.devicePixelRatio || 1;
             
@@ -39,6 +41,11 @@
             canvas.style.height = window.innerHeight + 'px';
             
             ctx.scale(dpr, dpr);
+
+            // 如果動畫已經在跑了，縮放當下立刻補畫一格，完美咬合新邊框
+            if (time > 0) {
+                renderFrame();
+            }
         }
         window.addEventListener('resize', resize);
         resize();
@@ -60,13 +67,11 @@
             const relY = point3D.y - camera.y;
             const relZ = point3D.z - camera.z;
             
-            // 【邊框修正 1】防止 3D 節點過於靠近或穿過鏡頭時返回 null，導致牆面在邊框整塊突然消失。
-            // 允許它進行極近投影，交由畫布底層自動裁剪邊緣
-            const safeZ = relZ <= 1 ? 1 : relZ; 
+            if (relZ <= 5) return null; 
             
             const scale = (window.innerHeight / 2) / Math.tan((camera.fov * Math.PI) / 360);
-            const screenX = window.innerWidth / 2 + (relX / safeZ) * scale;
-            const screenY = window.innerHeight / 2 - (relY / safeZ) * scale;
+            const screenX = window.innerWidth / 2 + (relX / relZ) * scale;
+            const screenY = window.innerHeight / 2 - (relY / relZ) * scale;
             
             return { x: screenX, y: screenY, z: relZ };
         }
@@ -144,6 +149,7 @@
         
         function drawPolygon(polygon, depth) {
             const projectedPoints = polygon.points.map(project);
+            if (projectedPoints.some(p => p === null)) return;
             
             let blurAmount = 0;
             if (depth > 600) {
@@ -249,25 +255,12 @@
                 }
             }
         }
-        
-        function animate() {
-            // 【邊框修正 2】清除底層背景時，暫時重設 DPR 縮放矩陣，
-            // 採用 canvas.width/height 物理尺寸徹底填滿，防止高畫質螢幕邊緣漏光閃爍。
-            ctx.filter = 'none';
-            ctx.setTransform(1, 0, 0, 1, 0, 0); 
+
+        // 【縮放核心修正 2】將純粹的繪製抽離成獨立函式，以便 resize 觸發時能「不同步延遲」地直接呼叫它
+        function renderFrame() {
             ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // 隨即恢復原本的 DPR 縮放
-            const dpr = window.devicePixelRatio || 1;
-            ctx.scale(dpr, dpr);
-            
-            time += 1;
-            camera.z += speed;
-            
-            const walkSpeed = 0.11; 
-            camera.y = 60 + Math.abs(Math.sin(time * walkSpeed)) * -20; 
-            camera.x = Math.cos(time * walkSpeed) * 9;                
+            ctx.filter = 'none';
+            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
             
             const activePolygons = generateSegments(camera.z - 150, camera.z + renderDistance);
             
@@ -275,8 +268,7 @@
                 poly: p,
                 depth: getPolygonDepth(p)
             }))
-            // 【邊框修正 3】放寬深度過濾，允許靠近並稍微越過鏡頭的物件正常渲染，避免邊框視覺穿幫
-            .filter(item => item.depth > -50) 
+            .filter(item => item.depth > 0)
             .sort((a, b) => b.depth - a.depth);
             
             sorted.forEach(item => {
@@ -294,19 +286,28 @@
             const centerX = width / 2;
             const centerY = height / 2;
             
-            // 根據螢幕對角線計算暗角範圍
             const radius = Math.sqrt(centerX * centerX + centerY * centerY);
             
-            // 建立徑向漸層：中心透明，越往四周（即畫面的「近處」）越黑
             const vignetteGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, radius);
-            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');     // 畫面中心不變暗
-            vignetteGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)'); // 中間過渡
-            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');  // 四角邊緣接近純黑
+            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');     
+            vignetteGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)'); 
+            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');  
 
             ctx.fillStyle = vignetteGrad;
-            // 【邊框修正 4】配合最前面的填滿，這裡在經由 scale 作用下能完美貼合螢幕物理邊緣
             ctx.fillRect(0, 0, width, height);
             // ==========================================
+        }
+        
+        function animate() {
+            time += 1;
+            camera.z += speed;
+            
+            const walkSpeed = 0.11; 
+            camera.y = 60 + Math.abs(Math.sin(time * walkSpeed)) * -20; 
+            camera.x = Math.cos(time * walkSpeed) * 9;                
+            
+            // 呼叫繪製
+            renderFrame();
             
             requestAnimationFrame(animate);
         }
