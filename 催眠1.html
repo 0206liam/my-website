@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>無限走廊 - 修正縮放與邊界版</title>
+    <title>無限走廊 - 3D空間近景暗角版</title>
     <style>
         * {
             margin: 0;
@@ -47,8 +47,6 @@
             canvas.style.width = window.innerWidth + 'px';
             canvas.style.height = window.innerHeight + 'px';
             
-            // 移除原本的 ctx.scale(dpr, dpr)，改由投影函式直接計算物理座標
-
             if (time > 0) {
                 renderFrame();
             }
@@ -75,7 +73,6 @@
             
             if (relZ <= 5) return null; 
             
-            // 使用變更後的 cHeight 與 cWidth
             const scale = (cHeight / 2) / Math.tan((camera.fov * Math.PI) / 360);
             const screenX = cWidth / 2 + (relX / relZ) * scale;
             const screenY = cHeight / 2 - (relY / relZ) * scale;
@@ -158,10 +155,13 @@
             const projectedPoints = polygon.points.map(project);
             if (projectedPoints.some(p => p === null)) return;
             
-            // 【修正 2】模糊濾鏡（blur）大小也要跟著 dpr 縮放，否則高解析度下模糊會變得很不明顯
+            // 【優化 2】遠景模糊 + 【新功能】近景景深模糊（靠近螢幕邊緣越模糊）
             let blurAmount = 0;
             if (depth > 600) {
                 blurAmount = Math.min((depth - 600) / 300, 8) * dpr; 
+            } else if (depth < 250) {
+                // 距離小於 250 時觸發近景失焦，最大模糊度 12px
+                blurAmount = Math.min((250 - depth) / 20, 12) * dpr;
             }
             ctx.filter = blurAmount > 0 ? `blur(${blurAmount}px)` : 'none';
 
@@ -172,13 +172,26 @@
             }
             ctx.closePath();
             
-            let fog = Math.min(Math.max(depth / renderDistance, 0), 1);
-            fog = Math.pow(fog, 2.5); 
+            // 遠景迷霧（深處黑洞）
+            let farFog = Math.min(Math.max(depth / renderDistance, 0), 1);
+            farFog = Math.pow(farFog, 2.5); 
+            
+            // 【新功能】近景迷霧（靠近鏡頭的空間暗角，符合 3D 空間幾何形狀）
+            let nearFog = 0;
+            if (depth < 400) {
+                // 距離小於 400 開始變暗，最靠近時不透明度達 0.95
+                nearFog = Math.min(Math.max((400 - depth) / 350, 0), 0.95);
+                nearFog = Math.pow(nearFog, 1.5); 
+            }
+            
+            // 融合遠近迷霧（取最大值）
+            const totalFog = Math.max(farFog, nearFog);
             
             if (polygon.type === 'light') {
-                ctx.shadowBlur = Math.max(0, 20 * (1 - fog)) * dpr; // 陰影大小乘上 dpr
+                ctx.shadowBlur = Math.max(0, 20 * (1 - farFog)) * dpr; 
                 ctx.shadowColor = '#ffffa0';
-                ctx.fillStyle = `rgba(255, 255, 230, ${1 - fog * 0.3})`;
+                // 燈光靠近鏡頭時也順應近景迷霧變暗
+                ctx.fillStyle = `rgba(255, 255, 230, ${Math.max(0, (1 - farFog * 0.3) - nearFog)})`;
                 ctx.fill();
             } else {
                 ctx.shadowBlur = 0;
@@ -195,7 +208,7 @@
                     ctx.fill();
 
                     ctx.strokeStyle = '#44443c'; 
-                    ctx.lineWidth = Math.max(1.1, 600 / depth) * dpr; // 線條粗細乘上 dpr
+                    ctx.lineWidth = Math.max(1.1, 600 / depth) * dpr; 
                     
                     const w = 250; const h = -200;
                     const z1 = polygon.z1; const z2 = polygon.z2;
@@ -254,11 +267,12 @@
                     ctx.stroke();
                 }
                 
-                ctx.fillStyle = `rgba(0, 0, 0, ${fog})`;
+                // 套用融合後的遠近迷霧黑影
+                ctx.fillStyle = `rgba(0, 0, 0, ${totalFog})`;
                 ctx.fill();
                 
                 if (polygon.type === 'line' || polygon.type === 'floor' || polygon.type === 'wall-left' || polygon.type === 'wall-right' || polygon.type === 'ceiling') {
-                    ctx.strokeStyle = `rgba(0, 0, 0, ${fog})`;
+                    ctx.strokeStyle = `rgba(0, 0, 0, ${totalFog})`;
                     ctx.stroke();
                 }
             }
@@ -267,7 +281,6 @@
         function renderFrame() {
             ctx.fillStyle = '#000000';
             ctx.filter = 'none';
-            // 【修正 3】背景清除改用物理尺寸 cWidth, cHeight，確保完美填滿
             ctx.fillRect(0, 0, cWidth, cHeight);
             
             const activePolygons = generateSegments(camera.z - 150, camera.z + renderDistance);
@@ -283,25 +296,8 @@
                 drawPolygon(item.poly, item.depth);
             });
             
-            // ==========================================
-            // 【修正 4】暗角 (Vignette) 改用物理像素尺寸計算
-            // ==========================================
-            ctx.shadowBlur = 0;
-            ctx.filter = 'none'; 
-            
-            const centerX = cWidth / 2;
-            const centerY = cHeight / 2;
-            
-            const radius = Math.sqrt(centerX * centerX + centerY * centerY);
-            
-            const vignetteGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, radius);
-            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');     
-            vignetteGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)'); 
-            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');  
-
-            ctx.fillStyle = vignetteGrad;
-            ctx.fillRect(0, 0, cWidth, cHeight); // 確保暗角完美覆蓋邊界
-            // ==========================================
+            // 原本的 2D 圓形暗角 (Vignette) 已完全移除
+            // 現在改由 drawPolygon 內部計算 3D 空間的近景黑霧來完美取代
         }
         
         function animate() {
@@ -317,7 +313,6 @@
             requestAnimationFrame(animate);
         }
         
-        // 初始化先執行一次 resize 以確保初始畫布大小正確
         resize();
         animate();
     </script>
